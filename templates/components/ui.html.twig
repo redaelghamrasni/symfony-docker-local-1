@@ -1,0 +1,48 @@
+{# Bouton primaire #}
+{% macro btn_primary(text, url = '#') %}
+<a href="{{ url }}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-600/25 transition-all hover:scale-105">
+    {{ text }}
+</a>
+{% endmacro %}
+
+{# Bouton secondaire #}
+{% macro btn_secondary(text, url = '#') %}
+<a href="{{ url }}" class="inline-flex items-center px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-900 text-sm font-semibold rounded-lg border border-zinc-300 shadow-sm transition-all">
+    {{ text }}
+</a>
+{% endmacro %}
+
+{# Card simple #}
+{% macro card(title, content) %}
+<div class="bg-white rounded-xl border border-zinc-200 p-6 hover:shadow-lg transition-all">
+    <h3 class="text-lg font-bold text-zinc-900 mb-2">{{ title }}</h3>
+    <p class="text-sm text-zinc-600">{{ content }}</p>
+</div>
+{% endmacro %}
+
+{# Card avec icône #}
+{% macro card_icon(title, content, color = 'blue') %}
+<div class="bg-white rounded-xl border border-zinc-200 p-6 hover:shadow-lg transition-all">
+    <div class="w-12 h-12 rounded-lg bg-{{ color }}-500 flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+    </div>
+    <h3 class="text-lg font-bold text-zinc-900 mb-2">{{ title }}</h3>
+    <p class="text-sm text-zinc-600">{{ content }}</p>
+</div>
+{% endmacro %}
+
+{# Badge #}
+{% macro badge(text, color = 'blue') %}
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-{{ color }}-100 text-{{ color }}-800">
+    {{ text }}
+</span>
+{% endmacro %}
+
+{# Alert #}
+{% macro alert(message, type = 'info') %}
+<div class="rounded-lg p-4 {{ type == 'success' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : type == 'error' ? 'bg-rose-50 text-rose-900 border border-rose-200' : 'bg-blue-50 text-blue-900 border border-blue-200' }}">
+    <p class="text-sm font-semibold">{{ message }}</p>
+</div>
+{% endmacro %}

@@ -8,4 +8,12 @@
 #   bin/console debug:router
 
 controllers:
-    resource: routing.controllers
+    resource:
+        path: ../src/Controller/        # Où sont les contrôleurs
+        namespace: App\Controller
+    type: attribute                     # On utilise les attributs PHP (#[Route])
+    prefix: /{_locale}                  # TOUTES les routes auront /{_locale} devant
+    requirements:
+        _locale: fr|en                  # La locale peut être 'fr' OU 'en' uniquement
+    defaults:
+        _locale: fr

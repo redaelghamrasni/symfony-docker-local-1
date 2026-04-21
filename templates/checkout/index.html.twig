@@ -1,0 +1,220 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'checkout.title' | trans }}{% endblock %}
+
+{% block body %}
+<div class="checkout-container">
+
+    <div class="checkout-header">
+        <h1>{{ 'checkout.title' | trans }}</h1>
+        <a href="{{ path('app_cart_index') }}" class="btn-back">
+            <i class="bi bi-arrow-left"></i>
+            {{ 'checkout.back_to_cart' | trans }}
+        </a>
+    </div>
+
+    <div class="checkout-grid">
+
+        {# Formulaire #}
+        <section class="checkout-form-card">
+            <h2>{{ 'checkout.information' | trans }}</h2>
+            <form id="payment-form">
+
+                <div class="checkout-form-section">
+                    <h3>{{ 'checkout.contact_information' | trans }}</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="first_name">{{ 'checkout.first_name' | trans }}</label>
+                            <input id="first_name" name="first_name" type="text" required class="form-control" placeholder="Jean">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="last_name">{{ 'checkout.last_name' | trans }}</label>
+                            <input id="last_name" name="last_name" type="text" required class="form-control" placeholder="Dupont">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="customer_email">{{ 'checkout.email_address' | trans }}</label>
+                        <input id="customer_email" name="customer_email" type="email" required class="form-control" placeholder="jean@exemple.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="phone">{{ 'checkout.phone' | trans }}</label>
+                        <input id="phone" name="phone" type="tel" class="form-control" placeholder="+1 514 000 0000">
+                    </div>
+                </div>
+
+                <div class="checkout-form-section">
+                    <h3>{{ 'checkout.shipping_address_title' | trans }}</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="shipping_address">{{ 'checkout.address' | trans }}</label>
+                        <input id="shipping_address" name="shipping_address" type="text" required class="form-control" placeholder="123 rue Example">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="shipping_city">{{ 'checkout.city' | trans }}</label>
+                            <input id="shipping_city" name="shipping_city" type="text" required class="form-control" placeholder="Montréal">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="shipping_postal">{{ 'checkout.postal_code' | trans }}</label>
+                            <input id="shipping_postal" name="shipping_postal" type="text" required class="form-control" placeholder="H1A 1A1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkout-form-section">
+                    <h3>{{ 'checkout.billing_address_title' | trans }}</h3>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#334155; cursor:pointer;">
+                            <input type="checkbox" name="billing_same" id="billing_same" checked
+                                   onchange="document.getElementById('billing-fields').style.display = this.checked ? 'none' : 'block'">
+                            {{ 'checkout.same_as_shipping' | trans }}
+                        </label>
+                    </div>
+                    <div id="billing-fields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label" for="billing_address">{{ 'checkout.address' | trans }}</label>
+                            <input id="billing_address" name="billing_address" type="text" class="form-control" placeholder="123 rue Example">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="billing_city">{{ 'checkout.city' | trans }}</label>
+                                <input id="billing_city" name="billing_city" type="text" class="form-control" placeholder="Montréal">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="billing_postal">{{ 'checkout.postal_code' | trans }}</label>
+                                <input id="billing_postal" name="billing_postal" type="text" class="form-control" placeholder="H1A 1A1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkout-form-section">
+                    <h3>{{ 'checkout.payment_method' | trans }}</h3>
+                    <div id="payment-element" class="payment-element" style="margin-top: 1rem;"></div>
+                    <div id="payment-message" class="payment-message" style="margin-top: 1rem; color: #dc2626;"></div>
+                </div>
+
+                <button id="submit-button" type="submit" class="btn-pay">
+                    <i class="bi bi-lock"></i>
+                    {{ 'checkout.confirm_order' | trans }} — {{ cart.total|number_format(2, ',', ' ') }} $
+                </button>
+
+            </form>
+        </section>
+
+        {# Résumé #}
+        <aside class="checkout-summary-card">
+            <h2>{{ 'checkout.order_summary' | trans }}</h2>
+            {% if cart.items is empty %}
+                <p style="color:#94a3b8; font-size:14px;">{{ 'cart.empty' | trans }}</p>
+            {% else %}
+                <div class="checkout-summary-list">
+                    {% for item in cart.items %}
+                        <div class="summary-item">
+                            <div class="summary-item-title">{{ item.article.title }}</div>
+                            <div class="summary-item-meta">{{ item.quantity }} × {{ item.unitPrice|number_format(2, ',', ' ') }} $</div>
+                            <div class="summary-item-subtotal">{{ item.subtotal|number_format(2, ',', ' ') }} $</div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="checkout-total">
+                    <span>{{ 'checkout.total' | trans }}</span>
+                    <strong>{{ cart.total|number_format(2, ',', ' ') }} $</strong>
+                </div>
+            {% endif %}
+        </aside>
+
+    </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const stripePublicKey = '{{ stripe_public_key }}';
+        if (!stripePublicKey) {
+            document.getElementById('payment-message').textContent = 'Clé publique Stripe manquante.';
+            return;
+        }
+
+        const stripe = Stripe(stripePublicKey);
+        const paymentForm = document.getElementById('payment-form');
+        const submitButton = document.getElementById('submit-button');
+        const paymentMessage = document.getElementById('payment-message');
+
+        const createPaymentIntent = async () => {
+            const response = await fetch('{{ path('app_checkout_create_payment_intent') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                paymentMessage.textContent = data.error || 'Impossible de créer la session de paiement.';
+                return null;
+            }
+
+            return data.clientSecret;
+        };
+
+        const clientSecret = await createPaymentIntent();
+        if (!clientSecret) {
+            submitButton.disabled = true;
+            return;
+        }
+
+        const elements = stripe.elements({clientSecret});
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        const saveCustomerInfo = async () => {
+            const customerEmail = document.getElementById('customer_email').value.trim();
+            const customerName = `${document.getElementById('first_name').value.trim()} ${document.getElementById('last_name').value.trim()}`.trim();
+
+            const response = await fetch('{{ path('app_checkout_save_customer_info') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    customer_email: customerEmail,
+                    customer_name: customerName,
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                paymentMessage.textContent = data.error || 'Impossible d\'enregistrer vos informations de contact.';
+                return false;
+            }
+
+            return true;
+        };
+
+        paymentForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            submitButton.disabled = true;
+            paymentMessage.textContent = '';
+
+            const saved = await saveCustomerInfo();
+            if (!saved) {
+                submitButton.disabled = false;
+                return;
+            }
+
+            const {error} = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: '{{ absolute_url(path('app_checkout_success', {'_locale': app.request.locale})) }}',
+                },
+            });
+
+            if (error) {
+                paymentMessage.textContent = error.message;
+                submitButton.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

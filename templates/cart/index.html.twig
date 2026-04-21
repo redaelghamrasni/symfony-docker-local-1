@@ -1,0 +1,238 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'base.my_cart'|trans }}{% endblock %}
+
+{% block body %}
+<div class="cart-container">
+    <!-- Header -->
+    <div class="cart-header">
+        <h1>🛒 {{ 'cart.my_cart'|trans}}</h1>
+        {% if cart.items is not empty %}
+            <span class="cart-badge">
+                {{ cart.items|length }} {{ cart.items|length > 1 ? 'cart.articles'|trans : 'cart.article'|trans }}
+            </span>
+        {% endif %}
+    </div>
+
+    <!-- Flash messages -->
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    <!-- Panier vide -->
+    {% if cart.items is empty %}
+        <div class="empty-cart">
+            <div class="empty-cart-icon">🛒</div>
+            <h3 style="color: #667eea; font-weight: 700;">{{ 'cart.empty'|trans }}</h3>
+            <p style="color: #6c757d; margin: 1rem 0 2rem;">
+                {{ 'cart.no_items_added'|trans }}
+            </p>
+            <a href="{{ path('app_article_list') }}" class="btn btn-custom btn-continue">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'cart.continue_shopping'|trans }}
+            </a>
+        </div>
+    {% else %}
+        <!-- Panier avec articles -->
+        <div class="cart-card card">
+            <div class="table-responsive">
+                <table class="cart-table table">
+                    <thead>
+                        <tr>
+                            <th class="item-column">{{ 'cart.article'|trans }}</th>
+                            <th class="price-column text-end">{{ 'cart.unit_price'|trans }}</th>
+                            <th class="quantity-column text-center">{{ 'cart.quantity'|trans }}</th>
+                            <th class="price-column text-end">{{ 'cart.subtotal'|trans }}</th>
+                            <th class="actions-column text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cart.items %}
+                            <tr class="cart-item-row" data-item-id="{{ item.id }}">
+                                <td class="item-column">
+                                    <div class="item-title">{{ item.article.title }}</div>
+                                    {% if item.article.content %}
+                                        <div class="item-description">
+                                            {{ item.article.content|length > 80 
+                                                ? item.article.content|slice(0, 80) ~ '...' 
+                                                : item.article.content }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="price-column text-end">
+                                    <span class="item-price">{{ item.unitPrice|number_format(2, ',', ' ') }} $</span>
+                                </td>
+                                <td class="quantity-column text-center">
+                                    <form method="post" 
+                                          action="{{ path('app_cart_update', {id: item.id}) }}" 
+                                          class="quantity-control" 
+                                          data-item-id="{{ item.id }}">
+                                        <button class="quantity-btn" 
+                                                type="button"
+                                                data-action="decrement">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" 
+                                               name="quantity" 
+                                               value="{{ item.quantity }}" 
+                                               min="1" 
+                                               max="99"
+                                               class="quantity-input"
+                                               data-item-id="{{ item.id }}">
+                                        <button class="quantity-btn" 
+                                                type="button"
+                                                data-action="increment">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="price-column text-end">
+                                    <span class="item-price item-subtotal" data-item-id="{{ item.id }}">
+                                        {{ item.subtotal|number_format(2, ',', ' ') }} $
+                                    </span>
+                                </td>
+                                <td class="actions-column text-center">
+                                    <form method="post" 
+                                          action="{{ path('app_cart_remove', {id: item.id}) }}" 
+                                          onsubmit="return confirm('{{ 'cart.remove_item_confirm'|trans }}');">
+                                        <button type="submit" 
+                                                class="btn-delete"
+                                                title="{{ 'cart.remove_item'|trans }}">
+                                            <i class="bi bi-bag-x"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="cart-total-row">
+                            <td colspan="4" class="text-end">
+                                <div class="grand-total-cell">
+                                    <span class="total-label">{{ 'cart.total'|trans }} :</span>
+                                    <span class="total-amount">{{ cart.total|number_format(2, ',', ' ') }} $</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Actions du panier -->
+        <div class="cart-actions">
+            <div class="cart-actions-left">
+                <a href="{{ path('app_article_list') }}" class="btn btn-custom btn-continue">
+                    <i class="bi bi-arrow-left"></i>
+                    {{ 'cart.continue_shopping'|trans }}
+                </a>
+                <form method="post" 
+                      action="{{ path('app_cart_clear') }}" 
+                      class="d-inline"
+                      onsubmit="return confirm('{{ 'cart.clear_confirm'|trans }}');">
+                    <button type="submit" class="btn btn-custom btn-clear">
+                        <i class="bi bi-trash3"></i>
+                        {{ 'cart.clear'|trans }}
+                    </button>
+                </form>
+            </div>
+            <div class="cart-actions-right">
+                <a href="{{ path('app_checkout_index') }}" class="btn btn-custom btn-checkout">
+                    <i class="bi bi-credit-card"></i>
+                    {{ 'cart.checkout'|trans }}
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript -->
+<script>
+function updateTotalAmount(data) {
+    const subtotalCell = document.querySelector(`.item-subtotal[data-item-id="${data.itemId}"]`);
+    const totalAmount = document.querySelector('.total-amount');
+
+    if (subtotalCell) {
+        subtotalCell.textContent = `${data.subtotal} $`;
+    }
+
+    if (totalAmount) {
+        totalAmount.textContent = `${data.total} $`;
+    }
+}
+
+function submitQuantityChange(form) {
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+        body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateTotalAmount(data);
+        } else {
+            form.submit();
+        }
+    })
+    .catch(() => {
+        form.submit();
+    });
+}
+
+function bindQuantityControls() {
+    document.querySelectorAll('.quantity-control').forEach(form => {
+        const input = form.querySelector('.quantity-input');
+        const decrementButton = form.querySelector('[data-action="decrement"]');
+        const incrementButton = form.querySelector('[data-action="increment"]');
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            submitQuantityChange(form);
+        });
+
+        if (input) {
+            input.addEventListener('change', () => {
+                let quantity = parseInt(input.value, 10) || 1;
+                if (quantity < 1) {
+                    quantity = 1;
+                    input.value = quantity;
+                }
+                submitQuantityChange(form);
+            });
+        }
+
+        if (decrementButton) {
+            decrementButton.addEventListener('click', () => {
+                const currentValue = parseInt(input.value, 10) || 1;
+                if (currentValue > 1) {
+                    input.value = currentValue - 1;
+                    submitQuantityChange(form);
+                }
+            });
+        }
+
+        if (incrementButton) {
+            incrementButton.addEventListener('click', () => {
+                const currentValue = parseInt(input.value, 10) || 1;
+                if (currentValue < 99) {
+                    input.value = currentValue + 1;
+                    submitQuantityChange(form);
+                }
+            });
+        }
+    });
+}
+
+bindQuantityControls();
+</script>
+{% endblock %}

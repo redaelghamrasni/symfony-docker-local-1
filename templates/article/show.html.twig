@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>{{ article.title }}</h1>
+        <span class="article-id">#{{ article.id }}</span>
+    </div>
+
+    <!-- Carte principale -->
+    <div class="article-card">
+
+        <!-- Meta -->
+        <div class="article-header">
+            <div class="article-date">
+                <span>📅</span>
+                Publié le {{ article.createdAt|date('d/m/Y à H:i') }}
+            </div>
+        </div>
+
+        <!-- Contenu -->
+        <p class="article-content" style="-webkit-line-clamp: unset; overflow: visible;">
+            {{ article.content }}
+        </p>
+
+        <!-- Prix -->
+        {% if article.price is defined %}
+            <div class="article-price">
+                {{ article.price|number_format(2, ',', ' ') }} $
+            </div>
+        {% endif %}
+
+        <!-- Ajouter au panier -->
+        <form method="post" action="{{ path('app_cart_add', {id: article.id}) }}" 
+              style="margin: 1.5rem 0; display: flex; align-items: flex-end; gap: 0.75rem;">
+            <div>
+                <label for="quantity" class="form-label" 
+                       style="display: block; font-size: 0.8rem; color: #64748b; margin-bottom: 0.3rem; font-weight: 500;">
+                    Quantité
+                </label>
+                <input type="number" 
+                       name="quantity" 
+                       id="quantity"
+                       value="1" 
+                       min="1" 
+                       max="99"
+                       class="form-control"
+                       style="width: 70px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+            <button type="submit" class="btn-action-primary">
+                <i class="bi bi-cart-plus"></i>
+                {{ 'articles.actions.add_to_cart'|trans }}
+            </button>
+        </form>
+
+        <!-- Actions -->
+        <div class="article-footer">
+            <div></div>
+            <div class="article-actions">
+                <a href="{{ path('app_article_edit', {id: article.id}) }}" class="action-link edit">
+                    {{ 'article_form.edit_title'|trans }}
+                </a>
+                <a href="{{ path('app_article_list') }}" class="action-link view">
+                    {{ 'article_form.back'|trans }}
+                </a>
+                <form method="POST" action="{{ path('app_article_delete', {id: article.id}) }}"
+                      style="display: inline;"
+                      onsubmit="return confirm({{ 'articles.actions.confirm_delete'|trans|json_encode|raw }})">
+                    <button type="submit" class="btn btn-danger">
+                        {{ 'articles.actions.delete'|trans }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

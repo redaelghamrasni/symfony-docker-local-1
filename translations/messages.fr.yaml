@@ -1,0 +1,185 @@
+# translations/messages.fr.yaml
+# Fichier de traduction français
+
+#base
+base:
+  app_name: MyApp
+  home: Home
+  contact: Contact
+  my_cart: Mon panier
+  cart: Panier
+  cancel: Annuler
+
+# Navigation
+nav:
+  app_name: MonApp
+  articles: Articles
+  about: À propos
+  cart: Panier
+
+# Langues
+lang:
+  fr: FR
+  en: EN
+  french: Français
+  english: Anglais
+
+# Page Articles - Liste
+articles:
+  title: Mes Articles
+  subtitle: Gérez et consultez tous vos articles
+  create_article: Créer un article
+  empty:
+    title: Aucun article pour le moment
+    description: Commencez par créer votre premier article
+    button: Créer mon premier article
+  stats:
+    total: Total
+    this_week: Cette semaine
+    total_views: Vues totales
+    total_comments: Commentaires
+  actions:
+    view: Voir
+    edit: Modifier
+    delete: Supprimer
+    confirm_delete: Êtes-vous sûr de vouloir supprimer cet article ?
+    add_to_cart: Ajouter au panier
+
+# Page Articles - Formulaire
+article_form:
+  new_title: Créer un nouvel article
+  edit_title: Modifier l'article
+  title_label: Titre
+  title_placeholder: Entrez un titre accrocheur...
+  content_label: Contenu
+  content_placeholder: Rédigez votre article ici...
+  category_label: Catégorie
+  categories:
+    tech: Technologie
+    design: Design
+    marketing: Marketing
+    business: Business
+  save_changes: Enregistrer les modifications
+  return_to_article: ← Retour à l'article
+  submit: Publier
+  save_draft: Sauvegarder comme brouillon
+  cancel: Annuler
+  back: Retour à la liste
+
+# Page Articles - Affichage
+article_show:
+  back: Retour
+  edit: Modifier
+  delete: Supprimer
+  created_at: Créé le
+  updated_at: Modifié le
+  article_id: Article
+
+# Messages Flash
+flash:
+  article_created: Article créé avec succès !
+  article_updated: Article modifié avec succès !
+  article_deleted: Article supprimé avec succès !
+  error_occurred: Une erreur est survenue
+  required_fields: Le titre et le contenu sont obligatoires !
+
+# Formulaire - Validation
+validation:
+  required: Ce champ est obligatoire
+  min_length: Ce champ doit contenir au moins {min} caractères
+  max_length: Ce champ ne peut pas dépasser {max} caractères
+  invalid_email: L'adresse email n'est pas valide
+
+# Pagination
+pagination:
+  previous: Précédent
+  next: Suivant
+  page: Page
+  of: sur
+  showing: Affichage de
+  to: à
+  results: résultats
+
+# Footer
+footer:
+  copyright: Tous droits réservés
+  documentation: Documentation
+  support: Support
+  privacy: Confidentialité
+  terms: Conditions
+
+# Dates et temps
+date:
+  today: Aujourd'hui
+  yesterday: Hier
+  days_ago: "Il y a {count} jours"
+  just_now: À l'instant
+  
+# Boutons communs
+button:
+  save: Enregistrer
+  cancel: Annuler
+  delete: Supprimer
+  edit: Modifier
+  create: Créer
+  search: Rechercher
+  filter: Filtrer
+  confirm: Confirmer
+  close: Fermer
+
+# Messages d'erreur
+error:
+  404: Page non trouvée
+  500: Erreur serveur
+  not_found: La ressource demandée n'existe pas
+  access_denied: Accès refusé
+  try_again: Veuillez réessayer
+
+#Cart
+cart:
+  title: Mon panier
+  empty: Votre panier est vide.
+  continue_shopping: Continuer de magasiner
+  update_cart: Mettre à jour le panier
+  remove_item: Supprimer l'article
+  subtotal: Sous-total
+  shipping: Livraison
+  tax: Taxe
+  total: Total
+  checkout: Aller au paiement
+  back_to_articles: Retour aux articles
+  my_cart: Mon panier
+  clear: Vider le panier.
+  clear_confirm: Êtes-vous sûr de vouloir vider le panier ?
+  remove_item_confirm: Retirer cet article du panier ?
+  no_items_added: Vous n'avez pas encore ajouté d'articles à votre panier.
+  article: Article
+  articles: Articles
+  unit_price: Prix unitaire
+  quantity: Quantité
+
+#Checkout
+checkout:
+  title: Paiement
+  information: Informations
+  contact_information: Coordonnées
+  first_name: Prénom
+  last_name: Nom
+  email_address: Adresse courriel
+  phone: Téléphone
+  shipping_address_title: Adresse de livraison
+  billing_address_title: Adresse de facturation
+  same_as_shipping: Identique à l'adresse de livraison
+  address: Adresse
+  city: Ville
+  postal_code: Code postal
+  payment_note: Mode test uniquement — aucun vrai paiement ne sera effectué.
+  confirm_order: Confirmer la commande
+  order_summary: Votre commande
+  billing_details: Détails de facturation
+  shipping_details: Détails de livraison
+  payment_method: Méthode de paiement
+  place_order: Passer la commande
+  back_to_cart: Retour au panier
+  proceed_to_payment: Procéder au paiement
+  total: Total

@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'article_form.edit_title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="form-container">
+    <a href="{{ path('app_article_show', {id: article.id}) }}" class="back-link">
+        {{ 'article_form.return_to_article'|trans }}
+    </a>
+    
+    <div class="form-card">
+        <h1 class="form-title">✏️ {{ 'article_form.edit_title'|trans }}</h1>
+        
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+            <div class="form-group">
+                {{ form_label(form.title, 'article_form.title_label'|trans, {
+                    'label_attr': {'class': 'form-label'}
+                }) }}
+                {{ form_widget(form.title, {
+                    'attr': {
+                        'placeholder': 'article_form.title_placeholder'|trans,
+                        'class': 'form-control'
+                    }
+                }) }}
+                <div class="form-errors">
+                    {{ form_errors(form.title) }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                {{ form_label(form.content, 'article_form.content_label'|trans, {
+                    'label_attr': {'class': 'form-label'}
+                }) }}
+                {{ form_widget(form.content, {
+                    'attr': {
+                        'placeholder': 'article_form.content_placeholder'|trans,
+                        'class': 'form-control'
+                    }
+                }) }}
+                <div class="form-errors">
+                    {{ form_errors(form.content) }}
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-custom btn-checkout">
+                    💾 {{ 'article_form.save_changes'|trans }}
+                </button>
+                <a href="{{ path('app_article_show', {id: article.id}) }}" class="btn-custom btn-continue">
+                    {{ 'article_form.cancel'|trans }}
+                </a>
+            </div>
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

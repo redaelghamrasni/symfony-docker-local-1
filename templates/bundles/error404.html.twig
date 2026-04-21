@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Article #{{ articleId }} introuvable{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 100px auto; padding: 40px; text-align: center;">
+    <div style="font-size: 100px; margin-bottom: 20px;">😢</div>
+    
+    <h1 style="font-size: 48px; color: #dc3545; margin-bottom: 20px;">
+        Article #{{ articleId }} introuvable
+    </h1>
+    
+    <p style="font-size: 20px; color: #6c757d; margin-bottom: 40px;">
+        Désolé, cet article n'existe pas ou a été supprimé.
+    </p>
+    
+    <div style="background: #f8f9fa; padding: 30px; border-radius: 8px; display: inline-block;">
+        <p style="margin: 0 0 20px 0; font-weight: 600; font-size: 18px;">Que faire maintenant ?</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <a href="{{ path('app_article_list') }}" 
+               style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                📚 Tous les articles
+            </a>
+            <a href="{{ path('app_article_new') }}" 
+               style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                ✍️ Créer un article
+            </a>
+        </div>
+    </div>
+    
+    <p style="margin-top: 40px; color: #999; font-size: 14px;">
+        URL demandée : <code>{{ path }}</code>
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer un article{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 40px auto; padding: 20px;">
+    <div style="margin-bottom: 30px;">
+        <a href="{{ path('app_article_list') }}" 
+           style="color: #6c757d; text-decoration: none; font-weight: 500;">
+            ← {{ 'article_form.back'|trans }}
+        </a>
+    </div>
+    
+    <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h1 style="margin: 0 0 30px 0; font-size: 32px; color: #212529;">
+            ✍️ {{ 'article_form.new_title'|trans }}
+        </h1>
+        
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+            <div style="margin-bottom: 24px;">
+                {{ form_label(form.title, 'article_form.title_label'|trans, {
+                    'label_attr': {
+                        'style': 'display: block; margin-bottom: 8px; font-weight: 600; color: #495057;'
+                    }
+                }) }}
+                {{ form_widget(form.title, {
+                    'attr': {
+                        'placeholder': 'article_form.title_placeholder'|trans,
+                        'style': 'width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; box-sizing: border-box;'
+                    }
+                }) }}
+                {{ form_errors(form.title) }}
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                {{ form_label(form.content, 'article_form.content_label'|trans, {
+                    'label_attr': {
+                        'style': 'display: block; margin-bottom: 8px; font-weight: 600; color: #495057;'
+                    }
+                }) }}
+                {{ form_widget(form.content, {
+                    'attr': {
+                        'placeholder': 'article_form.content_placeholder'|trans,
+                        'rows': 10,
+                        'style': 'width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical; font-family: inherit;'
+                    }
+                }) }}
+                {{ form_errors(form.content) }}
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 30px;">
+                <button 
+                    type="submit"
+                    style="background: #28a745; color: white; padding: 12px 32px; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                    ✅ {{ 'article_form.submit'|trans }}
+                </button>
+                
+                <a href="{{ path('app_article_list') }}"
+                   style="background: #6c757d; color: white; padding: 12px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-block; line-height: 1;">
+                    {{ 'base.cancel'|trans }}
+                </a>
+            </div>
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

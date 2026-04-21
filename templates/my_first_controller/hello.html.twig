@@ -1,0 +1,10 @@
+{% if lang == 'fr' %}
+    <h1>Bonjour {{ name }} !</h1>
+    <p>Bienvenue dans notre application Symfony.</p>
+{% elseif lang == 'es' %}
+    <h1>¡Hola {{ name }}!</h1>
+    <p>Bienvenido a nuestra aplicación Symfony.</p>
+{% else %}
+    <h1>Hello {{ name }}!</h1>
+    <p>Welcome to our Symfony application.</p>
+{% endif %}

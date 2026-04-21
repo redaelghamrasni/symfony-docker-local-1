@@ -1,0 +1,34 @@
+<div style="font-family: Arial, sans-serif; color: #1f2937;">
+    <h1>Merci pour votre commande</h1>
+    <p>Bonjour {{ name }},</p>
+    <p>Nous avons bien reçu votre paiement. Voici le récapitulatif de votre commande :</p>
+
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="text-align: left; border-bottom: 1px solid #d1d5db;">
+                <th style="padding: 8px 0;">Produit</th>
+                <th style="padding: 8px 0;">Quantité</th>
+                <th style="padding: 8px 0;">Sous-total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart.items %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 8px 0;">{{ item.article.title }}</td>
+                    <td style="padding: 8px 0;">{{ item.quantity }}</td>
+                    <td style="padding: 8px 0;">{{ item.subtotal|number_format(2, ',', ' ') }} $</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" style="padding: 12px 0; font-weight: bold;">Total</td>
+                <td style="padding: 12px 0; font-weight: bold;">{{ cart.total|number_format(2, ',', ' ') }} $</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <p>Si vous avez des questions, répondez simplement à cet e-mail.</p>
+    <p>Bonne journée,</p>
+    <p>L'équipe MonApp</p>
+</div>

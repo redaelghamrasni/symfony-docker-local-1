@@ -1,0 +1,99 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'articles.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>📚 {{ 'articles.title'|trans }}</h1>
+        <a href="{{ path('app_article_new') }}" class="btn">
+            <span>+</span>
+            {{ 'articles.create_article'|trans }}
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">{{ 'articles.stats.total'|trans }}</div>
+            <div class="stat-value">{{ articles|length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">{{ 'articles.stats.this_week'|trans }}</div>
+            <div class="stat-value">
+                {{ articles|filter(a => a.createdAt > date('-7 days'))|length }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Articles -->
+    {% if articles is empty %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h2>{{ 'articles.empty.title'|trans }}</h2>
+            <p>{{ 'articles.empty.description'|trans }}</p>
+            <a href="{{ path('app_article_new') }}" class="btn">
+                {{ 'articles.empty.button'|trans }}
+            </a>
+        </div>
+    {% else %}
+        <div class="article-grid">
+            {% for article in articles %}
+                <div class="article-card">
+                    <div class="article-header">
+                        <div style="flex: 1;">
+                            <h2 class="article-title">{{ article.title }}</h2>
+                        </div>
+                        <span class="article-id">#{{ article.id }}</span>
+                    </div>
+                    
+                    <p class="article-content">{{ article.content }}</p>
+                    
+                    {# Prix de l'article #}
+                    {% if article.price is defined %}
+                        <div class="article-price" style="margin: 15px 0; font-size: 1.5em; color: #2563eb; font-weight: bold;">
+                            {{ article.price|number_format(2, ',', ' ') }} $
+                        </div>
+                    {% endif %}
+                    
+                    <div class="article-footer">
+                        <div class="article-date">
+                            <span>📅</span>
+                            {{ article.createdAt|format_datetime('medium', 'short') }}
+                        </div>
+                        
+                        <div class="article-actions">
+                            {# Bouton Ajouter au panier - NOUVEAU #}
+                            <form method="POST" action="{{ path('app_cart_add', {id: article.id}) }}" style="display: inline;">
+                                <button type="submit" class="btn-action-primary btn-add-to-cart" style="margin-right: 5px;">
+                                    <i class="bi bi-cart-plus"></i>
+                                    {{ 'articles.actions.add_to_cart'|trans }}
+                                </button>
+                            </form>
+                            
+                            <a href="{{ path('app_article_show', {id: article.id}) }}" class="action-link view">
+                                {{ 'articles.actions.view'|trans }}
+                            </a>
+                            <a href="{{ path('app_article_edit', {id: article.id}) }}" class="action-link edit">
+                                {{ 'articles.actions.edit'|trans }}
+                            </a>
+
+                            <form method="POST" action="{{ path('app_article_delete', {id: article.id}) }}" style="display: inline;" onsubmit="return confirm({{ 'articles.actions.confirm_delete'|trans|json_encode|raw }})">
+                                <button type="submit" class="btn btn-danger">
+                                    {{ 'articles.actions.delete'|trans }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
