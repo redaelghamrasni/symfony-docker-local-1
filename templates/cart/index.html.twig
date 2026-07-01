@@ -27,9 +27,8 @@
     {% if cart.items is empty %}
         <div class="empty-cart">
             <div class="empty-cart-icon">🛒</div>
-            <h3 style="color: #667eea; font-weight: 700;">{{ 'cart.empty'|trans }}</h3>
             <p style="color: #6c757d; margin: 1rem 0 2rem;">
-                {{ 'cart.no_items_added'|trans }}
+                {{ 'cart.empty'|trans }}
             </p>
             <a href="{{ path('app_article_list') }}" class="btn btn-custom btn-continue">
                 <i class="bi bi-arrow-left"></i>
@@ -54,7 +53,14 @@
                         {% for item in cart.items %}
                             <tr class="cart-item-row" data-item-id="{{ item.id }}">
                                 <td class="item-column">
-                                    <div class="item-title">{{ item.article.title }}</div>
+                                    <div class="item-title">
+                                        <a href="{{ path('app_article_show', {id: item.article.id}) }}"
+                                           style="color: inherit; text-decoration: none;"
+                                           onmouseover="this.style.textDecoration='underline'"
+                                           onmouseout="this.style.textDecoration='none'">
+                                            {{ item.article.title }}
+                                        </a>
+                                    </div>
                                     {% if item.article.content %}
                                         <div class="item-description">
                                             {{ item.article.content|length > 80 
@@ -141,10 +147,17 @@
                 </form>
             </div>
             <div class="cart-actions-right">
-                <a href="{{ path('app_checkout_index') }}" class="btn btn-custom btn-checkout">
-                    <i class="bi bi-credit-card"></i>
-                    {{ 'cart.checkout'|trans }}
-                </a>
+                {% if app.user %}
+                    <a href="{{ path('app_checkout_index') }}" class="btn btn-custom btn-checkout">
+                        <i class="bi bi-credit-card"></i>
+                        {{ 'cart.checkout'|trans }}
+                    </a>
+                {% else %}
+                    <button type="button" class="btn btn-custom btn-checkout" onclick="openCheckoutModal()">
+                        <i class="bi bi-credit-card"></i>
+                        {{ 'cart.checkout'|trans }}
+                    </button>
+                {% endif %}
             </div>
         </div>
     {% endif %}

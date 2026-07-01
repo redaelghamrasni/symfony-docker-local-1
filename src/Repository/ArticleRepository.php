@@ -16,28 +16,33 @@ class ArticleRepository extends ServiceEntityRepository
         parent::__construct($registry, Article::class);
     }
 
-    //    /**
-    //     * @return Article[] Returns an array of Article objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('a.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function findPaginated(int $limit, int $offset, ?string $categorySlug = null): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->orderBy('a.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset);
 
-    //    public function findOneBySomeField($value): ?Article
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        if ($categorySlug !== null) {
+            $qb->join('a.category', 'c')
+               ->andWhere('c.slug = :slug')
+               ->setParameter('slug', $categorySlug);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countAll(?string $categorySlug = null): int
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)');
+
+        if ($categorySlug !== null) {
+            $qb->join('a.category', 'c')
+               ->andWhere('c.slug = :slug')
+               ->setParameter('slug', $categorySlug);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
 }

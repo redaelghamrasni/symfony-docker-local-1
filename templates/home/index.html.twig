@@ -1,0 +1,375 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'home.hero.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ── Hero ───────────────────────────────────────────── */
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+        .hero-title { font-size: 3.5rem; font-weight: 800; margin-bottom: 1.5rem; line-height: 1.1; }
+        .hero-subtitle { font-size: 1.25rem; margin-bottom: 2.5rem; opacity: 0.9; line-height: 1.6; }
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        .btn-hero-primary {
+            padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; font-size: 1.05rem;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+            background: white; color: #667eea; border: 2px solid white;
+            transition: all 0.25s;
+        }
+        .btn-hero-primary:hover {
+            background: transparent; color: white;
+            transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .btn-hero-secondary {
+            padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 600; font-size: 1.05rem;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+            background: transparent; color: white; border: 2px solid rgba(255,255,255,0.4);
+            transition: all 0.25s;
+        }
+        .btn-hero-secondary:hover {
+            background: rgba(255,255,255,0.12); border-color: white;
+            transform: translateY(-2px);
+        }
+
+        /* ── Shop by Category ───────────────────────────────── */
+        .categories-section {
+            padding: 4rem 2rem;
+            background: #f8fafc;
+        }
+        .categories-container { max-width: 1280px; margin: 0 auto; }
+        .section-header { text-align: center; margin-bottom: 2.5rem; }
+        .section-title { font-size: 2rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; }
+        .section-subtitle { font-size: 1.05rem; color: #6b7280; }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+        }
+        .category-card {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            text-decoration: none;
+            aspect-ratio: 3/4;
+            display: block;
+            background: #e5e7eb;
+        }
+        .category-card-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+            display: block;
+        }
+        .category-card:hover .category-card-img { transform: scale(1.07); }
+        .category-card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 14px 12px;
+            transition: background 0.25s;
+        }
+        .category-card:hover .category-card-overlay {
+            background: linear-gradient(to top, rgba(102,126,234,0.82) 0%, rgba(102,126,234,0.2) 60%, transparent 100%);
+        }
+        .category-card-name {
+            color: white; font-size: 13px; font-weight: 700;
+            line-height: 1.3; text-align: center;
+        }
+        .category-card-count {
+            color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 500;
+            text-align: center; margin-top: 3px;
+        }
+
+        /* ── Featured products ──────────────────────────────── */
+        .featured-section { padding: 5rem 2rem; background: white; }
+        .featured-container { max-width: 1280px; margin: 0 auto; }
+
+        .hp-articles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 3rem;
+        }
+        .hp-card {
+            background: white;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .hp-card:hover { transform: translateY(-5px); box-shadow: 0 16px 32px rgba(0,0,0,0.1); }
+
+        .hp-card-img {
+            height: 210px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            flex-shrink: 0;
+        }
+        .hp-card-img img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.35s ease;
+        }
+        .hp-card:hover .hp-card-img img { transform: scale(1.05); }
+        .hp-card-img-placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: #d1d5db; font-size: 3rem;
+        }
+
+        .hp-card-body {
+            padding: 18px 18px 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: visible;
+        }
+        .hp-card-cat {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #7c3aed; margin-bottom: 6px;
+        }
+        .hp-card-title {
+            font-size: 1.05rem; font-weight: 600; color: #1f2937;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+        .hp-card-price {
+            font-size: 1.3rem; font-weight: 700; color: #667eea;
+            margin: 0 0 4px;
+        }
+        .hp-card-price-orig {
+            font-size: 0.9rem; color: #9ca3af;
+            text-decoration: line-through; margin-left: 6px; font-weight: 400;
+        }
+        .hp-card-price-sale { color: #ef4444; }
+
+        .hp-card-actions {
+            display: flex; gap: 8px;
+            margin-top: auto;
+            padding-top: 16px;
+        }
+        .btn-card-cart {
+            flex: 1; padding: 10px 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            transition: opacity 0.15s, transform 0.15s; width: 100%;
+        }
+        .btn-card-cart:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-card-view {
+            padding: 10px 14px;
+            background: #f3f4f6; color: #374151;
+            border-radius: 8px; font-size: 13px; font-weight: 600;
+            text-decoration: none; display: inline-flex; align-items: center;
+            transition: background 0.15s; flex-shrink: 0;
+        }
+        .btn-card-view:hover { background: #e5e7eb; color: #111827; }
+
+        /* "View all" button — must stay readable on white bg */
+        .btn-view-all {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.9rem 2.2rem; border-radius: 10px;
+            font-size: 1rem; font-weight: 600; text-decoration: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: 2px solid transparent;
+            transition: all 0.25s;
+        }
+        .btn-view-all:hover {
+            background: linear-gradient(135deg, #5a6fd6, #6a3d8f);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+        }
+
+        /* ── CTA ────────────────────────────────────────────── */
+        .cta-section {
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, #1f2937, #374151);
+            color: white; text-align: center;
+        }
+        .cta-container { max-width: 800px; margin: 0 auto; }
+        .cta-title { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; }
+        .cta-text { font-size: 1.15rem; margin-bottom: 2rem; opacity: 0.85; }
+        .cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        /* ── Responsive ─────────────────────────────────────── */
+        @media (max-width: 1100px) {
+            .categories-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2.4rem; }
+            .hero-buttons { flex-direction: column; align-items: center; }
+            .btn-hero-primary, .btn-hero-secondary { width: 100%; max-width: 300px; justify-content: center; }
+            .categories-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .hp-articles-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .section-title { font-size: 1.6rem; }
+            .cta-title { font-size: 1.8rem; }
+            .cta-buttons { flex-direction: column; align-items: center; }
+        }
+        @media (max-width: 480px) {
+            .hp-articles-grid { grid-template-columns: 1fr; }
+            .categories-grid { grid-template-columns: repeat(2, 1fr); }
+            .hero-section { padding: 4rem 1.5rem; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+{# ── Hero ──────────────────────────────────────────── #}
+<section class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">{{ 'home.hero.title'|trans }}</h1>
+        <p class="hero-subtitle">{{ 'home.hero.subtitle'|trans }}</p>
+        <div class="hero-buttons">
+            <a href="{{ path('app_article_list') }}" class="btn-hero-primary">
+                <i class="bi bi-shop"></i>
+                {{ 'home.hero.browse_products'|trans }}
+            </a>
+            {% if not app.user %}
+                <a href="{{ path('app_auth_login') }}" class="btn-hero-secondary">
+                    <i class="bi bi-person"></i>
+                    {{ 'home.hero.sign_in'|trans }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{# ── Shop by category ──────────────────────────────── #}
+{% if categories is not empty %}
+<section class="categories-section">
+    <div class="categories-container">
+        <div class="section-header">
+            <h2 class="section-title">{{ 'home.categories.title'|trans }}</h2>
+            <p class="section-subtitle">{{ 'home.categories.subtitle'|trans }}</p>
+        </div>
+        <div class="categories-grid">
+            {% for category in categories %}
+                <a href="{{ path('app_article_list', {category: category.slug}) }}" class="category-card">
+                    {% if category.imageUrl %}
+                        <img class="category-card-img" src="{{ category.imageUrl }}" alt="{{ category.getTranslatedName(app.request.locale) }}" loading="lazy">
+                    {% else %}
+                        <div style="width:100%;height:100%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+                    {% endif %}
+                    <div class="category-card-overlay">
+                        <span class="category-card-name">{{ category.getTranslatedName(app.request.locale) }}</span>
+                        <span class="category-card-count">{{ categoryCounts[category.id] ?? 0 }} {{ 'common.articles'|trans }}</span>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# ── Featured products ─────────────────────────────── #}
+<section class="featured-section">
+    <div class="featured-container">
+        <div class="section-header">
+            <h2 class="section-title">{{ 'home.featured.title'|trans }}</h2>
+            <p class="section-subtitle">{{ 'home.featured.subtitle'|trans }}</p>
+        </div>
+
+        {% if featured_articles is not empty %}
+            <div class="hp-articles-grid">
+                {% for article in featured_articles %}
+                    <div class="hp-card">
+                        <div class="hp-card-img">
+                            {% if article.imageUrl %}
+                                <img src="{{ article.imageUrl }}" alt="{{ article.getTranslatedTitle(app.request.locale) }}" loading="lazy">
+                            {% else %}
+                                <div class="hp-card-img-placeholder"><i class="bi bi-image"></i></div>
+                            {% endif %}
+                        </div>
+                        <div class="hp-card-body">
+                            {% if article.category %}
+                                <span class="hp-card-cat">{{ article.category.getTranslatedName(app.request.locale) }}</span>
+                            {% endif %}
+                            <h3 class="hp-card-title">{{ article.getTranslatedTitle(app.request.locale) }}</h3>
+                            <div>
+                                {% if article.hasActivePromotion %}
+                                    <span class="hp-card-price hp-card-price-sale">{{ article.effectivePrice|number_format(2, ',', ' ') }} $</span>
+                                    <span class="hp-card-price-orig">{{ article.price|number_format(2, ',', ' ') }} $</span>
+                                {% else %}
+                                    <span class="hp-card-price">{{ article.price|number_format(2, ',', ' ') }} $</span>
+                                {% endif %}
+                            </div>
+                            <div class="hp-card-actions">
+                                <form class="form-add-to-cart"
+                                      data-url="{{ path('app_cart_add', {id: article.id}) }}"
+                                      style="flex: 1; display: flex;">
+                                    <button type="submit" class="btn-card-cart">
+                                        <i class="bi bi-cart-plus"></i>
+                                        {{ 'home.featured.add_to_cart'|trans }}
+                                    </button>
+                                </form>
+                                <a href="{{ path('app_article_show', {id: article.id}) }}" class="btn-card-view">
+                                    {{ 'home.featured.view'|trans }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{ path('app_article_list') }}" class="btn-view-all">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    {{ 'home.featured.view_all'|trans }}
+                </a>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 4rem 2rem; color: #6b7280;">
+                <div style="font-size: 3.5rem; margin-bottom: 1rem;">📦</div>
+                <h3 style="font-size: 1.25rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">{{ 'home.featured.no_products'|trans }}</h3>
+                <p>{{ 'home.featured.come_back'|trans }}</p>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+{# ── CTA ───────────────────────────────────────────── #}
+<section class="cta-section">
+    <div class="cta-container">
+        <h2 class="cta-title">{{ 'home.cta.title'|trans }}</h2>
+        <p class="cta-text">{{ 'home.cta.text'|trans }}</p>
+        <div class="cta-buttons">
+            {% if not app.user %}
+                <a href="{{ path('app_auth_register') }}" class="btn-hero-primary">
+                    <i class="bi bi-person-plus"></i>
+                    {{ 'home.cta.join'|trans }}
+                </a>
+            {% endif %}
+            <a href="{{ path('app_cart_index') }}" class="btn-hero-secondary">
+                <i class="bi bi-cart"></i>
+                {{ 'home.cta.cart'|trans }}
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

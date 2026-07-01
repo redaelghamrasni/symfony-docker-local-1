@@ -30,10 +30,51 @@ services:
         tags:
             - { name: 'kernel.event_subscriber'}
 
+    App\EventListener\LocaleSubscriber:
+        arguments:
+            $defaultLocale: '%kernel.default_locale%'
+            $supportedLocales: ['en', 'fr']
+        tags:
+            - { name: 'kernel.event_subscriber' }
+
+    App\EventListener\TimezoneListener:
+        arguments:
+            $appTimezone: '%env(APP_TIMEZONE)%'
+        tags:
+            - { name: 'kernel.event_subscriber' }
+
+    App\EventListener\EntityNotFoundListener:
+        arguments:
+            $container: '@service_container'
+            $twig: '@twig'
+        tags:
+            - { name: 'kernel.event_subscriber' }
+
+    App\EventSubscriber\CartPreserveOnLogoutSubscriber:
+        tags:
+            - { name: kernel.event_subscriber, dispatcher: security.event_dispatcher.main }
+
     App\Service\CartService:
+        public: true
+
+    App\Service\PayPalService:
+        arguments:
+            $clientId:    '%env(PAYPAL_CLIENT_ID)%'
+            $secret:      '%env(PAYPAL_SECRET)%'
+            $environment: '%env(PAYPAL_ENV)%'
+
+    App\Service\ShippingService:
+        arguments:
+            $apiKey: '%env(SHIPPO_API_KEY)%'
         public: true
         
     # Rendre le service accessible dans Twig
     cart_service:
         alias: App\Service\CartService
         public: true
+
+    #Meilisearch service
+    App\Service\MeilisearchService:
+        arguments:
+            $meilisearchUrl: 'http://localhost:7700'
+            $apiKey: 'changeme_master_key_dev'

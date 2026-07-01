@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="{{ app.request.locale }}" class="h-full">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}{{ 'admin.nav.panel'|trans }} - {{ 'nav.app_name'|trans }}{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+        
+        {% block stylesheets %}
+            <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+            <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+        {% endblock %}
+
+        {% block javascripts %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
+        {% endblock %}
+    </head>
+    <body class="h-full bg-zinc-50 antialiased admin-body">
+        <div class="admin-sidebar-backdrop" id="adminBackdrop"></div>
+        <button class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Toggle menu">
+            <i class="bi bi-list" id="adminSidebarToggleIcon"></i>
+        </button>
+        <div class="admin-layout">
+            {# Sidebar Navigation #}
+            <nav class="admin-sidebar" id="adminSidebar">
+                <div class="admin-logo">
+                    <i class="bi bi-speedometer2"></i>
+                    {{ 'admin.nav.panel'|trans }}
+                </div>
+
+                <div class="admin-nav">
+                    <a href="{{ path('admin_dashboard') }}" class="admin-nav-item {% if 'admin_dashboard' == app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-house-door"></i>
+                        {{ 'admin.nav.dashboard'|trans }}
+                    </a>
+                    <a href="{{ path('admin_articles_index') }}" class="admin-nav-item {% if 'admin_articles_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-newspaper"></i>
+                        {{ 'admin.nav.articles'|trans }}
+                    </a>
+                    <a href="{{ path('admin_users_index') }}" class="admin-nav-item {% if 'admin_users_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-people"></i>
+                        {{ 'admin.nav.users'|trans }}
+                    </a>
+                    <a href="{{ path('admin_orders_index') }}" class="admin-nav-item {% if 'admin_orders_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-bag"></i>
+                        {{ 'admin.nav.orders'|trans }}
+                    </a>
+                    <a href="{{ path('admin_categories_index') }}" class="admin-nav-item {% if 'admin_categories_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-tags"></i>
+                        {{ 'admin.nav.categories'|trans }}
+                    </a>
+                    <a href="{{ path('admin_promotions_index') }}" class="admin-nav-item {% if 'admin_promotions_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-percent"></i>
+                        {{ 'admin.nav.promotions'|trans }}
+                    </a>
+                    <a href="{{ path('admin_settings_index') }}" class="admin-nav-item {% if 'admin_settings_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-gear"></i>
+                        {{ 'admin.nav.settings'|trans }}
+                    </a>
+                    <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;">
+                    <a href="{{ path('app_article_list') }}" class="admin-nav-item">
+                        <i class="bi bi-arrow-left"></i>
+                        {{ 'admin.nav.back_to_store'|trans }}
+                    </a>
+                </div>
+            </nav>
+
+            {# Main Content #}
+            <div class="admin-content">
+                {# Header #}
+                <div class="admin-header">
+                    <h1 class="admin-title">{% block page_title %}Admin{% endblock %}</h1>
+                    <!--
+                    <div class="admin-user-menu">
+                        {% if app.user %}
+                            <span>{{ app.user.getFirstName() }} {{ app.user.getLastName() }}</span>
+                            <a href="{{ path('app_profile_index') }}">
+                                <i class="bi bi-person"></i>
+                                Profile
+                            </a>
+                            <a href="{{ path('app_auth_logout') }}" style="border-color: #fecaca; color: #dc2626;">
+                                <i class="bi bi-box-arrow-right"></i>
+                                Logout
+                            </a>
+                        {% else %}
+                            <a href="{{ path('app_auth_login') }}" style="border-color: #3b82f6; color: #3b82f6;">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                Login
+                            </a>
+                        {% endif %}
+                    </div>
+                    -->
+                </div>
+
+                {# Flash Messages #}
+                {% for type, messages in app.flashes %}
+                    {% for message in messages %}
+                        <div style="
+                            padding: 12px 16px;
+                            margin-bottom: 20px;
+                            border-radius: 6px;
+                            {% if type == 'success' %}
+                                background: #dcfce7;
+                                border-left: 4px solid #22c55e;
+                                color: #166534;
+                            {% elseif type == 'error' %}
+                                background: #fee2e2;
+                                border-left: 4px solid #ef4444;
+                                color: #991b1b;
+                            {% else %}
+                                background: #dbeafe;
+                                border-left: 4px solid #3b82f6;
+                                color: #1e40af;
+                            {% endif %}
+                        ">
+                            {{ message | trans }}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+
+                {# Breadcrumb #}
+                {% block breadcrumb %}{% endblock %}
+
+                {# Page Content #}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    <script>
+    (function () {
+        const sidebar  = document.getElementById('adminSidebar') || document.querySelector('.admin-sidebar');
+        const backdrop = document.getElementById('adminBackdrop');
+        const toggle   = document.getElementById('adminSidebarToggle');
+        const icon     = document.getElementById('adminSidebarToggleIcon');
+
+        let pinned    = false;
+        let hoverOpen = false;
+
+        function open(pin) {
+            sidebar.classList.add('open');
+            backdrop.classList.add('visible');
+            if (pin) { pinned = true; icon.className = 'bi bi-x-lg'; }
+        }
+
+        function close() {
+            sidebar.classList.remove('open');
+            backdrop.classList.remove('visible');
+            pinned    = false;
+            hoverOpen = false;
+            icon.className = 'bi bi-list';
+        }
+
+        // Toggle button — always visible on mobile, works on desktop too
+        toggle.addEventListener('click', function () {
+            if (sidebar.classList.contains('open') && pinned) {
+                close();
+            } else {
+                open(true);
+            }
+        });
+
+        // Backdrop click closes
+        backdrop.addEventListener('click', close);
+
+        // Desktop: open when cursor enters the leftmost 5% of the viewport
+        document.addEventListener('mousemove', function (e) {
+            if (!sidebar.classList.contains('open') && e.clientX < window.innerWidth * 0.05) {
+                hoverOpen = true;
+                open(false);
+            }
+        });
+
+        // Desktop: close on mouseleave only if opened by hover (not pinned)
+        sidebar.addEventListener('mouseleave', function () {
+            if (hoverOpen && !pinned) {
+                hoverOpen = false;
+                close();
+            }
+        });
+
+        // Escape key closes
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                close();
+            }
+        });
+    })();
+    </script>
+    </body>
+</html>

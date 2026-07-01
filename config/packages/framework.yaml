@@ -5,6 +5,11 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # Internationalization
+    default_locale: 'en'
+    set_locale_from_accept_language: true
+    enabled_locales: ['en', 'fr']
+
     #esi: true
     #fragments: true
 

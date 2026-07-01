@@ -1,0 +1,98 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ user.firstName }} {{ user.lastName }} - Admin{% endblock %}
+{% block page_title %}{{ user.firstName }} {{ user.lastName }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">
+    <a href="{{ path('admin_users_index') }}" style="color: #8a9ab5; text-decoration: none;">{{ 'admin.users.index.breadcrumb'|trans }}</a>
+    &nbsp;/&nbsp;{{ user.firstName }} {{ user.lastName }}
+</p>
+{% endblock %}
+
+{% block content %}
+<div class="admin-grid-sidebar" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    {# User Information #}
+    <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h2 style="margin: 0 0 25px 0; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">{{ 'admin.users.show.info_title'|trans }}</h2>
+
+        <div style="display: grid; gap: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'common.first_name'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.firstName }}</p>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'common.last_name'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.lastName }}</p>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'common.email'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.email }}</p>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'common.username'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.username }}</p>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'common.roles'|trans }}</label>
+                <div style="display: flex; gap: 8px;">
+                    {% for role in user.roles %}
+                        {% if role == 'ROLE_ADMIN' %}
+                            <span style="background: #fecaca; color: #991b1b; padding: 6px 12px; border-radius: 4px; font-size: 13px;">{{ role|role_label }}</span>
+                        {% else %}
+                            <span style="background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 4px; font-size: 13px;">{{ role|role_label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'admin.users.show.joined'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.createdAt|date('Y-m-d H:i') }}</p>
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; color: #64748b; font-size: 14px; font-weight: 600;">{{ 'admin.users.show.last_updated'|trans }}</label>
+                <p style="margin: 0; color: #0f172a; padding: 12px; background: #f8fafc; border-radius: 6px;">{{ user.updatedAt|date('Y-m-d H:i') }}</p>
+            </div>
+
+            <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn-action-primary">
+                    <i class="bi bi-pencil"></i> {{ 'admin.users.show.edit_user'|trans }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# Actions Sidebar #}
+    <div>
+        {# Reset Password #}
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">{{ 'admin.users.show.reset_password_title'|trans }}</h3>
+            <p style="margin: 0 0 16px 0; color: #64748b; font-size: 13px;">{{ 'admin.users.show.reset_password_desc'|trans }}</p>
+            <form action="{{ path('admin_users_reset_password', {id: user.id}) }}" method="POST">
+                <input type="hidden" name="_token" value="{{ csrf_token('reset-password' ~ user.id) }}">
+                <button type="submit" style="width: 100%; padding: 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="return confirm({{ 'admin.users.show.reset_confirm'|trans({'%name%': user.firstName ~ ' ' ~ user.lastName})|json_encode|raw }});">
+                    <i class="bi bi-key"></i> {{ 'admin.users.show.reset_password_btn'|trans }}
+                </button>
+            </form>
+        </div>
+
+        {# Delete User #}
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #ef4444;">
+            <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px;">{{ 'admin.users.show.delete_title'|trans }}</h3>
+            <p style="margin: 0 0 16px 0; color: #64748b; font-size: 13px;">{{ 'admin.users.show.delete_desc'|trans }}</p>
+            <form action="{{ path('admin_users_delete', {id: user.id}) }}" method="POST">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
+                <button type="submit" style="width: 100%; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="return confirm({{ 'admin.users.show.delete_confirm'|trans|json_encode|raw }});">
+                    <i class="bi bi-trash"></i> {{ 'admin.users.show.delete_btn'|trans }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

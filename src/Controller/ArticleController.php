@@ -3,146 +3,92 @@
 namespace App\Controller;
 
 use App\Entity\Article;
-use App\Traits\FlashMessageTrait;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\ArticleRepository;
+use App\Repository\CategoryRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Contracts\Translation\TranslatorInterface;
-use Symfony\Component\HttpFoundation\Request;
-use App\Form\ArticleType;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 final class ArticleController extends AbstractController
 {
-    use FlashMessageTrait;
-    
+    private const PAGE_SIZE = 12;
+
     public function __construct(
-        private EntityManagerInterface $entityManager
+        private ArticleRepository $articleRepository,
+        private CategoryRepository $categoryRepository,
+        private TagAwareCacheInterface $cache
     ) {}
 
-    #[Route('/{locale}/articles/', name: 'app_article_list_locale', requirements: ['_locale' => 'fr|en'], defaults: ['locale' => 'fr'])]
-    public function index(): Response {
+    #[Route('/{locale}/articles/', name: 'app_article_index_locale', requirements: ['_locale' => 'fr|en'], defaults: ['locale' => 'fr'])]
+    public function index(): Response
+    {
         return $this->render('article/index.html.twig');
     }
-    
-    #[Route('/article/new', name: 'app_article_new', requirements: ['_locale' => 'fr|en'])]
-    public function new(Request $request,TranslatorInterface $translator): Response
+
+    #[Route('/articles', name: 'app_article_list')]
+    public function list(Request $request): Response
     {
-        $article = new Article();
-        $form = $this->createForm(ArticleType::class,$article);
-        $form->handleRequest($request);
-        
-        if ($form->isSubmitted() && $form->isValid()) {
-            $article->setCreatedAt(new \DateTime());
-            $this->entityManager->persist($article);
-            $this->entityManager->flush();
-            
-            $this->addSuccessMessage('✅ Article créé avec succès !');
-            
-            return $this->redirectToRoute('app_article_show', ['id' => $article->getId()]);
+        $categorySlug = $request->query->get('category') ?: null;
+        $offset       = max(0, (int) $request->query->get('offset', 0));
+
+        $cacheKeyTotal    = 'articles_total_cat_' . ($categorySlug ?? 'all');
+        $cacheKeyArticles = 'articles_offset_' . $offset . '_size_' . self::PAGE_SIZE . '_cat_' . ($categorySlug ?? 'all');
+
+        $total = $this->cache->get($cacheKeyTotal, function (ItemInterface $item) use ($categorySlug) {
+            $item->expiresAfter(3600);
+            $item->tag(['articles']);
+            return $this->articleRepository->countAll($categorySlug);
+        });
+
+        $articles = $this->cache->get($cacheKeyArticles, function (ItemInterface $item) use ($offset, $categorySlug) {
+            $item->expiresAfter(3600);
+            $item->tag(['articles']);
+            return $this->articleRepository->findPaginated(self::PAGE_SIZE, $offset, $categorySlug);
+        });
+
+        // Categories are not cached: they're a small list and their `articles`
+        // lazy-load collection breaks when Doctrine entities are serialized/cached.
+        $categories = $this->categoryRepository->findBy([], ['name' => 'ASC']);
+
+        // Counts are a plain scalar array — safely cacheable.
+        $categoryCounts = $this->cache->get('categories_article_counts', function (ItemInterface $item) {
+            $item->expiresAfter(3600);
+            $item->tag(['categories', 'articles']);
+            return $this->categoryRepository->findAllWithArticleCounts();
+        });
+
+        $nextOffset = $offset + self::PAGE_SIZE;
+        $hasMore    = $nextOffset < $total;
+
+        if ($request->isXmlHttpRequest()) {
+            $html = $this->renderView('article/_cards.html.twig', ['articles' => $articles]);
+            return new JsonResponse([
+                'html'       => $html,
+                'hasMore'    => $hasMore,
+                'nextOffset' => $nextOffset,
+            ]);
         }
-        
-        return $this->render('article/new.html.twig', [
-            'form' => $form,
-        ]);
-    }
-    
-    #[Route('/articles', name: 'app_article_list', requirements: ['_locale' => 'fr|en'])]
-    public function list(): Response
-    {
-        $articles = $this->entityManager
-            ->getRepository(Article::class)
-            ->findAll();
-        
+
         return $this->render('article/list.html.twig', [
-            'articles' => $articles,
+            'articles'       => $articles,
+            'categories'     => $categories,
+            'categoryCounts' => $categoryCounts,
+            'activeCategory' => $categorySlug,
+            'total'          => $total,
+            'hasMore'        => $hasMore,
+            'nextOffset'     => $nextOffset,
         ]);
     }
-    
-    
-    #[Route('/article/{id}', name: 'app_article_show', requirements: ['_locale' => 'fr|en', 'id' => '\d+'])]
-    /**
-     * @param int $id
-     * 
-     * @return Response
-     */
+
+    #[Route('/article/{id}', name: 'app_article_show', requirements: ['id' => '\d+'])]
     public function show(Article $article): Response
     {
-        if (!$article) {
-            throw $this->createNotFoundException('Article non trouvé');
-        }
-        
         return $this->render('article/show.html.twig', [
             'article' => $article,
         ]);
     }
-
-    #[Route('/article/create', name: 'app_article_create', requirements: ['_locale' => 'fr|en'], methods: ['POST'])]
-public function create(Request $request): Response
-{
-    $title = $request->request->get('title');
-    $content = $request->request->get('content');
-    
-    if (empty($title) || empty($content)) {
-        $this->addErrorMessage('Le titre et le contenu sont obligatoires !');
-        return $this->redirectToRoute('app_article_new');
-    }
-    
-    $article = new Article();
-    $article->setTitle($title);
-    $article->setContent($content);
-    $article->setCreatedAt(new \DateTime());
-    
-    $this->entityManager->persist($article);
-    $this->entityManager->flush();
-    
-    $this->addSuccessMessage('✅ Article créé avec succès !');
-    
-    return $this->redirectToRoute('app_article_show', ['id' => $article->getId()]);
-}
-
-#[Route('/article/{id}/edit', name: 'app_article_edit', requirements: ['_locale' => 'fr|en', 'id' => '\d+'], methods: ['GET', 'POST'])]
-public function edit(Article $article, Request $request): Response
-{
-    if (!$article) {
-
-        return $this->render('bundles/error404.html.twig', [
-            'error' => 'Article non trouvé',
-        ]);
-    }
-    $form = $this->createForm(ArticleType::class, $article);
-    $form->handleRequest($request);
-
-    if ($form->isSubmitted() && $form->isValid()) {
-        $this->entityManager->flush();
-
-        $this->addSuccessMessage('✅ Article modifié avec succès !');
-
-        return $this->redirectToRoute('app_article_show', ['id' => $article->getId()]);
-    }
-
-    return $this->render('article/edit.html.twig', [
-        'article' => $article,
-        'form' => $form,
-    
-    ]);
-}
-
-#[Route('/article/{id}/delete', name: 'app_article_delete', requirements: ['_locale' => 'fr|en', 'id' => '\d+'], methods: ['POST'])]
-public function delete(Article $article, Request $request): Response
-{
-    if (!$article) {
-
-        return $this->render('bundles/error404.html.twig', [
-            'error' => 'Article non trouvé',
-        ]);
-    }
-    $this->entityManager->remove($article);
-    $this->entityManager->flush();
-    
-    $this->addSuccessMessage('✅ Article supprimé avec succès !');
-    
-    return $this->redirectToRoute('app_article_list');
-}
-
 }

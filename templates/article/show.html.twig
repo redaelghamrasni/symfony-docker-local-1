@@ -1,86 +1,141 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ article.title }}{% endblock %}
+{% block title %}{{ article.getTranslatedTitle(app.request.locale) }}{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
 {% endblock %}
 
 {% block body %}
-<div class="container">
+<div style="background: #f4f6f9; min-height: calc(100vh - 4rem);">
 
-    <!-- Header -->
-    <div class="header">
-        <h1>{{ article.title }}</h1>
-        <span class="article-id">#{{ article.id }}</span>
+    {# Page header bar #}
+    <div style="background: white; border-bottom: 1px solid #d6dde6; padding: 0 32px;">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 64px;">
+            <div>
+                <p style="margin: 0 0 2px 0; font-size: 12px; color: #8a9ab5;">
+                    <a href="{{ path('app_article_list') }}" style="color: #8a9ab5; text-decoration: none;">Articles</a>
+                    &nbsp;/&nbsp;{{ article.getTranslatedTitle(app.request.locale)|slice(0, 40) }}{% if article.getTranslatedTitle(app.request.locale)|length > 40 %}…{% endif %}
+                </p>
+                <h1 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: #1a2340; letter-spacing: -0.01em;">
+                    {{ article.getTranslatedTitle(app.request.locale) }}
+                </h1>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="{{ path('app_article_list') }}" class="btn-action-secondary">
+                    <i class="bi bi-arrow-left"></i> {{ 'article_form.back'|trans }}
+                </a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('admin_articles_edit', {id: article.id}) }}" class="btn-action-primary">
+                        <i class="bi bi-pencil"></i> {{ 'article_form.edit_title'|trans }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
-    <!-- Carte principale -->
-    <div class="article-card">
+    {# Page content #}
+    <div style="max-width: 1200px; margin: 28px auto; padding: 0 32px; display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;">
 
-        <!-- Meta -->
-        <div class="article-header">
-            <div class="article-date">
-                <span>📅</span>
-                Publié le {{ article.createdAt|date('d/m/Y à H:i') }}
+        {# Main card — Content #}
+        <div>
+            <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                {% if article.imageUrl %}
+                    <div style="height: 320px; overflow: hidden; background: #f3f4f6;">
+                        <img src="{{ article.imageUrl }}" alt="{{ article.getTranslatedTitle(app.request.locale) }}"
+                             style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    </div>
+                {% endif %}
+                <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+                    <h2 style="margin: 0; font-size: 14px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'article_show.content'|trans }}</h2>
+                </div>
+                <div style="padding: 28px 24px;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f1f3f7;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #8a9ab5;">
+                            <i class="bi bi-calendar3"></i>
+                            {{ article.createdAt|date('d/m/Y à H:i') }}
+                        </span>
+                        <span style="font-size: 13px; color: #d6dde6;">|</span>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #8a9ab5;">
+                            <i class="bi bi-hash"></i> {{ article.id }}
+                        </span>
+                    </div>
+                    <div style="font-size: 15px; line-height: 1.8; color: #374151; white-space: pre-wrap; word-wrap: break-word;">{{ article.getTranslatedContent(app.request.locale) }}</div>
+                </div>
             </div>
         </div>
 
-        <!-- Contenu -->
-        <p class="article-content" style="-webkit-line-clamp: unset; overflow: visible;">
-            {{ article.content }}
-        </p>
+        {# Sidebar #}
+        <div style="display: flex; flex-direction: column; gap: 16px;">
 
-        <!-- Prix -->
-        {% if article.price is defined %}
-            <div class="article-price">
-                {{ article.price|number_format(2, ',', ' ') }} $
+            {# SKU badge #}
+            {% if article.sku %}
+            <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; padding: 14px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 11px; font-weight: 600; color: #8a9ab5; text-transform: uppercase; letter-spacing: 0.05em;">SKU</span>
+                <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #1a2340; background: #f1f5f9; padding: 3px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">{{ article.sku }}</span>
             </div>
-        {% endif %}
+            {% endif %}
 
-        <!-- Ajouter au panier -->
-        <form method="post" action="{{ path('app_cart_add', {id: article.id}) }}" 
-              style="margin: 1.5rem 0; display: flex; align-items: flex-end; gap: 0.75rem;">
-            <div>
-                <label for="quantity" class="form-label" 
-                       style="display: block; font-size: 0.8rem; color: #64748b; margin-bottom: 0.3rem; font-weight: 500;">
-                    Quantité
-                </label>
-                <input type="number" 
-                       name="quantity" 
-                       id="quantity"
-                       value="1" 
-                       min="1" 
-                       max="99"
-                       class="form-control"
-                       style="width: 70px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+            {# Price card #}
+            <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div style="padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+                    <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'common.price'|trans }}</h2>
+                </div>
+                <div style="padding: 20px;">
+                    {% if article.price is defined %}
+                        <div style="font-size: 2rem; font-weight: 700; color: #1a2340; letter-spacing: -0.02em;">
+                            {{ article.price|number_format(2, ',', ' ') }} $
+                        </div>
+                    {% else %}
+                        <span style="color: #8a9ab5; font-size: 14px;">—</span>
+                    {% endif %}
+                </div>
             </div>
-            <button type="submit" class="btn-action-primary">
-                <i class="bi bi-cart-plus"></i>
-                {{ 'articles.actions.add_to_cart'|trans }}
-            </button>
-        </form>
 
-        <!-- Actions -->
-        <div class="article-footer">
-            <div></div>
-            <div class="article-actions">
-                <a href="{{ path('app_article_edit', {id: article.id}) }}" class="action-link edit">
-                    {{ 'article_form.edit_title'|trans }}
-                </a>
-                <a href="{{ path('app_article_list') }}" class="action-link view">
-                    {{ 'article_form.back'|trans }}
-                </a>
-                <form method="POST" action="{{ path('app_article_delete', {id: article.id}) }}"
-                      style="display: inline;"
-                      onsubmit="return confirm({{ 'articles.actions.confirm_delete'|trans|json_encode|raw }})">
-                    <button type="submit" class="btn btn-danger">
-                        {{ 'articles.actions.delete'|trans }}
-                    </button>
-                </form>
+            {# Add to cart card #}
+            <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div style="padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+                    <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'common.add_to_cart'|trans }}</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <form class="form-add-to-cart" data-url="{{ path('app_cart_add', {id: article.id}) }}">
+                        <div style="display: flex; align-items: flex-end; gap: 10px;">
+                            <div style="flex-shrink: 0;">
+                                <label style="display: block; font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;">
+                                    {{ 'common.quantity'|trans }}
+                                </label>
+                                <input type="number" name="quantity" id="quantity" value="1" min="1" max="99"
+                                       style="width: 72px; padding: 9px 10px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 14px; color: #1a2340; background: #f8fafc; box-sizing: border-box; text-align: center;">
+                            </div>
+                            <button type="submit" class="btn-action-primary" style="flex: 1; justify-content: center; margin-bottom: 0;">
+                                <i class="bi bi-cart-plus"></i>
+                                {{ 'articles.actions.add_to_cart'|trans }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
+
+            {# Danger zone (Admin only) #}
+            {% if is_granted('ROLE_ADMIN') %}
+                <div style="background: white; border: 1px solid #f5c2c7; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                    <div style="padding: 14px 20px; background: #fff5f5; border-bottom: 1px solid #f5c2c7;">
+                        <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #991b1b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'article_show.danger_zone'|trans }}</h2>
+                    </div>
+                    <div style="padding: 20px;">
+                        <form method="POST" action="{{ path('admin_articles_delete', {id: article.id}) }}"
+                              onsubmit="return confirm({{ 'articles.actions.confirm_delete'|trans|json_encode|raw }})">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
+                            <button type="submit" class="btn-danger" style="width: 100%; justify-content: center;">
+                                <i class="bi bi-trash3"></i>
+                                {{ 'articles.actions.delete'|trans }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
         </div>
-
     </div>
 
 </div>

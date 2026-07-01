@@ -1,0 +1,359 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.order_show.title'|trans }} #{{ order.id }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .order-detail-shell {
+            min-height: calc(100vh - 6rem);
+            padding: 4rem 1.5rem 3rem;
+            background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), transparent 34%),
+                        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.13), transparent 28%),
+                        #f8fafc;
+        }
+        .order-detail-container {
+            width: min(1200px, 100%);
+            margin: 0 auto;
+        }
+        .order-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .order-detail-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #374151;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        .btn-back:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        .order-detail-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+        .order-detail-card {
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 2rem;
+        }
+        .order-detail-section {
+            margin-bottom: 2rem;
+        }
+        .order-detail-section:last-child {
+            margin-bottom: 0;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .order-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .order-status--pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .order-status--processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .order-status--completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .order-status--cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+        .items-table th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .items-table td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            color: #4b5563;
+        }
+        .item-name {
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .item-link {
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .item-link:hover {
+            color: #5568d3;
+            text-decoration: underline;
+        }
+        .order-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .btn-order-again {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .btn-order-again:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+        .info-block {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .info-value {
+            color: #6b7280;
+        }
+        .info-block:last-child {
+            border-bottom: none;
+        }
+        .sidebar-card {
+            background: linear-gradient(135deg, #f8fafc, #f0f0f0);
+            border: 1px solid #e2e8f0;
+        }
+        .totals-section {
+            margin-bottom: 2rem;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            font-size: 0.95rem;
+        }
+        .total-row.final {
+            border-top: 2px solid #e2e8f0;
+            padding-top: 1rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .address-info {
+            font-size: 0.9rem;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        .address-info strong {
+            display: block;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 968px) {
+            .order-detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="order-detail-shell">
+    <div class="order-detail-container">
+        <div class="order-detail-header">
+            <h1 class="order-detail-title">{{ 'profile.order_show.title'|trans }} #{{ order.id }}</h1>
+            <a href="{{ path('app_profile_orders') }}" class="btn-back">
+                <i class="bi bi-arrow-left"></i>
+                {{ 'profile.order_show.back_orders'|trans }}
+            </a>
+        </div>
+
+        <div class="order-detail-grid">
+            {# Main Content #}
+            <div class="order-detail-card">
+                {# Order Status #}
+                <div class="order-detail-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 class="section-title" style="margin-bottom: 0; border: none; padding: 0;">{{ 'profile.order_show.status'|trans }}</h2>
+                        <span class="order-status order-status--{{ order.status }}">
+                            {{ ('profile.orders.status_' ~ order.status)|trans }}
+                        </span>
+                    </div>
+                </div>
+
+                {# Order Items #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.items'|trans }}</h2>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>{{ 'profile.order_show.item_name'|trans }}</th>
+                                <th style="width: 80px;">{{ 'profile.order_show.quantity'|trans }}</th>
+                                <th style="width: 120px; text-align: right;">{{ 'profile.order_show.unit_price'|trans }}</th>
+                                <th style="width: 120px; text-align: right;">{{ 'profile.order_show.subtotal'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                                <tr>
+                                    <td class="item-name">
+                                        <a href="{{ path('app_article_show', {id: item.article.id}) }}" class="item-link">
+                                            {{ item.article.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td style="text-align: right;">{{ item.unitPrice|number_format(2, ',', ' ') }} $</td>
+                                    <td style="text-align: right; font-weight: 600;">{{ item.subtotal|number_format(2, ',', ' ') }} $</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Shipping Address #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.shipping_address'|trans }}</h2>
+                    <div class="address-info">
+                        <strong>{{ order.customerFirstName }} {{ order.customerLastName }}</strong>
+                        {{ order.shippingStreet }}<br>
+                        {{ order.shippingPostalCode }} {{ order.shippingCity }}<br>
+                        {% if order.customerPhone %}
+                            {{ order.customerPhone }}<br>
+                        {% endif %}
+                        {{ order.customerEmail }}
+                    </div>
+                </div>
+
+                {# Billing Address #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.billing_address'|trans }}</h2>
+                    <div class="address-info">
+                        <strong>{{ order.customerFirstName }} {{ order.customerLastName }}</strong>
+                        {{ order.billingStreet }}<br>
+                        {{ order.billingPostalCode }} {{ order.billingCity }}<br>
+                        {% if order.customerPhone %}
+                            {{ order.customerPhone }}<br>
+                        {% endif %}
+                        {{ order.customerEmail }}
+                    </div>
+                </div>
+            </div>
+
+            {# Sidebar #}
+            <div class="order-detail-card sidebar-card">
+                {# Order Again Button #}
+                <div class="order-detail-section" style="margin-bottom: 2rem;">
+                    <a href="{{ path('app_profile_order_again', {id: order.id}) }}" class="btn-action-primary">
+                        <i class="bi bi-arrow-repeat"></i>
+                        {{ 'profile.order_show.order_again'|trans }}
+                    </a>
+                </div>
+
+                {# Order Information #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.order_info'|trans }}</h2>
+                    <div class="info-block">
+                        <span class="info-label">{{ 'profile.order_show.order_id'|trans }}</span>
+                        <span class="info-value">#{{ order.id }}</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">{{ 'profile.order_show.order_date'|trans }}</span>
+                        <span class="info-value">{{ order.createdAt|date('d/m/Y H:i') }}</span>
+                    </div>
+                    <div class="info-block">
+                        <span class="info-label">{{ 'profile.order_show.last_updated'|trans }}</span>
+                        <span class="info-value">{{ order.updatedAt|date('d/m/Y H:i') }}</span>
+                    </div>
+                </div>
+
+                {# Order Totals #}
+                <div class="order-detail-section totals-section">
+                    <h2 class="section-title">{{ 'profile.order_show.order_summary'|trans }}</h2>
+                    <div class="total-row">
+                        <span>{{ 'profile.order_show.subtotal'|trans }}</span>
+                        <span>{{ order.total|number_format(2, ',', ' ') }} $</span>
+                    </div>
+                    <div class="total-row">
+                        <span>{{ 'profile.order_show.shipping'|trans }}</span>
+                        <span>0,00 $</span>
+                    </div>
+                    <div class="total-row">
+                        <span>{{ 'profile.order_show.tax'|trans }}</span>
+                        <span>0,00 $</span>
+                    </div>
+                    <div class="total-row final">
+                        <span>{{ 'profile.order_show.total'|trans }}</span>
+                        <span>{{ order.total|number_format(2, ',', ' ') }} $</span>
+                    </div>
+                </div>
+
+                {# Customer Contact #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.customer_contact'|trans }}</h2>
+                    <div class="address-info">
+                        <strong>{{ order.customerEmail }}</strong>
+                        {% if order.customerPhone %}
+                            <strong>{{ order.customerPhone }}</strong>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

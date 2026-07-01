@@ -1,14 +1,14 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Paiement réussi{% endblock %}
+{% block title %}{{ 'checkout.success.title'|trans }}{% endblock %}
 
 {% block body %}
 <div class="checkout-success-container">
     <div class="checkout-success-card card">
-        <h1>✅ Paiement réussi</h1>
-        <p>Merci ! Votre paiement a été traité avec Stripe et votre panier a été vidé.</p>
+        <h1>✅ {{ 'checkout.success.title'|trans }}</h1>
+        <p>{{ 'checkout.success.message'|trans }}</p>
         <a href="{{ path('app_article_list') }}" class="btn btn-custom btn-continue">
-            Retour aux articles
+            {{ 'checkout.success.back'|trans }}
         </a>
     </div>
 </div>

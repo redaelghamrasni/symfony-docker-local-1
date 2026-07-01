@@ -31,7 +31,8 @@ class Cart
      */
     public function __construct()
     {
-        $this->createdAt = new \DateTimeImmutable();
+        $tz = new \DateTimeZone('America/Toronto');
+        $this->createdAt = new \DateTimeImmutable('now', $tz);
         $this->items = new ArrayCollection();
     }
 

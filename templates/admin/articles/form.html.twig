@@ -1,0 +1,281 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ isEdit ? 'common.edit'|trans : 'admin.articles.form.new_article'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ isEdit ? 'common.edit'|trans : 'admin.articles.form.new_article'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">
+    <a href="{{ path('admin_articles_index') }}" style="color: #8a9ab5; text-decoration: none;">{{ 'admin.nav.articles'|trans }}</a>
+    {% if isEdit %}
+        &nbsp;/&nbsp;{{ article.title|slice(0, 30) }}{% if article.title|length > 30 %}…{% endif %}
+    {% endif %}
+    &nbsp;/&nbsp;{{ isEdit ? 'common.edit'|trans : 'admin.articles.form.new_article'|trans }}
+</p>
+{% endblock %}
+
+{% block content %}
+
+{% set _referer = app.request.query.get('referer') %}
+{% set cancelUrl = (
+    _referer is not empty and
+    _referer starts with '/' and
+    'cart' not in _referer and
+    'checkout' not in _referer
+) ? _referer : path('admin_articles_index') %}
+
+    {{ form_start(form, {'attr': {'id': 'article-form', 'novalidate': 'novalidate', 'style': 'width:100%;', 'enctype': 'multipart/form-data'}}) }}
+
+    {# Hidden base fields — synced from FR translation in controller #}
+    <div style="display:none;">
+        {{ form_widget(form.title) }}
+        {{ form_widget(form.content) }}
+    </div>
+
+    {# Top action bar #}
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
+        <a href="{{ cancelUrl }}" class="btn-action-secondary">
+            <i class="bi bi-x-lg"></i> {{ 'common.cancel'|trans }}
+        </a>
+        <button type="submit" form="article-form" class="btn-action-primary">
+            <i class="bi bi-check-lg"></i> {{ isEdit ? 'common.save_changes'|trans : 'admin.articles.form.create_btn'|trans }}
+        </button>
+    </div>
+
+    {# Translations card with FR / EN tabs #}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6; display: flex; align-items: center; justify-content: space-between;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.content_title'|trans }}</h2>
+            {# Language tabs #}
+            <div style="display: flex; gap: 4px;">
+                {% for translationForm in form.translations %}
+                    {% set locale = translationForm.vars.data.locale %}
+                    <button type="button"
+                        class="lang-tab"
+                        data-locale="{{ locale }}"
+                        onclick="switchLangTab('{{ locale }}')"
+                        style="padding: 5px 14px; border-radius: 5px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; border: 1px solid #d6dde6; cursor: pointer; transition: background 0.15s, color 0.15s; text-transform: uppercase; background: {% if locale == 'fr' %}#1a2340{% else %}#fff{% endif %}; color: {% if locale == 'fr' %}#fff{% else %}#8a9ab5{% endif %};">
+                        {{ locale == 'fr' ? '🇫🇷' : '🇬🇧' }} {{ locale|upper }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+        <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 24px;">
+
+            {% for translationForm in form.translations %}
+                {% set locale = translationForm.vars.data.locale %}
+                <div class="lang-panel" data-locale="{{ locale }}" style="display: {% if locale == 'fr' %}flex{% else %}none{% endif %}; flex-direction: column; gap: 24px;">
+
+                    {{ form_widget(translationForm.locale) }}
+
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">
+                            {{ 'article_form.title_label'|trans }}
+                            <span style="margin-left: 6px; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 10px; background: {% if locale == 'fr' %}#e8f0fb{% else %}#f0fdf4{% endif %}; color: {% if locale == 'fr' %}#1a56db{% else %}#16a34a{% endif %}; letter-spacing: 0.03em; text-transform: uppercase;">{{ locale|upper }}</span>
+                        </label>
+                        {{ form_widget(translationForm.title, {
+                            'attr': {
+                                'placeholder': 'article_form.title_placeholder'|trans,
+                                'style': 'width: 100%; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box; transition: border-color 0.2s;'
+                            }
+                        }) }}
+                        <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(translationForm.title) }}</div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">
+                            {{ 'article_form.content_label'|trans }}
+                            <span style="margin-left: 6px; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 10px; background: {% if locale == 'fr' %}#e8f0fb{% else %}#f0fdf4{% endif %}; color: {% if locale == 'fr' %}#1a56db{% else %}#16a34a{% endif %}; letter-spacing: 0.03em; text-transform: uppercase;">{{ locale|upper }}</span>
+                        </label>
+                        {{ form_widget(translationForm.content, {
+                            'attr': {
+                                'style': 'width: 100%; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box; min-height: 300px; resize: vertical; line-height: 1.6; transition: border-color 0.2s;'
+                            }
+                        }) }}
+                        <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(translationForm.content) }}</div>
+                    </div>
+
+                </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    {# Category card #}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.categories.index.title'|trans }}</h2>
+        </div>
+        <div style="padding: 28px 24px;">
+            {{ form_label(form.category, 'article_form.category_label'|trans, {
+                'label_attr': {
+                    'style': 'display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;'
+                }
+            }) }}
+            {{ form_widget(form.category, {
+                'attr': {
+                    'style': 'width: 100%; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box;'
+                }
+            }) }}
+            <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(form.category) }}</div>
+        </div>
+    </div>
+
+    {# Image card — edit mode only #}
+    {% if isEdit %}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.image_title'|trans }}</h2>
+        </div>
+        <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 20px;">
+
+            {# Current image preview #}
+            <div>
+                <div style="margin-bottom: 10px; font-size: 12px; font-weight: 600; color: #8a9ab5; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.image_current'|trans }}</div>
+                {% if article.imageUrl %}
+                    <div id="image-preview-wrap" style="position: relative; display: inline-block;">
+                        <img id="image-preview"
+                             src="{{ article.imageUrl }}"
+                             alt="{{ article.title }}"
+                             style="max-height: 200px; max-width: 100%; border-radius: 6px; border: 1px solid #d6dde6; display: block;">
+                    </div>
+                {% else %}
+                    <div id="image-preview-wrap" style="display: none; position: relative; display: inline-block;">
+                        <img id="image-preview" src="" alt="" style="max-height: 200px; max-width: 100%; border-radius: 6px; border: 1px solid #d6dde6; display: block;">
+                    </div>
+                    <p id="no-image-msg" style="margin: 0; font-size: 13px; color: #8a9ab5; font-style: italic;">{{ 'admin.articles.form.image_no_image'|trans }}</p>
+                {% endif %}
+            </div>
+
+            {# Upload new image #}
+            <div>
+                <label for="{{ form.imageFile.vars.id }}" style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ 'admin.articles.form.image_upload_label'|trans }}
+                </label>
+                {{ form_widget(form.imageFile, {
+                    'attr': {
+                        'style': 'display: block; font-size: 13px; color: #374155;',
+                        'accept': 'image/jpeg,image/png,image/webp,image/gif',
+                        'onchange': 'previewNewImage(this)'
+                    }
+                }) }}
+                <p style="margin: 6px 0 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.articles.form.image_upload_hint'|trans }}</p>
+                {{ form_errors(form.imageFile) }}
+            </div>
+
+            {# Delete checkbox — only when an image exists #}
+            {% if article.imageUrl %}
+            <div id="delete-image-row" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: #fff5f5; border: 1px solid #fecaca; border-radius: 6px;">
+                <div style="padding-top: 1px;">
+                    {{ form_widget(form.deleteImage, {'attr': {'id': 'delete-image-cb', 'style': 'width:16px;height:16px;cursor:pointer;accent-color:#dc2626;'}}) }}
+                </div>
+                <div>
+                    <label for="delete-image-cb" style="font-size: 13px; font-weight: 600; color: #dc2626; cursor: pointer;">{{ 'admin.articles.form.image_delete_label'|trans }}</label>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: #ef4444;">{{ 'admin.articles.form.image_delete_confirm'|trans }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endif %}
+
+    {# Pricing card #}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.pricing_title'|trans }}</h2>
+        </div>
+        <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 28px;">
+
+            {# Base price #}
+            <div>
+                {{ form_label(form.price, 'admin.articles.show.base_price'|trans, {
+                    'label_attr': {
+                        'style': 'display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;'
+                    }
+                }) }}
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    {{ form_widget(form.price, {
+                        'attr': {
+                            'style': 'width: 200px; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box;'
+                        }
+                    }) }}
+                    <span style="font-size: 14px; color: #8a9ab5;">$</span>
+                </div>
+                <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(form.price) }}</div>
+
+                {# Promotional price preview (edit mode only) #}
+                {% if isEdit and article.hasActivePromotion %}
+                    {% set promo = article.activePromotion %}
+                    <div style="margin-top: 12px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 11px; color: #16a34a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.show.promotional_price'|trans }}</span>
+                            <span style="font-size: 11px; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 10px; font-weight: 600;">{{ promo.name }}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 10px;">
+                            <span style="font-size: 18px; font-weight: 700; color: #16a34a;">${{ article.effectivePrice|number_format(2) }}</span>
+                            <span style="font-size: 13px; color: #94a3b8; text-decoration: line-through;">{{ 'admin.articles.show.base_price'|trans }} : ${{ article.price|number_format(2) }}</span>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Promotions multi-select #}
+            <div>
+                <div style="margin-bottom: 10px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">{{ 'admin.articles.form.promotions_label'|trans }}</div>
+                {{ form_widget(form.promotions, {
+                    'attr': {
+                        'style': 'width: 100%; border: 1px solid #d6dde6; border-radius: 6px; font-size: 14px; color: #1a2340; background: #f8fafc; box-sizing: border-box; padding: 4px 0;'
+                    }
+                }) }}
+                <p style="margin: 8px 0 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.articles.form.promotions_hint'|trans }}</p>
+                <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(form.promotions) }}</div>
+            </div>
+
+        </div>
+    </div>
+
+    {# Bottom action bar #}
+    <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 16px;">
+        <a href="{{ cancelUrl }}" class="btn-action-secondary">
+            <i class="bi bi-x-lg"></i> {{ 'common.cancel'|trans }}
+        </a>
+        <button type="submit" form="article-form" class="btn-action-primary">
+            <i class="bi bi-check-lg"></i> {{ isEdit ? 'common.save_changes'|trans : 'admin.articles.form.create_btn'|trans }}
+        </button>
+    </div>
+
+    {{ form_end(form, {render_rest: false}) }}
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function previewNewImage(input) {
+    var preview = document.getElementById('image-preview');
+    var wrap    = document.getElementById('image-preview-wrap');
+    var noMsg   = document.getElementById('no-image-msg');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            if (preview) { preview.src = e.target.result; }
+            if (wrap)    { wrap.style.display = 'inline-block'; }
+            if (noMsg)   { noMsg.style.display = 'none'; }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function switchLangTab(locale) {
+    document.querySelectorAll('.lang-tab').forEach(function(btn) {
+        var active = btn.dataset.locale === locale;
+        btn.style.background = active ? '#1a2340' : '#fff';
+        btn.style.color      = active ? '#fff'    : '#8a9ab5';
+        btn.style.borderColor = active ? '#1a2340' : '#d6dde6';
+    });
+    document.querySelectorAll('.lang-panel').forEach(function(panel) {
+        panel.style.display = panel.dataset.locale === locale ? 'flex' : 'none';
+    });
+}
+</script>
+{% endblock %}

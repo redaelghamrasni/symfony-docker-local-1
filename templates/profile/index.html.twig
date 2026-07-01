@@ -1,0 +1,202 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.index.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .profile-shell {
+            min-height: calc(100vh - 6rem);
+            padding: 4rem 1.5rem 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), transparent 34%),
+                        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.13), transparent 28%),
+                        #f8fafc;
+        }
+        .profile-grid {
+            width: min(1200px, 100%);
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        .profile-card {
+            border-radius: 2rem;
+            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.12);
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 2.5rem;
+        }
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .profile-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .profile-section {
+            margin-bottom: 2rem;
+        }
+        .profile-section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+        .profile-info-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        .profile-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .profile-info-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .profile-info-value {
+            color: #6b7280;
+            padding-bottom: 1rem !important;
+        }
+        .profile-addresses {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .profile-address {
+            padding: 1.5rem;
+            border-radius: 1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .profile-address-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .profile-address-name {
+            font-weight: 600;
+            color: #111827;
+        }
+        .profile-address-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .profile-address-type--billing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .profile-address-type--shipping {
+            background: #dcfce7;
+            color: #166534;
+        }
+        @media (max-width: 768px) {
+            .profile-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="profile-shell">
+    <div class="profile-grid">
+        <div class="profile-card">
+            <div class="profile-header">
+                <h1 class="profile-title">{{ 'profile.index.title'|trans }}</h1>
+                <a href="{{ path('app_profile_edit') }}" class="btn-action-primary">{{ 'profile.index.edit_profile'|trans }}</a>
+            </div>
+
+            <div class="profile-section">
+                <h2 class="profile-section-title">{{ 'profile.index.personal_info'|trans }}</h2>
+                <div class="profile-info-grid">
+                    <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.first_name'|trans }}</span>
+                        <span class="profile-info-value">{{ user.firstName }} {{ user.lastName }}</span>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.last_name'|trans }}</span>
+                        <span class="profile-info-value">{{ user.lastName }}</span>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.email'|trans }}</span>
+                        <span class="profile-info-value">{{ user.email }}</span>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.username'|trans }}</span>
+                        <span class="profile-info-value">{{ user.username }}</span>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.auto_fill_checkout'|trans }}</span>
+                        <span class="profile-info-value">{{ user.autoFillCheckout ? 'profile.index.activated'|trans : 'profile.index.deactivated' |trans }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h2 class="profile-section-title">{{ 'profile.index.addresses'|trans }}</h2>
+                {% if user.addresses|length > 0 %}
+                    <div class="profile-addresses">
+                        {% for address in user.addresses %}
+                            <div class="profile-address">
+                                <div class="profile-address-header">
+                                    <span class="profile-address-name">{{ address.firstName }} {{ address.lastName }}</span>
+                                    <span class="profile-address-type profile-address-type--{{ address.type == 'billing' ? 'billing' : 'shipping' }}">
+                                        {{ address.type == 'billing' ? 'profile.index.billing'|trans : 'profile.index.shipping'|trans }}
+                                    </span>
+                                </div>
+                                <div class="profile-address-details">
+                                    {{ address.street }}<br>
+                                    {{ address.postalCode }} {{ address.city }}<br>
+                                    {% if address.phone %}{{ 'common.phone'|trans }}: {{ address.phone }}<br>{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="profile-info-value">{{ 'profile.index.no_addresses'|trans }}</p>
+                {% endif %}
+                <a href="{{ path('app_profile_address_new') }}" class="btn-action-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    {{ 'profile.index.add_address'|trans }}
+                </a>
+            </div>
+
+            <div class="profile-section">
+                <h2 class="profile-section-title">{{ 'profile.orders.title'|trans }}</h2>
+                <div style="display: flex; gap: 1rem;">
+                    <!-- 
+                    <a href="{{ path('app_profile_orders') }}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 1rem; border: none; background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white; text-decoration: none; font-weight: 600; cursor: pointer; transition: transform 0.2s ease;">
+                        <i class="bi bi-box"></i>
+                        {{ 'profile.orders.view_all'|trans }}
+                    </a>
+                    -->
+                    <a href="{{ path('app_profile_orders') }}" class="btn-action-primary">
+                        <i class="bi bi-box button-icon"></i>
+                        {{ 'profile.orders.view_all'|trans }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

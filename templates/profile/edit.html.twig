@@ -1,0 +1,150 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.edit.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .profile-shell {
+            min-height: calc(100vh - 6rem);
+            padding: 4rem 1.5rem 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), transparent 34%),
+                        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.13), transparent 28%),
+                        #f8fafc;
+        }
+        .profile-grid {
+            width: min(600px, 100%);
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        .profile-card {
+            border-radius: 2rem;
+            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.12);
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 2.5rem;
+        }
+        .profile-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .profile-form {
+            display: grid;
+            gap: 1.25rem;
+        }
+        .profile-group {
+            display: grid;
+            gap: 0.45rem;
+        }
+        .profile-group label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .profile-input {
+            width: 100%;
+            border-radius: 1rem;
+            padding: 1rem 1.1rem;
+            border: 1px solid #d1d5db;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 0.98rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .profile-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+        }
+        .profile-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .profile-checkbox input {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #4f46e5;
+        }
+        .profile-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .profile-back:hover {
+            color: #4338ca;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="profile-shell">
+    <div class="profile-grid">
+        <div class="profile-card">
+            <h1 class="profile-title">{{ 'profile.edit.title'|trans }}</h1>
+
+            {{ form_start(form, {'attr': {'class': 'profile-form', 'data-turbo': 'false'}}) }}
+                <div class="profile-group">
+                    <label for="{{ form.email.vars.id }}">{{ 'admin.profile.edit.email'|trans }}</label>
+                    {{ form_widget(form.email, {'attr': {'class': 'profile-input', 'placeholder': 'john@example.com'}}) }}
+                    {{ form_errors(form.email) }}
+                </div>
+                <div class="profile-group">
+                    <label for="{{ form.username.vars.id }}">{{ 'admin.profile.edit.username'|trans }}</label>
+                    {{ form_widget(form.username, {'attr': {'class': 'profile-input', 'placeholder': 'john_doe'}}) }}
+                    {{ form_errors(form.username) }}
+                </div>
+                <div class="profile-group">
+                    <label for="{{ form.first_name.vars.id }}">{{ 'admin.profile.edit.first_name'|trans }}</label>
+                    {{ form_widget(form.first_name, {'attr': {'class': 'profile-input', 'placeholder': 'Jean'}}) }}
+                    {{ form_errors(form.first_name) }}
+                </div>
+                <div class="profile-group">
+                    <label for="{{ form.last_name.vars.id }}">{{ 'admin.profile.edit.last_name'|trans }}</label>
+                    {{ form_widget(form.last_name, {'attr': {'class': 'profile-input', 'placeholder': 'Dupont'}}) }}
+                    {{ form_errors(form.last_name) }}
+                </div>
+                <div class="profile-checkbox">
+                    {{ form_widget(form.autoFillCheckout) }}
+                    <label for="{{ form.autoFillCheckout.vars.id }}">{{ 'admin.profile.edit.auto_fill_checkout'|trans }}</label>
+                </div>
+
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 0.5rem;">
+                    <p style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0;">{{ 'admin.users.edit.change_password'|trans }}</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 1rem 0;">{{ 'admin.users.edit.password_hint'|trans }}</p>
+                    <div class="profile-group" style="margin-bottom: 1rem;">
+                        <label for="{{ form.plainPassword.first.vars.id }}">{{ form.plainPassword.first.vars.label }}</label>
+                        {{ form_widget(form.plainPassword.first, {'attr': {'class': 'profile-input'}}) }}
+                        {{ form_errors(form.plainPassword.first) }}
+                    </div>
+                    <div class="profile-group">
+                        <label for="{{ form.plainPassword.second.vars.id }}">{{ form.plainPassword.second.vars.label }}</label>
+                        {{ form_widget(form.plainPassword.second, {'attr': {'class': 'profile-input'}}) }}
+                        {{ form_errors(form.plainPassword.second) }}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-action-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">{{ 'admin.profile.edit.save_changes'|trans }}</button>
+            {{ form_end(form) }}
+
+            <a href="{{ path('app_profile_index') }}" class="profile-back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+                {{ 'admin.profile.edit.back_to_profile'|trans }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,7 +2,17 @@
 
 {% block title %}{{ 'checkout.title' | trans }}{% endblock %}
 
+{% block javascripts %}
+    {{ parent() }}
+    {# Loaded async early so it is ready (or nearly ready) before DOMContentLoaded fires #}
+    <script src="https://js.stripe.com/v3/" async></script>
+    {% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&components=buttons" async></script>
+    {% endif %}
+{% endblock %}
+
 {% block body %}
+
 <div class="checkout-container">
 
     <div class="checkout-header">
@@ -25,20 +35,28 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="first_name">{{ 'checkout.first_name' | trans }}</label>
-                            <input id="first_name" name="first_name" type="text" required class="form-control" placeholder="Jean">
+                            <input id="first_name" name="first_name" type="text" required class="form-control"
+                                   placeholder="Jean"
+                                   value="{{ customer_info.first_name|default('') }}">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="last_name">{{ 'checkout.last_name' | trans }}</label>
-                            <input id="last_name" name="last_name" type="text" required class="form-control" placeholder="Dupont">
+                            <input id="last_name" name="last_name" type="text" required class="form-control"
+                                   placeholder="Dupont"
+                                   value="{{ customer_info.last_name|default('') }}">
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="customer_email">{{ 'checkout.email_address' | trans }}</label>
-                        <input id="customer_email" name="customer_email" type="email" required class="form-control" placeholder="jean@exemple.com">
+                        <input id="customer_email" name="customer_email" type="email" required class="form-control"
+                               placeholder="jean@exemple.com"
+                               value="{{ customer_info.email|default('') }}">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="phone">{{ 'checkout.phone' | trans }}</label>
-                        <input id="phone" name="phone" type="tel" class="form-control" placeholder="+1 514 000 0000">
+                        <input id="phone" name="phone" type="tel" class="form-control"
+                               placeholder="+1 514 000 0000"
+                               value="{{ customer_info.phone|default('') }}">
                     </div>
                 </div>
 
@@ -46,17 +64,32 @@
                     <h3>{{ 'checkout.shipping_address_title' | trans }}</h3>
                     <div class="form-group">
                         <label class="form-label" for="shipping_address">{{ 'checkout.address' | trans }}</label>
-                        <input id="shipping_address" name="shipping_address" type="text" required class="form-control" placeholder="123 rue Example">
+                        <input id="shipping_address" name="shipping_address" type="text" required class="form-control"
+                               placeholder="123 rue Example"
+                               value="{{ customer_info.shipping_address|default('') }}">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="shipping_city">{{ 'checkout.city' | trans }}</label>
-                            <input id="shipping_city" name="shipping_city" type="text" required class="form-control" placeholder="Montréal">
+                            <input id="shipping_city" name="shipping_city" type="text" required class="form-control"
+                                   placeholder="Montréal"
+                                   value="{{ customer_info.shipping_city|default('') }}">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="shipping_postal">{{ 'checkout.postal_code' | trans }}</label>
-                            <input id="shipping_postal" name="shipping_postal" type="text" required class="form-control" placeholder="H1A 1A1">
+                            <input id="shipping_postal" name="shipping_postal" type="text" required class="form-control"
+                                   placeholder="H1A 1A1"
+                                   value="{{ customer_info.shipping_postal|default('') }}">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shipping_province">{{ 'checkout.province' | trans }}</label>
+                        <select id="shipping_province" name="shipping_province" class="form-control">
+                            <option value="">—</option>
+                            {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
+                                <option value="{{ code }}" {% if customer_info.shipping_province|default('') == code %}selected{% endif %}>{{ name }} ({{ code }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
@@ -72,36 +105,117 @@
                     <div id="billing-fields" style="display:none;">
                         <div class="form-group">
                             <label class="form-label" for="billing_address">{{ 'checkout.address' | trans }}</label>
-                            <input id="billing_address" name="billing_address" type="text" class="form-control" placeholder="123 rue Example">
+                            <input id="billing_address" name="billing_address" type="text" class="form-control"
+                                   placeholder="123 rue Example">
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label" for="billing_city">{{ 'checkout.city' | trans }}</label>
-                                <input id="billing_city" name="billing_city" type="text" class="form-control" placeholder="Montréal">
+                                <input id="billing_city" name="billing_city" type="text" class="form-control"
+                                       placeholder="Montréal">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="billing_postal">{{ 'checkout.postal_code' | trans }}</label>
-                                <input id="billing_postal" name="billing_postal" type="text" class="form-control" placeholder="H1A 1A1">
+                                <input id="billing_postal" name="billing_postal" type="text" class="form-control"
+                                       placeholder="H1A 1A1">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label" for="billing_province">{{ 'checkout.province' | trans }}</label>
+                            <select id="billing_province" name="billing_province" class="form-control">
+                                <option value="">—</option>
+                                {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
+                                    <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkout-form-section" id="shipping-section">
+                    <h3>{{ 'checkout.shipping_method'|trans }}</h3>
+                    <div id="shipping-rates-container">
+                        <p style="color: #94a3b8; font-size: 14px;">
+                            {{ 'checkout.shipping_rates_placeholder'|trans }}
+                        </p>
                     </div>
                 </div>
 
                 <div class="checkout-form-section">
                     <h3>{{ 'checkout.payment_method' | trans }}</h3>
-                    <div id="payment-element" class="payment-element" style="margin-top: 1rem;"></div>
-                    <div id="payment-message" class="payment-message" style="margin-top: 1rem; color: #dc2626;"></div>
+
+                    {# Payment method switcher — only rendered when multiple options exist #}
+                    {% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
+                    <div class="pm-switcher" id="pm-switcher">
+                        <label class="pm-option">
+                            <input type="radio" name="payment_method_type" value="card"
+                                   id="pm-radio-card" checked
+                                   onchange="selectPayMethod('card')">
+                            <span class="pm-option-inner">
+                                <i class="bi bi-credit-card-2-front"></i>
+                                {{ 'checkout.pay_card'|trans }}
+                            </span>
+                        </label>
+                        <label class="pm-option">
+                            <input type="radio" name="payment_method_type" value="paypal"
+                                   id="pm-radio-paypal"
+                                   onchange="selectPayMethod('paypal')">
+                            <span class="pm-option-inner">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7.5 21H4L6 9h6.5c3.5 0 5 1.5 4.5 4.5C16.5 16 14 17.5 10.5 17.5H8L7.5 21Z" fill="#003087"/><path d="M10.5 17.5H13L14.5 9H11c0 0 1 3.5-0.5 8.5Z" fill="#009cde" opacity=".5"/></svg>
+                                PayPal
+                            </span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    {# Stripe card panel #}
+                    <div id="pm-card-panel" style="position: relative; min-height: 120px;">
+                        <div id="checkout-loader" style="
+                            position: absolute;
+                            inset: 0;
+                            z-index: 2;
+                            background: #f8fafc;
+                            border-radius: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 12px;
+                            transition: opacity 0.3s ease;
+                        ">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <path d="M16 10a4 4 0 0 1-8 0"/>
+                            </svg>
+                            <p style="font-size: 0.875rem; color: #64748b; margin: 0; letter-spacing: 0.03em;">
+                                {{ 'checkout.loading'|trans }}
+                            </p>
+                        </div>
+                        <div id="payment-element" class="payment-element"></div>
+                    </div>
+
+                    {# PayPal panel #}
+                    {% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
+                    <div id="pm-paypal-panel" style="display:none;">
+                        <div id="paypal-button-container" style="min-height:48px;"></div>
+                    </div>
+                    {% endif %}
+
+                    <div id="payment-message" class="payment-message"
+                         style="margin-top: 1rem; color: #dc2626; display: none;"></div>
                 </div>
 
                 <button id="submit-button" type="submit" class="btn-pay">
                     <i class="bi bi-lock"></i>
-                    {{ 'checkout.confirm_order' | trans }} — {{ cart.total|number_format(2, ',', ' ') }} $
+                    <span>{{ 'checkout.confirm_order' | trans }}</span>
+                    <span id="submit-total"> — {{ cart.total|number_format(2, ',', ' ') }} $</span>
                 </button>
 
             </form>
         </section>
 
-        {# Résumé #}
+        {# Résumé commande #}
         <aside class="checkout-summary-card">
             <h2>{{ 'checkout.order_summary' | trans }}</h2>
             {% if cart.items is empty %}
@@ -111,14 +225,42 @@
                     {% for item in cart.items %}
                         <div class="summary-item">
                             <div class="summary-item-title">{{ item.article.title }}</div>
-                            <div class="summary-item-meta">{{ item.quantity }} × {{ item.unitPrice|number_format(2, ',', ' ') }} $</div>
-                            <div class="summary-item-subtotal">{{ item.subtotal|number_format(2, ',', ' ') }} $</div>
+                            <div class="summary-item-meta">
+                                {{ item.quantity }} × {{ item.unitPrice|number_format(2, ',', ' ') }} $
+                            </div>
+                            <div class="summary-item-subtotal">
+                                {{ item.subtotal|number_format(2, ',', ' ') }} $
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
-                <div class="checkout-total">
-                    <span>{{ 'checkout.total' | trans }}</span>
-                    <strong>{{ cart.total|number_format(2, ',', ' ') }} $</strong>
+
+                {# Price breakdown #}
+                <div class="checkout-breakdown" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #334155;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>{{ 'checkout.subtotal'|trans }}</span>
+                        <span id="breakdown-subtotal">{{ cart.total|number_format(2, ',', ' ') }} $</span>
+                    </div>
+                    <div id="tax-row-gst" style="display:none; justify-content: space-between; color: #64748b;">
+                        <span id="tax-label-gst">TPS (5%)</span>
+                        <span id="breakdown-gst">0,00 $</span>
+                    </div>
+                    <div id="tax-row-pst" style="display:none; justify-content: space-between; color: #64748b;">
+                        <span id="tax-label-pst">TVP</span>
+                        <span id="breakdown-pst">0,00 $</span>
+                    </div>
+                    <div id="tax-row-hst" style="display:none; justify-content: space-between; color: #64748b;">
+                        <span id="tax-label-hst">TVH</span>
+                        <span id="breakdown-hst">0,00 $</span>
+                    </div>
+                    <div id="shipping-breakdown-row" style="display:none; justify-content: space-between; color: #64748b;">
+                        <span>{{ 'checkout.shipping'|trans }}</span>
+                        <span id="breakdown-shipping">—</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #e2e8f0; font-weight: 700; font-size: 15px; color: #0f172a;">
+                        <span>{{ 'checkout.grand_total'|trans }}</span>
+                        <strong id="breakdown-total">{{ cart.total|number_format(2, ',', ' ') }} $</strong>
+                    </div>
                 </div>
             {% endif %}
         </aside>
@@ -126,95 +268,832 @@
     </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const stripePublicKey = '{{ stripe_public_key }}';
-        if (!stripePublicKey) {
-            document.getElementById('payment-message').textContent = 'Clé publique Stripe manquante.';
-            return;
-        }
+const checkoutT = {
+    stripeFailed:    "{{ 'checkout.error.stripe_failed'|trans|e('js') }}",
+    missingKey:      "{{ 'checkout.error.missing_key'|trans|e('js') }}",
+    incompleteForm:  "{{ 'checkout.error.incomplete_form'|trans|e('js') }}",
+    createSession:   "{{ 'checkout.error.create_session'|trans|e('js') }}",
+    serverTimeout:   "{{ 'checkout.error.server_timeout'|trans|e('js') }}",
+    connection:      "{{ 'checkout.error.connection'|trans|e('js') }}",
+    notReady:        "{{ 'checkout.error.not_ready'|trans|e('js') }}",
+    loadFailed:      "{{ 'checkout.error.load_failed'|trans|e('js') }}",
+    invalidForm:     "{{ 'checkout.error.invalid_form'|trans|e('js') }}",
+    saveInfo:        "{{ 'checkout.error.save_info'|trans|e('js') }}",
+    timeout:         "{{ 'checkout.error.timeout'|trans|e('js') }}",
+    network:         "{{ 'checkout.error.network'|trans|e('js') }}",
+    loadingPayment:  "{{ 'checkout.loading_payment'|trans|e('js') }}",
+    retryAttempt:    "{{ 'checkout.retry_attempt'|trans|e('js') }}",
+};
 
-        const stripe = Stripe(stripePublicKey);
-        const paymentForm = document.getElementById('payment-form');
-        const submitButton = document.getElementById('submit-button');
-        const paymentMessage = document.getElementById('payment-message');
+let loaderHidden = false;
+let stripeReady  = false;
 
-        const createPaymentIntent = async () => {
-            const response = await fetch('{{ path('app_checkout_create_payment_intent') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({}),
-            });
+const STRIPE_READY_TIMEOUT_MS = 7000;
+const MAX_RETRIES = 3;
 
-            const data = await response.json();
-            if (!response.ok) {
-                paymentMessage.textContent = data.error || 'Impossible de créer la session de paiement.';
-                return null;
+function hideLoader() {
+    if (loaderHidden) return;
+    loaderHidden = true;
+    const loader = document.getElementById('checkout-loader');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 400);
+    }
+}
+
+function showError(message) {
+    console.error('Checkout error:', message);
+    const paymentMessage = document.getElementById('payment-message');
+    if (paymentMessage) {
+        paymentMessage.textContent = message;
+        paymentMessage.style.display = 'block';
+    }
+    hideLoader();
+}
+
+// Attend que Stripe soit disponible (chargé via le tag async dans <head>)
+function waitForStripe() {
+    return new Promise((resolve, reject) => {
+        if (typeof Stripe !== 'undefined') { resolve(); return; }
+        const started = Date.now();
+        const poll = setInterval(() => {
+            if (typeof Stripe !== 'undefined') {
+                clearInterval(poll);
+                resolve();
+            } else if (Date.now() - started > 10000) {
+                clearInterval(poll);
+                reject(new Error('Stripe CDN timeout'));
             }
+        }, 100);
+    });
+}
 
-            return data.clientSecret;
-        };
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🔵 Checkout initialisé');
 
-        const clientSecret = await createPaymentIntent();
-        if (!clientSecret) {
+    // ── Attendre Stripe.js ─────────────────────────────────────────────
+    try {
+        await waitForStripe();
+        console.log('✅ Stripe.js disponible');
+    } catch (err) {
+        showError(checkoutT.stripeFailed);
+        return;
+    }
+
+    const stripePublicKey = '{{ stripe_public_key }}';
+    if (!stripePublicKey) { showError(checkoutT.missingKey); return; }
+
+    const paymentForm    = document.getElementById('payment-form');
+    const submitButton   = document.getElementById('submit-button');
+    const paymentMessage = document.getElementById('payment-message');
+
+    if (!paymentForm || !submitButton || !paymentMessage) {
+        showError(checkoutT.incompleteForm);
+        return;
+    }
+
+    const stripe = Stripe(stripePublicKey);
+
+    // ── Étape 1 : Créer le PaymentIntent ──────────────────────────────
+    let clientSecret;
+    try {
+        console.log('🔵 Création du PaymentIntent...');
+        const controller   = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch('{{ path('app_checkout_create_payment_intent') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+            signal: controller.signal,
+        });
+
+        clearTimeout(fetchTimeout);
+        console.log('🟡 Status HTTP:', response.status);
+
+        const data = await response.json();
+        console.log('🟢 Réponse reçue:', data);
+
+        if (!response.ok || !data.clientSecret) {
+            showError(data.error || checkoutT.createSession);
             submitButton.disabled = true;
             return;
         }
 
-        const elements = stripe.elements({clientSecret});
-        const paymentElement = elements.create('payment');
-        paymentElement.mount('#payment-element');
+        clientSecret = data.clientSecret;
+        console.log('✅ clientSecret obtenu');
 
-        const saveCustomerInfo = async () => {
-            const customerEmail = document.getElementById('customer_email').value.trim();
-            const customerName = `${document.getElementById('first_name').value.trim()} ${document.getElementById('last_name').value.trim()}`.trim();
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            showError(checkoutT.serverTimeout);
+        } else {
+            console.error('🔴 Erreur fetch PaymentIntent:', err);
+            showError(checkoutT.connection);
+        }
+        submitButton.disabled = true;
+        return;
+    }
 
-            const response = await fetch('{{ path('app_checkout_save_customer_info') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    customer_email: customerEmail,
-                    customer_name: customerName,
-                }),
+    // ── Étape 2 : Monter PaymentElement ───────────────────────────────
+    // currentElements is set to the active elements instance on each successful mount.
+    let currentElements = null;
+    let currentPaymentElement = null;
+
+    // ── Gestionnaire de soumission ─────────────────────────────────────
+    paymentForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!stripeReady || !currentElements) {
+            paymentMessage.textContent = checkoutT.notReady;
+            paymentMessage.style.display = 'block';
+            return;
+        }
+
+        submitButton.disabled = true;
+        paymentMessage.textContent   = '';
+        paymentMessage.style.display = 'none';
+
+        const saved = await saveCustomerInfo(paymentMessage);
+        if (!saved) { submitButton.disabled = false; return; }
+
+        const { error } = await stripe.confirmPayment({
+            elements: currentElements,
+            confirmParams: {
+                return_url: '{{ absolute_url(path('app_checkout_success', {'_locale': app.request.locale})) }}',
+            },
+        });
+
+        if (error) {
+            console.error('🔴 Erreur confirmation paiement:', error);
+            paymentMessage.textContent   = error.message;
+            paymentMessage.style.display = 'block';
+            submitButton.disabled = false;
+        }
+    });
+
+    // ── Étape 3 : Monter PaymentElement avec retry ────────────────────
+    async function tryMountPaymentElement(attempt) {
+        const container = document.getElementById('payment-element');
+        if (!container) { showError(checkoutT.incompleteForm); return; }
+
+        // Démonter proprement l'ancien élément si existant
+        if (currentPaymentElement) {
+            try { currentPaymentElement.unmount(); } catch (_) {}
+            currentPaymentElement = null;
+            stripeReady = false;
+        }
+
+        // Vider le container
+        container.innerHTML = '';
+
+        if (attempt > 0) {
+            console.warn(`🔄 Stripe PaymentElement — retry ${attempt}/${MAX_RETRIES}`);
+            container.innerHTML = `
+                <div style="text-align:center; padding:20px 12px; color:#64748b; font-size:0.875rem; line-height:1.7;">
+                    <div>${checkoutT.loadingPayment}</div>
+                    <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
+                        ${checkoutT.retryAttempt.replace('%current%', attempt + 1).replace('%total%', MAX_RETRIES + 1)}
+                    </div>
+                </div>`;
+
+            // Délai progressif entre les tentatives (2s, 4s, 6s...)
+            await new Promise(r => setTimeout(r, attempt * 2000));
+            container.innerHTML = '';
+        }
+
+        try {
+            // Fresh elements instance per attempt — calling create() twice on the
+            // same instance returns the already-created (unmounted) element, not a new one.
+            const elements = stripe.elements({ clientSecret });
+            currentElements = elements;
+
+            const paymentElement = elements.create('payment', {
+                wallets: { link: 'never' }
             });
 
-            const data = await response.json();
-            if (!response.ok) {
-                paymentMessage.textContent = data.error || 'Impossible d\'enregistrer vos informations de contact.';
-                return false;
-            }
+            currentPaymentElement = paymentElement;
 
-            return true;
-        };
+            await new Promise((resolve, reject) => {
+                const readyTimeout = setTimeout(() => {
+                    reject(new Error(`ready timeout après ${STRIPE_READY_TIMEOUT_MS}ms`));
+                }, STRIPE_READY_TIMEOUT_MS);
 
-        paymentForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            submitButton.disabled = true;
-            paymentMessage.textContent = '';
+                paymentElement.on('ready', () => {
+                    clearTimeout(readyTimeout);
+                    stripeReady = true;
+                    hideLoader();
+                    console.log(`✅ Stripe ready (tentative ${attempt + 1})`);
+                    resolve();
+                });
 
-            const saved = await saveCustomerInfo();
-            if (!saved) {
-                submitButton.disabled = false;
-                return;
-            }
+                paymentElement.on('loaderror', (event) => {
+                    clearTimeout(readyTimeout);
+                    reject(new Error(`loaderror: ${event?.error?.message ?? 'inconnu'}`));
+                });
 
-            const {error} = await stripe.confirmPayment({
-                elements,
-                confirmParams: {
-                    return_url: '{{ absolute_url(path('app_checkout_success', {'_locale': app.request.locale})) }}',
-                },
+                paymentElement.on('change', (event) => {
+                    if (event.error) {
+                        paymentMessage.textContent   = event.error.message;
+                        paymentMessage.style.display = 'block';
+                    } else {
+                        paymentMessage.textContent   = '';
+                        paymentMessage.style.display = 'none';
+                    }
+                });
+
+                paymentElement.mount('#payment-element');
+                console.log(`🟡 mount() appelé (tentative ${attempt + 1})`);
             });
 
-            if (error) {
-                paymentMessage.textContent = error.message;
-                submitButton.disabled = false;
+        } catch (err) {
+            console.warn(`⚠️ Tentative ${attempt + 1} échouée : ${err.message}`);
+
+            // Démonter proprement avant le prochain essai
+            if (currentPaymentElement) {
+                try { currentPaymentElement.unmount(); } catch (_) {}
+                currentPaymentElement = null;
+            }
+
+            if (attempt < MAX_RETRIES) {
+                await tryMountPaymentElement(attempt + 1);
+            } else {
+                console.error('🔴 Toutes les tentatives ont échoué');
+                showError(checkoutT.loadFailed);
+                submitButton.disabled = true;
+            }
+        }
+    }
+
+    tryMountPaymentElement(0);
+});
+
+// ── Sauvegarder les infos client ──────────────────────────────────────
+async function saveCustomerInfo(paymentMessage) {
+    const firstNameInput = document.getElementById('first_name');
+    const lastNameInput  = document.getElementById('last_name');
+    const emailInput     = document.getElementById('customer_email');
+
+    if (!firstNameInput || !lastNameInput || !emailInput) {
+        paymentMessage.textContent = checkoutT.invalidForm;
+        paymentMessage.style.display = 'block';
+        return false;
+    }
+
+    const customerName  = `${firstNameInput.value.trim()} ${lastNameInput.value.trim()}`.trim();
+    const customerEmail = emailInput.value.trim();
+
+    try {
+        const controller   = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch('{{ path('app_checkout_save_customer_info') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_email:              customerEmail,
+                customer_name:               customerName,
+                customer_phone:              document.getElementById('phone')?.value.trim() ?? '',
+                checkout_shipping_address:   document.getElementById('shipping_address')?.value.trim() ?? '',
+                checkout_shipping_city:      document.getElementById('shipping_city')?.value.trim() ?? '',
+                checkout_shipping_postal:    document.getElementById('shipping_postal')?.value.trim() ?? '',
+                checkout_shipping_province:  document.getElementById('shipping_province')?.value ?? '',
+                checkout_billing_same:       document.getElementById('billing_same')?.checked ?? true,
+                checkout_billing_address:    document.getElementById('billing_address')?.value.trim() ?? '',
+                checkout_billing_city:       document.getElementById('billing_city')?.value.trim() ?? '',
+                checkout_billing_postal:     document.getElementById('billing_postal')?.value.trim() ?? '',
+                checkout_billing_province:   document.getElementById('billing_province')?.value ?? '',
+            }),
+            signal: controller.signal,
+        });
+
+        clearTimeout(fetchTimeout);
+        const data = await response.json();
+
+        if (!response.ok) {
+            paymentMessage.textContent = data.error || checkoutT.saveInfo;
+            paymentMessage.style.display = 'block';
+            return false;
+        }
+
+        return true;
+
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            paymentMessage.textContent = checkoutT.timeout;
+        } else {
+            console.error('🔴 Erreur saveCustomerInfo:', err);
+            paymentMessage.textContent = checkoutT.network;
+        }
+        paymentMessage.style.display = 'block';
+        return false;
+    }
+}
+
+// --Shipping Rates Update (triggered from shipping address fields) --
+async function loadShippingRates() {
+    const city     = document.getElementById('shipping_city')?.value.trim();
+    const zip      = document.getElementById('shipping_postal')?.value.trim();
+    const address  = document.getElementById('shipping_address')?.value.trim();
+    const province = document.getElementById('shipping_province')?.value ?? '';
+    const name     = `${document.getElementById('first_name')?.value.trim()} ${document.getElementById('last_name')?.value.trim()}`;
+    const email    = document.getElementById('customer_email')?.value.trim();
+
+    if (!city || !zip) return;
+
+    const container = document.getElementById('shipping-rates-container');
+    const section   = document.getElementById('shipping-section');
+
+    section.style.display = 'block';
+    container.innerHTML = `<p style="color:#64748b; font-size:14px;"><i class="bi bi-hourglass-split"></i> ${shippingTranslations.loading}</p>`;
+
+    try {
+        const response = await fetch('{{ path('app_checkout_shipping_rates') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, address, city, zip, province, email, country: 'CA' }),
+        });
+
+        const data = await response.json();
+
+        if (!data.rates || data.rates.length === 0) {
+            container.innerHTML = `<p style="color:#dc2626; font-size:14px;">${shippingTranslations.empty}</p>`;
+            return;
+        }
+
+        let html = '<div class="rate-list" style="display: flex; flex-direction: column; gap: 10px;">';
+        data.rates.forEach((rate, index) => {
+            const priceLabel = parseFloat(rate.price) === 0 ? '{{ "checkout.shipping_free"|trans }}' : `${parseFloat(rate.price).toFixed(2)} ${rate.currency}`;
+            const priceColor = parseFloat(rate.price) === 0 ? '#16a34a' : '#0f172a';
+            const checked    = index === 0 ? 'checked' : '';
+            const border     = index === 0 ? '#0f172a' : '#e2e8f0';
+            html += `
+                <label class="rate-label" style="display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid ${border}; border-radius: 8px; cursor: pointer; transition: border-color 0.15s;">
+                    <input type="radio" name="shipping_rate" id="rate_${rate.object_id}"
+                           value="${rate.object_id}"
+                           data-price="${rate.price}"
+                           data-carrier="${rate.carrier}"
+                           data-service="${rate.service}"
+                           ${checked}
+                           style="flex-shrink: 0; accent-color: #0f172a;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 14px; color: #0f172a;">
+                            ${rate.carrier} — ${rate.service}
+                        </div>
+                        ${rate.days ? `<div style="font-size: 12px; color: #64748b; margin-top: 2px;">~${rate.days} {{ 'checkout.shipping_days'|trans }}</div>` : ''}
+                    </div>
+                    <div style="font-weight: 700; color: ${priceColor}; white-space: nowrap;">
+                        ${priceLabel}
+                    </div>
+                </label>
+            `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+
+        // Delegate change events from the container (works after innerHTML replace)
+        container.addEventListener('change', (e) => {
+            if (e.target.name === 'shipping_rate') {
+                updateRateLabelBorders();
+                onShippingRateChange(e.target);
             }
         });
+
+        // Hover: only lighten the border when the label is NOT selected
+        container.addEventListener('mouseover', (e) => {
+            const label = e.target.closest('.rate-label');
+            if (label) {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio && !radio.checked) label.style.borderColor = '#94a3b8';
+            }
+        });
+        container.addEventListener('mouseout', (e) => {
+            const label = e.target.closest('.rate-label');
+            if (label) {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio && !radio.checked) label.style.borderColor = '#e2e8f0';
+            }
+        });
+
+        // Auto-select first rate and update breakdown
+        const firstRate = data.rates[0];
+        if (firstRate) {
+            onShippingRateChange({ dataset: { price: firstRate.price } });
+        }
+
+    } catch (err) {
+        container.innerHTML = `<p style="color:#dc2626; font-size:14px;">${shippingTranslations.error}</p>`;
+    }
+}
+
+// Déclenche le chargement quand l'utilisateur quitte le champ postal ou change de province
+document.getElementById('shipping_postal')?.addEventListener('blur', loadShippingRates);
+document.getElementById('shipping_city')?.addEventListener('blur', loadShippingRates);
+document.getElementById('shipping_province')?.addEventListener('change', loadShippingRates);
+
+// Shipment calculator translations
+const shippingTranslations = {
+    error:       "{{ 'checkout.shipping_rates_error'|trans }}",
+    empty:       "{{ 'checkout.shipping_rates_empty'|trans }}",
+    loading:     "{{ 'checkout.shipping_rates_loading'|trans }}",
+    placeholder: "{{ 'checkout.shipping_rates_placeholder'|trans }}",
+};
+
+// ── Payment method switcher ──────────────────────────────────────────
+var currentPayMethod = 'card';
+
+function selectPayMethod(method) {
+    currentPayMethod = method;
+    var isCard      = method === 'card';
+    var cardPanel   = document.getElementById('pm-card-panel');
+    var paypalPanel = document.getElementById('pm-paypal-panel');
+    var submitBtn   = document.getElementById('submit-button');
+    if (cardPanel)   cardPanel.style.display   = isCard  ? 'block' : 'none';
+    if (paypalPanel) paypalPanel.style.display  = !isCard ? 'block' : 'none';
+    if (submitBtn)   submitBtn.style.display    = isCard  ? ''      : 'none';
+}
+
+// ── PayPal Smart Button ──────────────────────────────────────────────
+{% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
+function waitForPayPal() {
+    return new Promise((resolve, reject) => {
+        if (typeof paypal !== 'undefined') { resolve(); return; }
+        const started = Date.now();
+        const poll = setInterval(() => {
+            if (typeof paypal !== 'undefined') { clearInterval(poll); resolve(); }
+            else if (Date.now() - started > 10000) { clearInterval(poll); reject(new Error('PayPal SDK timeout')); }
+        }, 150);
     });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await waitForPayPal();
+    } catch (e) {
+        console.warn('PayPal SDK not loaded', e);
+        return;
+    }
+
+    paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay', height: 48 },
+
+        createOrder: async function () {
+            const paymentMessage = document.getElementById('payment-message');
+            const saved = await saveCustomerInfo(paymentMessage);
+            if (!saved) throw new Error('form_validation');
+
+            const res  = await fetch('{{ path('app_checkout_paypal_create_order') }}', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok || !data.id) throw new Error(data.error || 'create order failed');
+            return data.id;
+        },
+
+        onApprove: async function (data) {
+            const res    = await fetch('{{ path('app_checkout_paypal_capture') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: data.orderID }),
+            });
+            const result = await res.json();
+            if (!res.ok || !result.redirectUrl) {
+                const paymentMessage = document.getElementById('payment-message');
+                if (paymentMessage) { paymentMessage.textContent = result.error || 'PayPal error'; paymentMessage.style.display = 'block'; }
+                return;
+            }
+            window.location.href = result.redirectUrl;
+        },
+
+        onError: function (err) {
+            console.error('PayPal error', err);
+            const paymentMessage = document.getElementById('payment-message');
+            if (paymentMessage) { paymentMessage.textContent = String(err); paymentMessage.style.display = 'block'; }
+        },
+    }).render('#paypal-button-container');
+});
+{% endif %}
+
+// ── Price Breakdown ──────────────────────────────────────────────────────
+const CART_SUBTOTAL = {{ cart.total }};
+
+const PROVINCE_TAXES = {
+    AB: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
+    BC: { gst: 0.05, pst: 0.07,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (7%)' },
+    MB: { gst: 0.05, pst: 0.07,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (7%)' },
+    NB: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
+    NL: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
+    NS: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
+    NT: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
+    NU: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
+    ON: { gst: 0.00, pst: 0.00,    hst: 0.13,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (13%)' },
+    PE: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
+    QC: { gst: 0.05, pst: 0.09975, hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVQ (9,975%)' },
+    SK: { gst: 0.05, pst: 0.06,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (6%)' },
+    YT: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
+};
+
+let selectedShippingAmount = null;
+
+function fmt(amount) {
+    return amount.toFixed(2).replace('.', ',') + ' $';
+}
+
+function updateBreakdown() {
+    const province = document.getElementById('shipping_province')?.value || '';
+    const rates    = PROVINCE_TAXES[province] || {};
+    const gst      = Math.round(CART_SUBTOTAL * (rates.gst || 0) * 100) / 100;
+    const pst      = Math.round(CART_SUBTOTAL * (rates.pst || 0) * 100) / 100;
+    const hst      = Math.round(CART_SUBTOTAL * (rates.hst || 0) * 100) / 100;
+    const shipping = selectedShippingAmount !== null ? selectedShippingAmount : 0;
+    const grand    = CART_SUBTOTAL + gst + pst + hst + shipping;
+
+    // GST row
+    const rowGst = document.getElementById('tax-row-gst');
+    if (rowGst) {
+        if (gst > 0) {
+            rowGst.style.display = 'flex';
+            document.getElementById('tax-label-gst').textContent = rates.gstLabel || 'TPS';
+            document.getElementById('breakdown-gst').textContent = fmt(gst);
+        } else {
+            rowGst.style.display = 'none';
+        }
+    }
+
+    // PST/QST row
+    const rowPst = document.getElementById('tax-row-pst');
+    if (rowPst) {
+        if (pst > 0) {
+            rowPst.style.display = 'flex';
+            document.getElementById('tax-label-pst').textContent = rates.pstLabel || 'TVP';
+            document.getElementById('breakdown-pst').textContent = fmt(pst);
+        } else {
+            rowPst.style.display = 'none';
+        }
+    }
+
+    // HST row
+    const rowHst = document.getElementById('tax-row-hst');
+    if (rowHst) {
+        if (hst > 0) {
+            rowHst.style.display = 'flex';
+            document.getElementById('tax-label-hst').textContent = rates.hstLabel || 'TVH';
+            document.getElementById('breakdown-hst').textContent = fmt(hst);
+        } else {
+            rowHst.style.display = 'none';
+        }
+    }
+
+    // Shipping row
+    const rowShipping = document.getElementById('shipping-breakdown-row');
+    if (rowShipping) {
+        if (selectedShippingAmount !== null) {
+            rowShipping.style.display = 'flex';
+            document.getElementById('breakdown-shipping').textContent =
+                selectedShippingAmount === 0 ? '{{ "checkout.shipping_free"|trans }}' : fmt(shipping);
+        } else {
+            rowShipping.style.display = 'none';
+        }
+    }
+
+    // Grand total
+    const totalEl = document.getElementById('breakdown-total');
+    if (totalEl) totalEl.textContent = fmt(grand);
+
+    // Submit button total
+    const submitTotal = document.getElementById('submit-total');
+    if (submitTotal) submitTotal.textContent = ' — ' + fmt(grand);
+}
+
+function updateRateLabelBorders() {
+    document.querySelectorAll('.rate-label').forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio) {
+            label.style.borderColor = radio.checked ? '#0f172a' : '#e2e8f0';
+        }
+    });
+}
+
+function onShippingRateChange(input) {
+    selectedShippingAmount = parseFloat(input.dataset.price) || 0;
+    updateRateLabelBorders();
+    updateBreakdown();
+    updatePaymentIntent();
+}
+
+async function updatePaymentIntent() {
+    const province = document.getElementById('shipping_province')?.value || '';
+    if (!province || selectedShippingAmount === null) return;
+    try {
+        await fetch('{{ path('app_checkout_update_payment') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ province, shipping_amount: selectedShippingAmount }),
+        });
+    } catch (e) {
+        console.warn('Could not sync payment amount', e);
+    }
+}
+
+// Trigger breakdown update when province changes (taxes update immediately)
+document.getElementById('shipping_province')?.addEventListener('change', () => {
+    updateBreakdown();
+    if (selectedShippingAmount !== null) updatePaymentIntent();
+});
+
+// Initialize breakdown and auto-fetch shipping rates when address is pre-filled
+document.addEventListener('DOMContentLoaded', () => {
+    const prov   = document.getElementById('shipping_province')?.value;
+    const city   = document.getElementById('shipping_city')?.value?.trim();
+    const postal = document.getElementById('shipping_postal')?.value?.trim();
+    if (prov) updateBreakdown();
+    if (city && postal) loadShippingRates();
+});
+
+// ── Address Autocomplete (OpenStreetMap / Nominatim) ──────────────────────
+(function () {
+    const PROVINCE_CODE = {
+        'alberta':                   'AB',
+        'british columbia':          'BC',
+        'colombie-britannique':      'BC',
+        'manitoba':                  'MB',
+        'new brunswick':             'NB',
+        'nouveau-brunswick':         'NB',
+        'newfoundland and labrador': 'NL',
+        'terre-neuve-et-labrador':   'NL',
+        'nova scotia':               'NS',
+        'nouvelle-écosse':           'NS',
+        'northwest territories':     'NT',
+        'territoires du nord-ouest': 'NT',
+        'nunavut':                   'NU',
+        'ontario':                   'ON',
+        'prince edward island':      'PE',
+        'île-du-prince-édouard':     'PE',
+        'quebec':                    'QC',
+        'québec':                    'QC',
+        'saskatchewan':              'SK',
+        'yukon':                     'YT',
+        'yukon territory':           'YT',
+    };
+
+    function esc(s) {
+        return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    function streetFrom(a, displayName) {
+        return [a.house_number, a.road].filter(Boolean).join(' ')
+            || a.pedestrian || a.path
+            || displayName.split(',')[0].trim();
+    }
+
+    function cityFrom(a) {
+        return a.city || a.town || a.village || a.municipality || a.hamlet || '';
+    }
+
+    function initAutocomplete(inputId, fields, afterFill) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'addr-ac-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const list = document.createElement('div');
+        list.className = 'addr-ac-list';
+        wrap.appendChild(list);
+
+        let timer   = null;
+        let aborter = null;
+        let hits    = [];
+        let cursor  = -1;
+
+        function close() {
+            list.style.display = 'none';
+            list.innerHTML = '';
+            cursor = -1;
+        }
+
+        function moveCursor(dir) {
+            const items = list.querySelectorAll('.addr-ac-item');
+            if (!items.length) return;
+            cursor = Math.max(0, Math.min(cursor + dir, items.length - 1));
+            items.forEach((el, i) => el.classList.toggle('addr-ac-active', i === cursor));
+        }
+
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            cursor = -1;
+            const q = input.value.trim();
+            if (q.length < 3) { close(); return; }
+            timer = setTimeout(() => search(q), 420);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown')                 { e.preventDefault(); moveCursor(+1); }
+            else if (e.key === 'ArrowUp')              { e.preventDefault(); moveCursor(-1); }
+            else if (e.key === 'Enter' && cursor >= 0) { e.preventDefault(); pick(hits[cursor]); }
+            else if (e.key === 'Escape')               { close(); }
+        });
+
+        document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+
+        async function search(query) {
+            if (aborter) aborter.abort();
+            const ctrl = new AbortController();
+            aborter = ctrl; // keep shared ref so next search can abort this one
+
+            list.innerHTML = '<div class="addr-ac-loading"><i class="bi bi-hourglass-split"></i> Recherche…</div>';
+            list.style.display = 'block';
+
+            const lang    = '{{ app.request.locale }},en;q=0.8';
+            const baseQS  = { format: 'json', countrycodes: 'ca', addressdetails: '1', limit: '7' };
+            const headers = { 'Accept-Language': lang };
+
+            try {
+                // Primary: free-text 'q=' — reliable for partial / short queries.
+                let resp = await fetch(
+                    'https://nominatim.openstreetmap.org/search?' +
+                        new URLSearchParams({ ...baseQS, q: query }),
+                    { signal: ctrl.signal, headers }
+                );
+                hits = await resp.json();
+
+                // Fallback: structured 'street=' — Nominatim splits the value into house
+                // number + street name, so it matches complete addresses (e.g. "1234 Rue
+                // Sainte-Catherine Ouest") that the free-text index often misses.
+                // Uses ctrl (not aborter) so a newer search can't invalidate our check.
+                if (!hits.length && !ctrl.signal.aborted) {
+                    resp = await fetch(
+                        'https://nominatim.openstreetmap.org/search?' +
+                            new URLSearchParams({ ...baseQS, street: query }),
+                        { signal: ctrl.signal, headers }
+                    );
+                    hits = await resp.json();
+                }
+
+                render(hits);
+            } catch (e) {
+                if (e.name !== 'AbortError') close();
+            }
+        }
+
+        function render(data) {
+            if (!data.length) { close(); return; }
+            let html = '';
+            data.forEach((r, i) => {
+                const a      = r.address || {};
+                const street = streetFrom(a, r.display_name);
+                const city   = cityFrom(a);
+                const prov   = PROVINCE_CODE[(a.state || '').toLowerCase()] || '';
+                const sub    = [city, prov, a.postcode].filter(Boolean).join(', ');
+                html += `<div class="addr-ac-item" data-i="${i}">
+                    <span class="addr-ac-main">${esc(street)}</span>
+                    ${sub ? `<span class="addr-ac-sub">${esc(sub)}</span>` : ''}
+                </div>`;
+            });
+            html += '<div class="addr-ac-credit">© OpenStreetMap contributors</div>';
+            list.innerHTML = html;
+            list.style.display = 'block';
+            list.querySelectorAll('.addr-ac-item').forEach(el => {
+                el.addEventListener('click', () => pick(hits[+el.dataset.i]));
+            });
+        }
+
+        function pick(r) {
+            if (!r) return;
+            const a      = r.address || {};
+            const street = streetFrom(a, r.display_name);
+            const city   = cityFrom(a);
+            const prov   = PROVINCE_CODE[(a.state || '').toLowerCase()] || '';
+            const postal = a.postcode || '';
+
+            input.value = street;
+
+            const set = (id, val) => {
+                if (!val) return;
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            };
+            set(fields.city,   city);
+            set(fields.postal, postal);
+
+            const sel = document.getElementById(fields.province);
+            if (sel && prov) sel.value = prov;
+
+            close();
+            if (typeof afterFill === 'function') afterFill();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initAutocomplete('shipping_address', {
+            city: 'shipping_city', postal: 'shipping_postal', province: 'shipping_province',
+        }, loadShippingRates);
+
+        initAutocomplete('billing_address', {
+            city: 'billing_city', postal: 'billing_postal', province: 'billing_province',
+        }, null);
+    });
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,130 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.address.new.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
+{% endblock %}
+
+{% block body %}
+<div style="background: #f4f6f9; min-height: calc(100vh - 4rem);">
+
+    {{ form_start(form, {'attr': {'id': 'address-form', 'novalidate': 'novalidate'}}) }}
+
+    {# Page header bar #}
+    <div style="background: white; border-bottom: 1px solid #d6dde6; padding: 0 32px;">
+        <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 64px;">
+            <div>
+                <p style="margin: 0 0 2px 0; font-size: 12px; color: #8a9ab5;">
+                    <a href="{{ path('app_profile_index') }}" style="color: #8a9ab5; text-decoration: none;">{{ 'profile.my_profile'|trans }}</a>
+                    &nbsp;/&nbsp;{{ 'profile.address.new.title'|trans }}
+                </p>
+                <h1 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: #1a2340; letter-spacing: -0.01em;">
+                    {{ 'profile.address.new.title'|trans }}
+                </h1>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ path('app_profile_index') }}" class="btn-action-secondary">
+                    <i class="bi bi-x-lg"></i> {{ 'profile.address.new.back_profile'|trans }}
+                </a>
+                <button type="submit" form="address-form" class="btn-action-primary">
+                    <i class="bi bi-check-lg"></i> {{ 'profile.address.new.save'|trans }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# Page content #}
+    <div style="max-width: 900px; margin: 28px auto; padding: 0 32px; display: flex; flex-direction: column; gap: 20px;">
+
+        {# Card — Contact & Address #}
+        <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+            <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+                <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'profile.address.info_title'|trans }}</h2>
+            </div>
+            <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 20px;">
+
+                {# First name / Last name #}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        {{ form_label(form.first_name, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                        {{ form_widget(form.first_name, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': 'Jean'}}) }}
+                        <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.first_name) }}</div>
+                    </div>
+                    <div>
+                        {{ form_label(form.last_name, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                        {{ form_widget(form.last_name, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': 'Dupont'}}) }}
+                        <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.last_name) }}</div>
+                    </div>
+                </div>
+
+                {# Street #}
+                <div>
+                    {{ form_label(form.street, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                    {{ form_widget(form.street, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': '123 rue Principale'}}) }}
+                    <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.street) }}</div>
+                </div>
+
+                {# City / Postal code #}
+                <div style="display: grid; grid-template-columns: 1fr 160px; gap: 20px;">
+                    <div>
+                        {{ form_label(form.city, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                        {{ form_widget(form.city, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': 'Montréal'}}) }}
+                        <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.city) }}</div>
+                    </div>
+                    <div>
+                        {{ form_label(form.postal_code, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                        {{ form_widget(form.postal_code, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': 'H1A 1A1'}}) }}
+                        <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.postal_code) }}</div>
+                    </div>
+                </div>
+
+                {# Phone #}
+                <div>
+                    {{ form_label(form.phone, null, {'label_attr': {'style': 'display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                    {{ form_widget(form.phone, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box;', 'placeholder': '+1 (514) 555-0100'}}) }}
+                    <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.phone) }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        {# Card — Settings #}
+        <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+            <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+                <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'profile.address.settings_title'|trans }}</h2>
+            </div>
+            <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+
+                {# Type #}
+                <div>
+                    {{ form_label(form.type, null, {'label_attr': {'style': 'display:block; margin-bottom:8px; font-size:13px; font-weight:600; color:#374155; text-transform:uppercase; letter-spacing:0.04em;'}}) }}
+                    {{ form_widget(form.type, {'attr': {'style': 'width:100%; padding:10px 14px; border:1px solid #d6dde6; border-radius:6px; font-size:15px; color:#1a2340; background:#f8fafc; box-sizing:border-box; cursor:pointer;'}}) }}
+                    <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ form_errors(form.type) }}</div>
+                </div>
+
+                {# Default checkbox #}
+                <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #f8fafc; border: 1px solid #d6dde6; border-radius: 6px;">
+                    {{ form_widget(form.is_default, {'attr': {'style': 'width:18px; height:18px; cursor:pointer; accent-color:#1a2340; flex-shrink:0;'}}) }}
+                    {{ form_label(form.is_default, null, {'label_attr': {'style': 'margin:0; font-size:14px; font-weight:500; color:#1a2340; cursor:pointer;'}}) }}
+                </div>
+
+            </div>
+        </div>
+
+        {# Bottom action bar #}
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 32px;">
+            <a href="{{ path('app_profile_index') }}" class="btn-action-secondary">
+                <i class="bi bi-x-lg"></i> {{ 'profile.address.new.back_profile'|trans }}
+            </a>
+            <button type="submit" form="address-form" class="btn-action-primary">
+                <i class="bi bi-check-lg"></i> {{ 'profile.address.new.save'|trans }}
+            </button>
+        </div>
+
+    </div>
+
+    {{ form_end(form) }}
+
+</div>
+{% endblock %}

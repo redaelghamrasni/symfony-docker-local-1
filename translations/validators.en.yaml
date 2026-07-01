@@ -1,0 +1,17 @@
+# translations/validators.en.yaml
+form:
+  email_required: "Please enter your email address."
+  email_invalid: "Please enter a valid email address."
+  username_required: "Username is required."
+  username_min: "Username must be at least {{ limit }} characters."
+  username_max: "Username cannot exceed {{ limit }} characters."
+  first_name_required: "First name is required."
+  last_name_required: "Last name is required."
+  password_required: "Please enter a password."
+  password_min: "Password must be at least {{ limit }} characters."
+  passwords_match: "The passwords do not match."
+  street_required: "Street address is required."
+  city_required: "City is required."
+  postal_code_required: "Postal code is required."
+  email_used: "This email address is already in use."
+  username_used: "This username is already taken."

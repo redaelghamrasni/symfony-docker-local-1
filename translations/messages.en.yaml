@@ -9,6 +9,8 @@ base:
   my_cart: My Cart
   cart: Cart
   cancel: Cancel
+  price_label: Price
+  back: Back
 
 # Navigation
 nav:
@@ -16,6 +18,11 @@ nav:
   articles: Articles
   about: About
   cart: Cart
+  welcome: "Welcome %name%"
+  my_profile: My Profile
+  my_orders: My Orders
+  admin: Admin
+  dashboard: Administration
 
 # Languages
 lang:
@@ -38,6 +45,9 @@ articles:
     this_week: This week
     total_views: Total views
     total_comments: Comments
+  load_more: Load more articles
+  filter:
+    all: All
   actions:
     view: View
     edit: Edit
@@ -49,11 +59,13 @@ articles:
 article_form:
   new_title: Create a new article
   edit_title: Edit article
+  price_label: Price
   title_label: Title
   title_placeholder: Enter a catchy title...
   content_label: Content
   content_placeholder: Write your article here...
   category_label: Category
+  category_placeholder: Select a category...
   categories:
     tech: Technology
     design: Design
@@ -74,6 +86,8 @@ article_show:
   created_at: Created on
   updated_at: Updated on
   article_id: Article
+  content: Content
+  danger_zone: Danger Zone
 
 # Flash Messages
 flash:
@@ -115,7 +129,7 @@ date:
   days_ago: "{count} days ago"
   just_now: Just now
   
-# Common buttons
+# Common buttons (kept for backwards compatibility)
 button:
   save: Save
   cancel: Cancel
@@ -127,9 +141,60 @@ button:
   confirm: Confirm
   close: Close
 
+# Common - shared across the whole app (use these to avoid duplication)
+common:
+  save: Save
+  save_changes: Save Changes
+  cancel: Cancel
+  delete: Delete
+  edit: Edit
+  create: Create
+  update: Update
+  view: View
+  back: Back
+  actions: Actions
+  status: Status
+  date: Date
+  price: Price
+  total: Total
+  quantity: Quantity
+  unit_price: Unit Price
+  subtotal: Subtotal
+  shipping: Shipping
+  tax: Tax
+  loading: "Loading..."
+  article: Article
+  articles: Articles
+  add_to_cart: Add to Cart
+  my_cart: My Cart
+  first_name: First Name
+  last_name: Last Name
+  email: Email
+  username: Username
+  phone: Phone
+  address: Address
+  city: City
+  postal_code: Postal Code
+  country: Country
+  shipping_address: Shipping Address
+  billing_address: Billing Address
+  status_pending: Pending
+  status_in_progress: In Progress
+  status_shipped: Shipped
+  status_completed: Completed
+  status_cancelled: Cancelled
+  roles: Roles
+  joined: Joined
+  last_updated: Last Updated
+  auto_fill_checkout: Auto-fill checkout information
+
 # Error messages
 error:
   404: Page not found
+  404_title: This page does not exist
+  404_description: "Sorry, the item you're looking for doesn't exist or has been removed."
+  back_home: Back Home
+  browse_products: Browse Products
   500: Server error
   not_found: The requested resource does not exist
   access_denied: Access denied
@@ -137,6 +202,10 @@ error:
 
 #Cart
 cart:
+  item_removed: "Item removed from cart"
+  cleared: "Cart cleared"
+  article: Article
+  articles: Articles
   title: Shopping Cart
   empty: Your cart is empty.
   continue_shopping: Continue Shopping
@@ -149,17 +218,100 @@ cart:
   checkout: Proceed to Checkout
   back_to_articles: Back to articles
   my_cart: My Cart
-  clear: Clear cart
+  no_items_added: You haven't added any items to your cart yet.
+  clear: Clear Cart
   clear_confirm: Are you sure you want to clear the cart?
   remove_item_confirm: Remove this item from the cart?
-  no_items_added: You haven't added any items to your cart yet.
-  article: Article
-  articles: Articles
+  added_article: "%name% has been added to the cart"
+  error_adding: "Error adding item to cart."
+  view_cart: View Cart
   unit_price: Unit Price
   quantity: Quantity
 
+# Authentication
+auth:
+  login:
+    title: Welcome back
+    subtitle: Access your customer account
+    email_hint: Once connected, save your shipping and billing addresses with just a few clicks.
+    security_hint: Your information is protected for fast and secure payment.
+    badge: Quick access
+    pill: Fast access
+    username_label: Username or email
+    password_label: Password
+    submit: Sign in
+    logout: Logout
+    forgot_password: Forgot your password?
+    register_link: Create an account
+    register_text: Don't have an account yet?
+  register:
+    badge: New user
+    title: Create an elegant and secure account
+    subtitle: Sign up to save your addresses, track your orders and pay faster on your next purchases.
+    pill: Simple and fast
+    addresses_hint: Add multiple shipping and billing addresses for a faster checkout.
+    security_hint: Your data is protected and treated securely.
+    email_label: Email address
+    username_label: Username
+    first_name_label: First name
+    last_name_label: Last name
+    password_label: Password
+    submit: Create account
+    login_link: Sign in
+    login_text: Already have an account?
+  forgot_password:
+    title: Recover your account
+    subtitle: Enter your email address and we will send you a link to reset your password.
+    email_label: Email address
+    submit: Send link
+    login_link: Back to login
+    info_message: If an account exists with this email address, a reset link will be sent.
+  reset_password:
+    title: New password
+    subtitle: Enter your new password below.
+    password_label: New password
+    password_confirm_label: Confirm password
+    submit: Reset password
+    login_link: Back to login
+    success_message: Your password has been reset. You can now sign in.
+    error_message: This reset link is invalid or expired.
+  messages:
+    success_register: Your account has been created. You can now sign in.
+    email_required: Please enter your email address
+    email_invalid: Please enter a valid email address
+    password_required: Please enter a password
+    password_min: Password must be at least 8 characters
+    passwords_match: Passwords must match
+    username_required: Username is required
+    username_min: Username must be at least 3 characters
+  processing: "Processing..."
+
 #Checkout
 checkout:
+  modal:
+    title: "How would you like to proceed?"
+    description: "You can checkout without an account, or log in to track your order and have your details pre-filled."
+    guest: "Continue as Guest"
+    login: "Log in / Register"
+  loading_payment: "Loading payment form…"
+  retry_attempt: "Attempt %current% of %total%"
+  error:
+    stripe_failed: "The Stripe library could not be loaded. Check your connection."
+    missing_key: "Stripe public key is missing."
+    incomplete_form: "The payment form is incomplete."
+    create_session: "Unable to create the payment session."
+    server_timeout: "The payment server is not responding. Try again in a few seconds."
+    connection: "Connection error to the payment server."
+    not_ready: "The payment form is not ready yet. Please wait."
+    load_failed: "The payment form could not be loaded. Please refresh the page."
+    invalid_form: "Invalid form. Please refresh the page."
+    save_info: "Unable to save your information."
+    timeout: "Request timed out. Check your connection and try again."
+    network: "Network error. Please try again."
+  success:
+    title: Payment Successful
+    message: "Thank you! Your payment has been processed and your cart has been cleared."
+    back: Back to Articles
   title: Payment
   information: Information
   contact_information: Contact Information
@@ -173,6 +325,7 @@ checkout:
   address: Address
   city: City
   postal_code: Postal Code
+  province: Province
   payment_note: Test mode only — no real charges will be made.
   confirm_order: Confirm order
   order_summary: Your order
@@ -183,3 +336,511 @@ checkout:
   back_to_cart: Back to Cart
   proceed_to_payment: Proceed to Payment
   total: Total
+  loading: Loading...
+  shipping_method: Shipping Method
+  pay_card: Pay by card
+  fill_shipping_info: Fill in the shipping address to see the rate.
+  shipping_rates_error: Error loading shipping rates.
+  shipping_rates_empty: No rates available for this address.
+  shipping_rates_loading: Loading rates...
+  shipping_rates_placeholder: Fill in the shipping address to see options.
+  subtotal: Subtotal
+  shipping: Shipping
+  grand_total: Total
+  shipping_free: Free
+  shipping_days: business day(s)
+
+# Admin Section
+admin:
+  nav:
+    panel: Admin Panel
+    dashboard: Dashboard
+    articles: Articles
+    users: Users
+    orders: Orders
+    categories: Categories
+    promotions: Promotions
+    settings: Settings
+    back_to_store: Back to Store
+  settings:
+    title: Settings
+    saved: Settings saved successfully.
+    csrf_error: Security token validation failed.
+    general_section: General Settings
+    free_threshold_hint: "Leave empty to disable automatic free shipping."
+    no_settings: No settings available.
+    save: Save Settings
+  dashboard:
+    breadcrumb: Dashboard
+    total_articles: Total Articles
+    total_users: Total Users
+    total_orders: Total Orders
+    recent_articles: Recent Articles
+    recent_users: Recent Users
+    no_articles: No articles yet
+    no_users: No users yet
+    create_article: Create Article
+  articles:
+    created: Article created successfully
+    updated: Article updated successfully
+    deleted: Article deleted successfully
+    form:
+      info_title: Article Information
+      content_title: Article Content
+      pricing_title: Pricing
+      base_price_label: Base Price
+      promotions_label: Applicable Promotions
+      promotions_hint: "Hold Ctrl / Cmd to select multiple promotions"
+      effective_price: Effective Price
+      new_article: New Article
+      create_btn: Create Article
+      image_title: Article Image
+      image_current: Current Image
+      image_no_image: No image
+      image_upload_label: Upload a new image
+      image_upload_hint: "JPEG, PNG, WebP or GIF · max 4 MB"
+      image_delete_label: Delete current image
+      image_delete_confirm: The image will be deleted on save
+    show:
+      title: Article Details
+      details: Information
+      sku: SKU
+      pricing: Pricing
+      base_price: Base Price
+      promotional_price: Promotional Price
+      savings: Savings
+      no_active_promotion: No active promotion
+      active_promotion: Active Promotion
+    index:
+      breadcrumb: Articles
+      title: Article Management
+      articles: articles
+      create_article: Create Article
+      col_title: Title
+      col_created: Created
+      col_price: Price
+      col_actions: Actions
+      view: View
+      edit: Edit
+      delete: Delete
+      confirm_delete: Are you sure you want to delete this article?
+      no_articles: No articles yet
+      no_articles_description: Start by creating your first article.
+      create_first_article: Create Article
+  users:
+    updated: User updated successfully
+    deleted: User deleted successfully
+    password_reset: Password has been reset
+    temp_password: A temporary password has been generated
+    csrf_error: Security token validation failed
+    cannot_delete_self: You cannot delete your own account
+    roles: Roles
+    email: Email Address
+    username: Username
+    first_name: First Name
+    last_name: Last Name
+    password: Password
+    confirm_password: Confirm Password
+    plainPassword:
+      first: New Password
+      second: Confirm New Password
+    index:
+      breadcrumb: Users
+      title: User Management
+      count: "%count% users"
+      col_name: Name
+      col_role: Role
+      col_joined: Joined
+      no_users: No users yet
+    show:
+      info_title: User Information
+      joined: Joined
+      last_updated: Last Updated
+      edit_user: Edit User
+      reset_password_title: Reset Password
+      reset_password_desc: "Send a temporary password to the user's email."
+      reset_password_btn: Reset Password
+      reset_confirm: "Reset password for %name%?"
+      delete_title: Delete User
+      delete_desc: Permanently delete this user account.
+      delete_btn: Delete User
+      delete_confirm: "Are you sure you want to delete this user? This action cannot be undone."
+      guest_order: Guest order
+      customer_label: Customer
+      items_title: Items
+    edit:
+      details_title: User Details
+      change_password: Change Password
+      password_hint: Leave empty to keep the current password.
+      update_btn: Update User
+  profile:
+    index:
+      title: Edit Profile
+      email: Email Address
+      username: Username
+      first_name: First Name
+      last_name: Last Name
+      auto_fill_checkout: Auto-fill checkout information
+      save_changes: Save Changes
+      back_to_profile: Back to profile
+      personal_info: Personal Information
+      addresses: Addresses
+      no_addresses: No addresses saved.
+      add_address: Add new address
+      shipping: Shipping Address
+      billing: Billing Address
+      activated: Activated
+      deactivated: Deactivated
+    edit:
+      title: Edit Profile
+      email: Email Address
+      username: Username
+      first_name: First Name
+      last_name: Last Name
+      auto_fill_checkout: Auto-fill checkout information
+      save_changes: Save Changes
+      back_to_profile: Back to profile
+      personal_info: Personal Information
+      addresses: Addresses
+      no_addresses: No addresses saved.
+      add_address: Add new address
+  orders:
+    status_updated: "Order status updated."
+    shipping_updated: "Shipping information updated."
+    payment_updated: "Payment information updated."
+    csrf_error: Security token validation failed
+    index:
+      title: Order Management
+      breadcrumb: Orders
+      status_all: All
+      col_customer: Customer
+      col_email: Email
+      col_items: Items
+      col_total: Total
+      col_status: Status
+      col_date: Date
+      col_actions: Actions
+      view: View
+      no_orders_found: No orders found
+      no_orders_yet: No orders yet.
+      no_orders_with_status: "No orders with status \"%status%\"."
+    show:
+      article: Article
+      articles: Articles
+      back_to_orders: Back to Orders
+      status: Status
+      update_status: Update Status
+      change_status: Change order status
+      status_pending: Pending
+      status_in_progress: In Progress
+      status_processing: Processing
+      status_shipped: Shipped
+      status_completed: Completed
+      status_cancelled: Cancelled
+      order_id: Order ID
+      order_summary: Order Summary
+      customer_info: Customer Information
+      customer_label: Customer
+      items_title: Items
+      guest_order: Guest order
+      order_show: Order informations
+      created: Created on
+      updated: Updated on
+      view_account: View customer profile
+      shipping_address: Shipping address
+      billing_address: Billing address
+      quantity: Quantity
+      unit_price: Unit price
+      subtotal: Subtotal
+      tab_order: Order
+      tab_payment: Payment
+      tab_shipping: Shipping
+      payment_title: Payment Details
+      payment_method: Payment method
+      payment_card: Credit / Debit Card
+      payment_paypal: PayPal
+      payment_link: Stripe Link
+      payment_unknown: Not available
+      payment_card_ending: "Card ending in"
+      payment_intent_id: Stripe Reference
+      payment_no_info: No payment information available
+      shipping_title: Shipping Information
+      shipping_status_label: Shipping Status
+      shipping_status_pending: Awaiting shipment
+      shipping_status_shipped: Shipped
+      shipping_status_in_transit: In transit
+      shipping_status_delivered: Delivered
+      shipping_status_failed: Delivery failed
+      shipping_date_label: Shipping Date
+      tracking_number_label: Tracking Number
+      shipping_save: Save
+      shipping_no_tracking: Not set
+      estimated_delivery_label: Estimated Delivery
+      shipping_label_label: Shipping Label
+      shipping_label_download: Download Label
+      carrier_label: Carrier
+      carrier_none: Select a carrier...
+      payment_edit_title: Edit Payment
+      payment_paypal_email: PayPal Email
+      payment_save: Save
+      page_title: "Order #%id%"
+  categories:
+    created: Category created successfully
+    updated: Category updated successfully
+    deleted: Category deleted successfully
+    index:
+      breadcrumb: Categories
+      title: Category Management
+      categories: categories
+      create_category: Create Category
+      col_name: Name
+      col_articles: Articles
+      no_categories: No categories yet
+      confirm_delete: Are you sure you want to delete this category?
+    form:
+      info_title: Category Information
+      new_category: New Category
+      create_btn: Create Category
+      name_label: Name
+      name_placeholder: Enter category name...
+  promotions:
+    created: Promotion created successfully
+    updated: Promotion updated successfully
+    deleted: Promotion deleted successfully
+    index:
+      breadcrumb: Promotions
+      title: Promotion Management
+      promotions: promotions
+      create_promotion: Create Promotion
+      col_name: Name
+      col_type: Type
+      col_value: Value
+      col_articles: Articles
+      no_promotions: No promotions yet
+      confirm_delete: Are you sure you want to delete this promotion?
+      status_active: Active
+      status_inactive: Inactive
+    type:
+      percent_off: "% Off"
+      amount_off: Amount Off
+      fixed_price: Fixed Price
+    form:
+      info_title: Promotion Information
+      new_promotion: New Promotion
+      create_btn: Create Promotion
+      name_label: Name
+      name_placeholder: Enter promotion name...
+      description_label: Description
+      description_placeholder: Optional description...
+      type_label: Type
+      value_label: "Value (% or $)"
+      starts_at_label: Starts At
+      ends_at_label: Ends At
+      is_active_label: Active
+      articles_label: Apply to Articles
+      articles_search: Search articles...
+      articles_selected_count: "%count% selected"
+      articles_select_all: Select all
+      articles_clear_all: Clear all
+
+
+# Profile Orders
+profile:
+  updated: "Profile updated successfully."
+  address_added: "Address added successfully."
+  order_added_to_cart: "Items added to cart."
+  my_profile: My Profile
+  logout: Logout
+  orders:
+    title: My Orders
+    view_all: View all orders
+    order: Order
+    status_pending: Pending
+    status_in_progress: In Progress
+    status_shipped: Shipped
+    status_completed: Completed
+    status_cancelled: Cancelled
+    date: Date
+    customer_name: Customer
+    shipping_address: Shipping address
+    total: Total
+    item: item
+    items: items
+    view_details: View details
+    no_orders: No orders yet
+    no_orders_description: You don't have any orders yet. Start shopping now.
+    start_shopping: Start shopping
+    back_profile: Back to profile
+  order_show:
+    title: Order details
+    back_orders: Back to orders
+    status: Status
+    items: Items
+    item_name: Item
+    quantity: Quantity
+    unit_price: Unit price
+    subtotal: Subtotal
+    shipping_address: Shipping address
+    billing_address: Billing address
+    order_info: Order information
+    order_id: Order ID
+    order_date: Order date
+    last_updated: Last updated
+    order_summary: Order summary
+    customer_contact: Customer contact
+    order_again: Order Again
+    shipping: Shipping
+    tax: Tax
+    total: Total
+  edit:
+    title: Edit Profile
+    email: Email Address
+    username: Username
+    first_name: First Name
+    last_name: Last Name
+    auto_fill_checkout: Auto-fill checkout information
+    save_changes: Save Changes
+    back_to_profile: Back to profile
+  address:
+    title: Add new address
+    edit_title: Edit address
+    info_title: Address Information
+    settings_title: Settings
+    type_label: Address type
+    types:
+      shipping: Shipping
+      billing: Billing
+    address_label: Address
+    city_label: City
+    postal_code_label: Postal code
+    save: Save address
+    back_profile: Back to profile
+    new:
+      title: New Address
+      save: Save Address
+      back_profile: Back to Profile
+  index:
+    title: My profile
+    email: Email address
+    username: Username
+    first_name: First name
+    last_name: Last name
+    auto_fill_checkout: Auto-fill checkout information
+    save_changes: Save changes
+    back_to_profile: Back to profile
+    edit_profile: Edit profile
+    add_address: Add new address
+    no_addresses: No addresses yet
+    personal_info: Personal information
+    addresses: Addresses
+    activated: Activated
+    deactivated: Deactivated
+    shipping: Shipping
+    billing: Billing
+
+# Address form
+address_form:
+  first_name_label: First Name
+  last_name_label: Last Name
+  street_label: Street Address
+  city_label: City
+  postal_code_label: Postal Code
+  phone_label: "Phone Number (Optional)"
+  type_label: Address Type
+  type_shipping: Shipping
+  type_billing: Billing
+  is_default_label: Set as default address
+
+# General forms
+form:
+  email: Email Address
+  username: Username
+  first_name: First Name
+  last_name: Last Name
+  password: Password
+  confirm_password: Confirm Password
+  new_password: New Password
+  confirm_new_password: Confirm New Password
+
+email:
+  order_confirmation:
+    title: "Thank you for your order"
+    greeting: "Hello %name%,"
+    message: "We have received your payment. Here is a summary of your order:"
+    order_number: "Order Number"
+    order_date: "Order Date"
+    order_status: "Status"
+    items_title: "Order Items"
+    product: "Product"
+    quantity: "Qty"
+    unit_price: "Unit Price"
+    subtotal: "Subtotal"
+    total: "Order Total"
+    shipping_address: "Shipping Address"
+    billing_address: "Billing Address"
+    payment: "Payment"
+    status_pending: "Pending"
+    status_in_progress: "In Progress"
+    status_shipped: "Shipped"
+    status_completed: "Completed"
+    questions: "If you have any questions, simply reply to this email."
+    goodbye: "Best regards,"
+    team: "The %app% Team"
+  password_reset:
+    title: "Reset your password"
+    greeting: "Hello %name%,"
+    message: "We received a request to reset the password for your account."
+    instruction: "Click the link below to reset your password:"
+    reset_btn: "Reset my password"
+    expiry: "This link will expire in 24 hours."
+    no_request: "If you did not request this reset, you can ignore this message. Your account is secure."
+    copy_url: "Or copy and paste the following URL into your browser:"
+    goodbye: "Best regards,"
+    team: "The %app% Team"
+
+#homepage
+home:
+  hero:
+    title: Welcome to Our Store
+    subtitle: Discover our latest products and offers
+    browse_products: Browse Products
+    sign_in: Sign In
+    featured_products: Featured Products
+    view_all_products: View All Products
+    shop_now: Shop Now
+    testimonials: Testimonials
+    customer_reviews: Customer Reviews
+    read_more: Read More
+  stats:
+    title: Why choose us?
+    quality: Quality products
+    fast_shipping: Fast shipping
+    secure_payment: Secure payment
+    customer_support: 24/7 customer support
+    products: Products
+    customers: Customers
+    orders: Orders
+  categories:
+    title: Shop by Category
+    subtitle: Explore our curated selection of products
+  featured:
+    title: Featured Products
+    subtitle: Check out our bestsellers and new arrivals
+    description: Check out our bestsellers and new arrivals
+    add_to_cart: Add to cart
+    view: View
+    view_all: View all products
+    no_products: "No products available"
+    come_back: "Check back soon!"
+  cta:
+    title: Ready to shop?
+    text: Explore our wide range of products and enjoy exclusive offers
+    cart: My Cart
+    join: Join now
+
+search:
+  title: Search
+  placeholder: Search for a product...
+  view_article: View article
+  view_all: See all results
+  no_results: "No results found for this search."

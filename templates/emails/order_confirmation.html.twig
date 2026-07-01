@@ -1,34 +1,98 @@
-<div style="font-family: Arial, sans-serif; color: #1f2937;">
-    <h1>Merci pour votre commande</h1>
-    <p>Bonjour {{ name }},</p>
-    <p>Nous avons bien reçu votre paiement. Voici le récapitulatif de votre commande :</p>
+<div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 600px; margin: 0 auto;">
 
-    <table style="width: 100%; border-collapse: collapse;">
+    <h1 style="color: #111827; margin-bottom: 4px;">{{ 'email.order_confirmation.title'|trans }}</h1>
+    <p>{{ 'email.order_confirmation.greeting'|trans({'%name%': order.customerFirstName}) }}</p>
+    <p>{{ 'email.order_confirmation.message'|trans }}</p>
+
+    {# Order summary header #}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+        <tr>
+            <td style="padding: 10px 16px; font-weight: bold; color: #6b7280; width: 40%;">{{ 'email.order_confirmation.order_number'|trans }}</td>
+            <td style="padding: 10px 16px;">#{{ order.id }}</td>
+        </tr>
+        <tr style="background: #f3f4f6;">
+            <td style="padding: 10px 16px; font-weight: bold; color: #6b7280;">{{ 'email.order_confirmation.order_date'|trans }}</td>
+            <td style="padding: 10px 16px;">{{ order.createdAt|date('F j, Y') }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 16px; font-weight: bold; color: #6b7280;">{{ 'email.order_confirmation.order_status'|trans }}</td>
+            <td style="padding: 10px 16px;">
+                <span style="display: inline-block; padding: 2px 10px; background: #dbeafe; color: #1d4ed8; border-radius: 12px; font-size: 13px; font-weight: bold;">
+                    {{ ('email.order_confirmation.status_' ~ order.status)|trans }}
+                </span>
+            </td>
+        </tr>
+    </table>
+
+    {# Items #}
+    <h2 style="font-size: 15px; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'email.order_confirmation.items_title'|trans }}</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
         <thead>
-            <tr style="text-align: left; border-bottom: 1px solid #d1d5db;">
-                <th style="padding: 8px 0;">Produit</th>
-                <th style="padding: 8px 0;">Quantité</th>
-                <th style="padding: 8px 0;">Sous-total</th>
+            <tr style="background: #f3f4f6; text-align: left; border-bottom: 2px solid #d1d5db;">
+                <th style="padding: 10px 8px;">{{ 'email.order_confirmation.product'|trans }}</th>
+                <th style="padding: 10px 8px; text-align: center;">{{ 'email.order_confirmation.quantity'|trans }}</th>
+                <th style="padding: 10px 8px; text-align: right;">{{ 'email.order_confirmation.unit_price'|trans }}</th>
+                <th style="padding: 10px 8px; text-align: right;">{{ 'email.order_confirmation.subtotal'|trans }}</th>
             </tr>
         </thead>
         <tbody>
-            {% for item in cart.items %}
+            {% for item in order.items %}
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 8px 0;">{{ item.article.title }}</td>
-                    <td style="padding: 8px 0;">{{ item.quantity }}</td>
-                    <td style="padding: 8px 0;">{{ item.subtotal|number_format(2, ',', ' ') }} $</td>
+                    <td style="padding: 10px 8px;">{{ item.article.title }}</td>
+                    <td style="padding: 10px 8px; text-align: center;">{{ item.quantity }}</td>
+                    <td style="padding: 10px 8px; text-align: right;">{{ item.unitPrice|number_format(2, ',', ' ') }} $</td>
+                    <td style="padding: 10px 8px; text-align: right;">{{ item.subtotal|number_format(2, ',', ' ') }} $</td>
                 </tr>
             {% endfor %}
         </tbody>
         <tfoot>
-            <tr>
-                <td colspan="2" style="padding: 12px 0; font-weight: bold;">Total</td>
-                <td style="padding: 12px 0; font-weight: bold;">{{ cart.total|number_format(2, ',', ' ') }} $</td>
+            <tr style="border-top: 2px solid #d1d5db;">
+                <td colspan="3" style="padding: 12px 8px; font-weight: bold; text-align: right;">{{ 'email.order_confirmation.total'|trans }}</td>
+                <td style="padding: 12px 8px; font-weight: bold; text-align: right;">{{ order.total|number_format(2, ',', ' ') }} $</td>
             </tr>
         </tfoot>
     </table>
 
-    <p>Si vous avez des questions, répondez simplement à cet e-mail.</p>
-    <p>Bonne journée,</p>
-    <p>L'équipe MonApp</p>
+    {# Addresses #}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 12px;">
+                <h3 style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">{{ 'email.order_confirmation.shipping_address'|trans }}</h3>
+                <p style="margin: 0; line-height: 1.7; color: #374151;">
+                    {{ order.customerFirstName }} {{ order.customerLastName }}<br>
+                    {{ order.shippingStreet }}<br>
+                    {{ order.shippingCity }}, {{ order.shippingPostalCode }}{% if order.shippingProvince %}, {{ order.shippingProvince }}{% endif %}
+                    {% if order.customerPhone %}<br>{{ order.customerPhone }}{% endif %}
+                </p>
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 12px; border-left: 1px solid #e5e7eb;">
+                <h3 style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">{{ 'email.order_confirmation.billing_address'|trans }}</h3>
+                <p style="margin: 0; line-height: 1.7; color: #374151;">
+                    {{ order.billingStreet }}<br>
+                    {{ order.billingCity }}, {{ order.billingPostalCode }}{% if order.billingProvince %}, {{ order.billingProvince }}{% endif %}
+                </p>
+            </td>
+        </tr>
+    </table>
+
+    {# Payment #}
+    {% if order.paymentMethod %}
+    <p style="color: #6b7280; font-size: 14px; margin-bottom: 24px;">
+        <strong style="color: #374151;">{{ 'email.order_confirmation.payment'|trans }}:</strong>
+        {% if order.paymentMethod == 'paypal' %}
+            PayPal{% if order.paymentBrand %} ({{ order.paymentBrand }}){% endif %}
+        {% elseif order.paymentBrand and order.paymentLast4 %}
+            {{ order.paymentBrand|capitalize }} •••• {{ order.paymentLast4 }}
+        {% else %}
+            {{ order.paymentMethod|capitalize }}
+        {% endif %}
+    </p>
+    {% endif %}
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+
+    <p>{{ 'email.order_confirmation.questions'|trans }}</p>
+    <p>{{ 'email.order_confirmation.goodbye'|trans }}</p>
+    <p>{{ 'email.order_confirmation.team'|trans({'%app%': 'nav.app_name'|trans}) }}</p>
+
 </div>

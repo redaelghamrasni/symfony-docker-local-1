@@ -1,0 +1,133 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'search.title'|trans }}{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="header">
+        <h1>{{ 'search.title'|trans }}</h1>
+    </div>
+
+    <div id="search-stats" style="margin-bottom: 20px; color: #64748b; font-size: 14px;"></div>
+    <div id="search-searchbox" style="margin-bottom: 24px;"></div>
+    <div id="search-hits" class="article-grid"></div>
+    <div id="search-pagination" style="margin-top: 32px; text-align: center;"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const locale = document.documentElement.lang || 'fr';
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQuery = urlParams.get('q') || '';
+
+    // Pré-remplit aussi la barre navbar
+    const navInput = document.querySelector('.search-autocomplete-input');
+    if (navInput && initialQuery) {
+        navInput.value = initialQuery;
+    }
+
+    const { searchClient } = instantMeiliSearch(
+        'http://localhost:7700',
+        'changeme_master_key_dev',
+    );
+
+    const search = instantsearch({
+        indexName: 'articles',
+        searchClient,
+        initialUiState: {
+            articles: { query: initialQuery }
+        },
+        routing: {
+            stateMapping: {
+                stateToRoute(uiState) {
+                    return { q: uiState.articles?.query || '' };
+                },
+                routeToState(routeState) {
+                    return { articles: { query: routeState.q || '' } };
+                },
+            },
+        },
+    });
+
+    search.addWidgets([
+        instantsearch.widgets.searchBox({
+            container: '#search-searchbox',
+            placeholder: locale === 'fr' ? 'Rechercher un article...' : 'Search for an article...',
+            showReset: true,
+            showSubmit: true,
+        }),
+
+        instantsearch.widgets.stats({
+            container: '#search-stats',
+            templates: {
+                text(data) {
+                    if (data.nbHits === 0) {
+                        return locale === 'fr'
+                            ? `Aucun résultat pour "${data.query}"`
+                            : `No results for "${data.query}"`;
+                    }
+                    return locale === 'fr'
+                        ? `${data.nbHits} résultat(s) en ${data.processingTimeMS}ms`
+                        : `${data.nbHits} result(s) in ${data.processingTimeMS}ms`;
+                },
+            },
+        }),
+
+        instantsearch.widgets.hits({
+            container: '#search-hits',
+            templates: {
+                item(hit, { html, components }) {
+                    return html`
+                        <div class="article-card search-hit-card-full">
+                            <a
+                                href="/${locale}/article/${hit.id}"
+                                class="search-hit-img-link"
+                                style="${hit.imageUrl ? '' : 'display:none'}"
+                            >
+                                <img src="${hit.imageUrl || ''}" alt="${hit.title}" class="search-hit-img" />
+                            </a>
+                            <div class="article-header">
+                                <h2 class="article-title">
+                                    ${components.Highlight({ hit, attribute: 'title' })}
+                                </h2>
+                                <span class="article-id">#${hit.id}</span>
+                            </div>
+                            <p class="article-content">
+                                ${components.Highlight({ hit, attribute: 'content' })}
+                            </p>
+                            <div class="article-price">
+                                ${parseFloat(hit.price).toFixed(2)} $
+                            </div>
+                            <div class="article-footer">
+                                <div></div>
+                                <div class="article-actions">
+                                    <a href="/${locale}/article/${hit.id}" class="action-link view">
+                                        ${locale === 'fr' ? 'Voir' : 'View'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                },
+                empty(results, { html }) {
+                    return html`
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔍</div>
+                            <h2>${locale === 'fr' ? 'Aucun résultat' : 'No results'}</h2>
+                            <p>${locale === 'fr' ? 'Essayez un autre mot-clé.' : 'Try another keyword.'}</p>
+                        </div>
+                    `;
+                },
+            },
+        }),
+
+        instantsearch.widgets.pagination({
+            container: '#search-pagination',
+            padding: 2,
+        }),
+    ]);
+
+    search.start();
+});
+</script>
+{% endblock %}

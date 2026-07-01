@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Listen for Xdebug",
+            "type": "php",
+            "request": "launch",
+            "port": 9003,
+            "pathMappings": {
+                "/home/reda-ubuntu/my-symfony-project-1": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Launch current file",
+            "type": "php",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
+            "port": 9003
+        }
+    ]
+}

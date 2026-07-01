@@ -1,0 +1,46 @@
+{% for article in articles %}
+<div class="product-card">
+    <a href="{{ path('app_article_show', {id: article.id}) }}" class="product-img-link">
+        <div class="product-img-wrap">
+            {% if article.imageUrl %}
+                <img src="{{ article.imageUrl }}" alt="{{ article.getTranslatedTitle(app.request.locale) }}" loading="lazy">
+            {% else %}
+                <div class="product-img-placeholder"><i class="bi bi-box-seam"></i></div>
+            {% endif %}
+            {% if article.category %}
+                <span class="product-cat-badge">{{ article.category.getTranslatedName(app.request.locale) }}</span>
+            {% endif %}
+            {% if article.hasActivePromotion %}
+                {% set promo = article.activePromotion %}
+                <span class="product-promo-badge">
+                    {% if promo.type == 'percent_off' %}-{{ promo.value|number_format(0) }}%
+                    {% else %}Promo{% endif %}
+                </span>
+            {% endif %}
+        </div>
+    </a>
+    <div class="product-body">
+        <h3 class="product-title">
+            <a href="{{ path('app_article_show', {id: article.id}) }}">{{ article.getTranslatedTitle(app.request.locale) }}</a>
+        </h3>
+        <div class="product-price">
+            {% if article.hasActivePromotion %}
+                <span class="product-price-current sale">{{ article.effectivePrice|number_format(2, ',', ' ') }} $</span>
+                <span class="product-price-original">{{ article.price|number_format(2, ',', ' ') }} $</span>
+            {% else %}
+                <span class="product-price-current">{{ article.price|number_format(2, ',', ' ') }} $</span>
+            {% endif %}
+        </div>
+        <div class="product-actions">
+            <form class="form-add-to-cart" data-url="{{ path('app_cart_add', {id: article.id}) }}" style="flex: 1; display: flex;">
+                <button type="submit" class="product-btn-cart btn-action-primary">
+                    <i class="bi bi-cart-plus"></i> {{ 'articles.actions.add_to_cart'|trans }}
+                </button>
+            </form>
+            <a href="{{ path('app_article_show', {id: article.id}) }}" class="product-btn-view btn-action-secondary">
+                {{ 'articles.actions.view'|trans }}
+            </a>
+        </div>
+    </div>
+</div>
+{% endfor %}

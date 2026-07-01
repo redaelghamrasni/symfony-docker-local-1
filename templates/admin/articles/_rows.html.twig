@@ -1,0 +1,47 @@
+{% for article in articles %}
+<tr style="border-bottom: 1px solid #e2e8f0;">
+    <td style="padding: 16px; color: #0f172a;">
+        <a href="{{ path('admin_articles_show', {id: article.id}) }}" style="text-decoration: none; color: inherit;">
+            <strong>{{ article.title }}</strong>
+        </a>
+        {% if article.sku %}
+            <br><span style="font-family: monospace; font-size: 11px; color: #8a9ab5; background: #f1f5f9; padding: 1px 6px; border-radius: 3px; border: 1px solid #e2e8f0;">{{ article.sku }}</span>
+        {% endif %}
+        <br><span style="font-size: 12px; color: #64748b;">{{ article.content|slice(0, 50) }}...</span>
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {% if article.category %}
+            <span style="padding: 3px 10px; border-radius: 999px; background: #ede9fe; color: #6d28d9; font-size: 12px; font-weight: 600;">
+                {{ article.category.name }}
+            </span>
+        {% else %}
+            <span style="color: #cbd5e1; font-size: 12px;">—</span>
+        {% endif %}
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {{ article.createdAt|date('Y-m-d') }}
+    </td>
+    <td style="padding: 16px; font-size: 14px;">
+        {% if article.hasActivePromotion %}
+            <span style="color: #ef4444; font-weight: 600;">{{ article.effectivePrice|number_format(2, '.', ',') }}</span>
+            <span style="color: #94a3b8; text-decoration: line-through; font-size: 12px; margin-left: 4px;">{{ article.price|number_format(2, '.', ',') }}</span>
+        {% else %}
+            <span style="color: #64748b;">{{ article.price|number_format(2, '.', ',') }} CAD</span>
+        {% endif %}
+    </td>
+    <td style="padding: 16px; text-align: right; white-space: nowrap;">
+        <a href="{{ path('admin_articles_show', {id: article.id}) }}" style="color: #64748b; text-decoration: none; margin-right: 10px;">
+            <i class="bi bi-eye"></i> {{ 'admin.articles.index.view'|trans }}
+        </a>
+        <a href="{{ path('admin_articles_edit', {id: article.id}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 10px;">
+            <i class="bi bi-pencil"></i> {{ 'admin.articles.index.edit'|trans }}
+        </a>
+        <form action="{{ path('admin_articles_delete', {id: article.id}) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ 'admin.articles.index.confirm_delete'|trans|e('js') }}');">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
+            <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                <i class="bi bi-trash"></i> {{ 'admin.articles.index.delete'|trans }}
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}

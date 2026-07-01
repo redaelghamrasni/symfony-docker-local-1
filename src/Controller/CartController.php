@@ -8,6 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route('/cart')]
 class CartController extends AbstractController
@@ -33,18 +34,27 @@ class CartController extends AbstractController
      * Ajouter un article au panier
      */
     #[Route('/add/{id}', name: 'app_cart_add', methods: ['POST'])]
-    public function add(Article $article, Request $request): Response
+    public function add(Article $article, Request $request, TranslatorInterface $translator): Response
     {
         $quantity = $request->request->getInt('quantity', 1);
-        
         $this->cartService->addArticle($article, $quantity);
 
-        $this->addFlash('success', sprintf(
-            '%s a été ajouté au panier',
-            $article->getName()
-        ));
+        if ($request->isXmlHttpRequest() || $request->headers->get('X-Requested-With') === 'XMLHttpRequest') {
+            $cart = $this->cartService->getCurrentCart();
+            return $this->json([
+                'success' => true,
+                'message' => $translator->trans('cart.added_article', [
+                    '%name%' => $article->getName()
+                ]),
+                'itemCount' => $cart->getItems()->count(),
+                'imageUrl' => $article->getImageUrl(),
+            ]);
+        }
 
-        // Rediriger vers la page d'origine ou le panier
+        $this->addFlash('success', $translator->trans('cart.added_article', [
+            '%name%' => $article->getName()
+        ]));
+
         $referer = $request->headers->get('referer');
         if ($referer) {
             return $this->redirect($referer);
@@ -61,7 +71,7 @@ class CartController extends AbstractController
     {
         $this->cartService->removeItem($id);
 
-        $this->addFlash('success', 'Article retiré du panier');
+        $this->addFlash('success', 'cart.item_removed');
 
         return $this->redirectToRoute('app_cart_index');
     }
@@ -106,7 +116,7 @@ class CartController extends AbstractController
     {
         $this->cartService->clear();
 
-        $this->addFlash('success', 'Panier vidé');
+        $this->addFlash('success', 'cart.cleared');
 
         return $this->redirectToRoute('app_cart_index');
     }

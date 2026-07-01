@@ -9,6 +9,8 @@ base:
   my_cart: Mon panier
   cart: Panier
   cancel: Annuler
+  price_label: Prix
+  back: Retour
 
 # Navigation
 nav:
@@ -16,6 +18,11 @@ nav:
   articles: Articles
   about: À propos
   cart: Panier
+  welcome: "Bienvenue %name%"
+  my_profile: Mon profil
+  my_orders: Mes commandes
+  admin: Admin
+  dashboard: Administration
 
 # Langues
 lang:
@@ -26,6 +33,8 @@ lang:
 
 # Page Articles - Liste
 articles:
+  article: Article
+  articles: Articles
   title: Mes Articles
   subtitle: Gérez et consultez tous vos articles
   create_article: Créer un article
@@ -38,6 +47,9 @@ articles:
     this_week: Cette semaine
     total_views: Vues totales
     total_comments: Commentaires
+  load_more: Afficher plus d'articles
+  filter:
+    all: Tous les articles
   actions:
     view: Voir
     edit: Modifier
@@ -49,11 +61,13 @@ articles:
 article_form:
   new_title: Créer un nouvel article
   edit_title: Modifier l'article
+  price_label: Prix
   title_label: Titre
   title_placeholder: Entrez un titre accrocheur...
   content_label: Contenu
   content_placeholder: Rédigez votre article ici...
   category_label: Catégorie
+  category_placeholder: Sélectionner une catégorie...
   categories:
     tech: Technologie
     design: Design
@@ -74,6 +88,8 @@ article_show:
   created_at: Créé le
   updated_at: Modifié le
   article_id: Article
+  content: Contenu
+  danger_zone: Zone dangereuse
 
 # Messages Flash
 flash:
@@ -115,7 +131,7 @@ date:
   days_ago: "Il y a {count} jours"
   just_now: À l'instant
   
-# Boutons communs
+# Boutons communs (conservé pour rétrocompatibilité)
 button:
   save: Enregistrer
   cancel: Annuler
@@ -127,9 +143,60 @@ button:
   confirm: Confirmer
   close: Fermer
 
+# Commun - partagé dans toute l'app (utiliser ces clés pour éviter les doublons)
+common:
+  save: Enregistrer
+  save_changes: Enregistrer les modifications
+  cancel: Annuler
+  delete: Supprimer
+  edit: Modifier
+  create: Créer
+  update: Mettre à jour
+  view: Voir
+  back: Retour
+  actions: Actions
+  status: Statut
+  date: Date
+  price: Prix
+  total: Total
+  quantity: Quantité
+  unit_price: Prix unitaire
+  subtotal: Sous-total
+  shipping: Livraison
+  tax: Taxe
+  loading: "Chargement..."
+  article: Article
+  articles: Articles
+  add_to_cart: Ajouter au panier
+  my_cart: Mon panier
+  first_name: Prénom
+  last_name: Nom
+  email: Adresse courriel
+  username: Nom d'utilisateur
+  phone: Téléphone
+  address: Adresse
+  city: Ville
+  postal_code: Code postal
+  country: Pays
+  shipping_address: Adresse de livraison
+  billing_address: Adresse de facturation
+  status_pending: En attente
+  status_in_progress: En cours
+  status_shipped: Expédiée
+  status_completed: Terminée
+  status_cancelled: Annulée
+  roles: Rôles
+  joined: Inscrit
+  last_updated: Dernière mise à jour
+  auto_fill_checkout: Remplissage automatique lors du paiement
+
 # Messages d'erreur
 error:
   404: Page non trouvée
+  404_title: Cette page n'existe pas
+  404_description: "Désolé, l'élément que vous recherchez n'existe pas ou a été supprimé."
+  back_home: Retour à l'accueil
+  browse_products: Parcourir les produits
   500: Erreur serveur
   not_found: La ressource demandée n'existe pas
   access_denied: Accès refusé
@@ -137,11 +204,16 @@ error:
 
 #Cart
 cart:
+  item_removed: "Article retiré du panier"
+  cleared: "Panier vidé"
+  article: Article
+  articles: Articles
   title: Mon panier
   empty: Votre panier est vide.
   continue_shopping: Continuer de magasiner
   update_cart: Mettre à jour le panier
   remove_item: Supprimer l'article
+  remove_item_confirm: Retirer cet article du panier ?
   subtotal: Sous-total
   shipping: Livraison
   tax: Taxe
@@ -149,17 +221,100 @@ cart:
   checkout: Aller au paiement
   back_to_articles: Retour aux articles
   my_cart: Mon panier
-  clear: Vider le panier.
-  clear_confirm: Êtes-vous sûr de vouloir vider le panier ?
-  remove_item_confirm: Retirer cet article du panier ?
   no_items_added: Vous n'avez pas encore ajouté d'articles à votre panier.
-  article: Article
-  articles: Articles
+  clear: Vider le panier
+  clear_confirm: Êtes-vous sûr de vouloir vider le panier ?
+  added_article: "%name% a été ajouté au panier"
+  error_adding: "Erreur lors de l'ajout au panier."
+  view_cart: Voir le panier
   unit_price: Prix unitaire
   quantity: Quantité
 
+# Authentification
+auth:
+  login:
+    title: Bienvenue
+    subtitle: Accédez à votre espace client
+    email_hint: Une fois connecté, ajoutez et gérez vos adresses en quelques clics.
+    security_hint: Vos informations sont protégées pour un paiement rapide et sécurisé.
+    badge: Connexion rapide
+    pill: Accès rapide
+    username_label: Nom d'utilisateur ou email
+    password_label: Mot de passe
+    submit: Se connecter
+    logout: Déconnexion
+    forgot_password: Mot de passe oublié ?
+    register_link: Créer un compte
+    register_text: Pas encore de compte ?
+  register:
+    badge: Nouvel utilisateur
+    title: Créez un compte élégant et sécurisé
+    subtitle: Inscrivez-vous pour sauvegarder vos adresses, suivre vos commandes et payer plus rapidement lors de vos prochains achats.
+    pill: Simple et rapide
+    addresses_hint: Ajoutez plusieurs adresses de livraison et facturation pour un checkout plus rapide.
+    security_hint: Vos données sont protégées et traitées de manière sécurisée.
+    email_label: Adresse email
+    username_label: Nom d'utilisateur
+    first_name_label: Prénom
+    last_name_label: Nom
+    password_label: Mot de passe
+    submit: Créer un compte
+    login_link: Se connecter
+    login_text: Vous avez déjà un compte ?
+  forgot_password:
+    title: Récupérer votre compte
+    subtitle: Entrez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+    email_label: Adresse e-mail
+    submit: Envoyer le lien
+    login_link: Retourner à la connexion
+    info_message: Si un compte existe avec cette adresse e-mail, un lien de réinitialisation sera envoyé.
+  reset_password:
+    title: Nouveau mot de passe
+    subtitle: Entrez votre nouveau mot de passe ci-dessous.
+    password_label: Nouveau mot de passe
+    password_confirm_label: Confirmer le mot de passe
+    submit: Réinitialiser le mot de passe
+    login_link: Retourner à la connexion
+    success_message: Votre mot de passe a été réinitialisé. Vous pouvez maintenant vous connecter.
+    error_message: Ce lien de réinitialisation est invalide ou expiré.
+  messages:
+    success_register: Votre compte a été créé. Vous pouvez maintenant vous connecter.
+    email_required: Veuillez entrer votre adresse e-mail
+    email_invalid: Veuillez entrer une adresse e-mail valide
+    password_required: Veuillez entrer un mot de passe
+    password_min: Le mot de passe doit contenir au moins 8 caractères
+    passwords_match: Les mots de passe doivent correspondre
+    username_required: Le nom d'utilisateur est obligatoire
+    username_min: Le nom d'utilisateur doit contenir au moins 3 caractères
+  processing: "Traitement en cours..."
+
+
 #Checkout
 checkout:
+  modal:
+    title: "Comment souhaitez-vous procéder ?"
+    description: "Vous pouvez passer commande sans compte, ou vous connecter pour suivre votre commande et avoir vos informations pré-remplies."
+    guest: "Continuer en tant qu'invité"
+    login: "Se connecter / S'inscrire"
+  loading_payment: "Chargement du formulaire de paiement…"
+  retry_attempt: "Tentative %current% sur %total%"
+  error:
+    stripe_failed: "La bibliothèque Stripe n'a pas pu être chargée. Vérifiez votre connexion."
+    missing_key: "Clé publique Stripe manquante."
+    incomplete_form: "Le formulaire de paiement est incomplet."
+    create_session: "Impossible de créer la session de paiement."
+    server_timeout: "Le serveur de paiement ne répond pas. Réessayez dans quelques secondes."
+    connection: "Erreur de connexion au serveur de paiement."
+    not_ready: "Le formulaire de paiement n'est pas encore prêt. Veuillez patienter."
+    load_failed: "Le formulaire de paiement n'a pas pu se charger. Veuillez rafraîchir la page."
+    invalid_form: "Formulaire invalide. Veuillez rafraîchir la page."
+    save_info: "Impossible d'enregistrer vos informations."
+    timeout: "Délai dépassé. Vérifiez votre connexion et réessayez."
+    network: "Erreur réseau. Veuillez réessayer."
+  success:
+    title: Paiement réussi
+    message: "Merci ! Votre paiement a été traité et votre panier a été vidé."
+    back: Retour aux articles
   title: Paiement
   information: Informations
   contact_information: Coordonnées
@@ -173,6 +328,7 @@ checkout:
   address: Adresse
   city: Ville
   postal_code: Code postal
+  province: Province
   payment_note: Mode test uniquement — aucun vrai paiement ne sera effectué.
   confirm_order: Confirmer la commande
   order_summary: Votre commande
@@ -183,3 +339,503 @@ checkout:
   back_to_cart: Retour au panier
   proceed_to_payment: Procéder au paiement
   total: Total
+  loading: Chargement...
+  shipping_method: Méthode de livraison
+  pay_card: Payer par carte
+  fill_shipping_info: Remplissez l'adresse de livraison pour voir le tarif.
+  shipping_rates_error: Erreur lors du chargement des tarifs.
+  shipping_rates_empty: Aucun tarif disponible pour cette adresse.
+  shipping_rates_loading: Chargement des tarifs...
+  shipping_rates_placeholder: Remplissez l'adresse de livraison pour voir les options.
+  subtotal: Sous-total
+  shipping: Livraison
+  grand_total: Total
+  shipping_free: Gratuit
+  shipping_days: jour(s) ouvrable(s)
+
+# Section Admin
+admin:
+  nav:
+    panel: Panneau Admin
+    dashboard: Tableau de bord
+    articles: Articles
+    users: Utilisateurs
+    orders: Commandes
+    categories: Catégories
+    promotions: Promotions
+    settings: Paramètres
+    back_to_store: Retour à la boutique
+  dashboard:
+    breadcrumb: Tableau de bord
+    total_articles: Total des articles
+    total_users: Total des utilisateurs
+    recent_articles: Articles récents
+    recent_users: Utilisateurs récents
+    total_orders: Total des commandes
+    no_articles: Aucun article pour le moment
+    no_users: Aucun utilisateur pour le moment
+    create_article: Créer un article
+  articles:
+    created: Article créé avec succès
+    updated: Article mis à jour avec succès
+    deleted: Article supprimé avec succès
+    form:
+      info_title: Informations sur l'article
+      content_title: Contenu de l'article
+      pricing_title: Tarification
+      base_price_label: Prix de base
+      promotions_label: Promotions applicables
+      promotions_hint: "Maintenez Ctrl / Cmd pour sélectionner plusieurs promotions"
+      effective_price: Prix effectif
+      new_article: Nouvel article
+      create_btn: Créer l'article
+      image_title: Image de l'article
+      image_current: Image actuelle
+      image_no_image: Aucune image
+      image_upload_label: Télécharger une nouvelle image
+      image_upload_hint: "JPEG, PNG, WebP ou GIF · max. 4 Mo"
+      image_delete_label: Supprimer l'image actuelle
+      image_delete_confirm: L'image sera supprimée lors de l'enregistrement
+    show:
+      title: Détails de l'article
+      details: Informations
+      sku: SKU
+      pricing: Tarification
+      base_price: Prix de base
+      promotional_price: Prix promotionnel
+      savings: Économie
+      no_active_promotion: Aucune promotion active
+      active_promotion: Promotion active
+    index:
+      breadcrumb: Articles
+      title: Gestion des articles
+      articles: articles
+      create_article: Créer un article
+      col_title: Titre
+      col_created: Créé
+      col_price: Prix
+      col_actions: Actions
+      view: Voir
+      edit: Modifier
+      delete: Supprimer
+      confirm_delete: Êtes-vous sûr de vouloir supprimer cet article ?
+      no_articles: Aucun article pour le moment
+      no_articles_description: Commencez par créer votre premier article.
+      create_first_article: Créer un article
+  users:
+    updated: Utilisateur mis à jour avec succès
+    deleted: Utilisateur supprimé avec succès
+    password_reset: Le mot de passe a été réinitialisé
+    temp_password: Un mot de passe temporaire a été généré
+    csrf_error: La validation du jeton de sécurité a échoué
+    cannot_delete_self: Vous ne pouvez pas supprimer votre propre compte
+    roles: Rôles
+    email: Adresse email
+    username: Nom d'utilisateur
+    first_name: Prénom
+    last_name: Nom
+    password: Mot de passe
+    confirm_password: Confirmer le mot de passe
+    plainPassword:
+      first: Nouveau mot de passe
+      second: Confirmer le nouveau mot de passe
+    index:
+      breadcrumb: Utilisateurs
+      title: Gestion des utilisateurs
+      count: "%count% utilisateurs"
+      col_name: Nom
+      col_role: Rôle
+      col_joined: Inscrit
+      no_users: Aucun utilisateur pour le moment
+    show:
+      info_title: Informations utilisateur
+      joined: Inscrit
+      last_updated: Dernière mise à jour
+      edit_user: Modifier l'utilisateur
+      reset_password_title: Réinitialiser le mot de passe
+      reset_password_desc: "Envoyer un mot de passe temporaire à l'email de l'utilisateur."
+      reset_password_btn: Réinitialiser le mot de passe
+      reset_confirm: "Réinitialiser le mot de passe de %name% ?"
+      delete_title: Supprimer l'utilisateur
+      delete_desc: Supprimer définitivement ce compte utilisateur.
+      delete_btn: Supprimer l'utilisateur
+      delete_confirm: "Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
+      guest_order: Commande invité
+      customer_label: Client
+      items_title: Articles
+    edit:
+      details_title: Détails de l'utilisateur
+      change_password: Changer le mot de passe
+      password_hint: Laissez vide pour conserver le mot de passe actuel.
+      update_btn: Mettre à jour l'utilisateur
+  profile:
+    index:
+      title: Modifier le profil
+      email: Adresse email
+      username: Nom d'utilisateur
+      first_name: Prénom
+      last_name: Nom
+      auto_fill_checkout: Remplissage automatique lors du paiement
+      save_changes: Enregistrer les modifications
+      back_to_profile: Retour au profil
+      personal_info: Informations personnelles
+      addresses: Adresses
+      no_addresses: Aucune adresse enregistrée.
+      add_address: Ajouter une adresse
+      shipping: Adresse de livraison
+      billing: Adresse de facturation
+      activated: Activé
+      deactivated: Désactivé
+    edit:
+      title: Modifier le profil
+      email: Adresse email
+      username: Nom d'utilisateur
+      first_name: Prénom
+      last_name: Nom
+      auto_fill_checkout: Remplissage automatique lors du paiement
+      save_changes: Enregistrer les modifications
+      back_to_profile: Retour au profil
+      personal_info: Informations personnelles
+      addresses: Adresses
+      no_addresses: Aucune adresse enregistrée.
+      add_address: Ajouter une adresse
+  orders:
+    status_updated: "Statut de la commande mis à jour."
+    shipping_updated: "Informations de livraison mises à jour."
+    payment_updated: "Informations de paiement mises à jour."
+    csrf_error: Erreur de validation du jeton de sécurité
+    index:
+      title: Gestion des commandes
+      breadcrumb: Commandes
+      status_all: Toutes
+      col_customer: Client
+      col_email: Courriel
+      col_items: Articles
+      col_total: Total
+      col_status: Statut
+      col_date: Date
+      col_actions: Actions
+      view: Voir
+      no_orders_found: Aucune commande trouvée
+      no_orders_yet: Aucune commande pour le moment.
+      no_orders_with_status: "Aucune commande avec le statut « %status% »."
+    show:
+      article: Article
+      articles: Articles
+      back_to_orders: Retour aux commandes
+      status: Statut
+      update_status: Mettre à jour le statut
+      change_status: Changer le statut de la commande
+      status_pending: En attente
+      status_in_progress: En cours
+      status_processing: En traitement
+      status_shipped: Expédiée
+      status_completed: Terminée
+      status_cancelled: Annulée
+      order_id: Référence de commande
+      order_summary: Récapitulatif de la commande
+      customer_info: Informations sur le client
+      customer_label: Client
+      items_title: Articles
+      guest_order: Commande invité
+      order_show: Informations sur la commande
+      created: Créé le
+      updated: Mis à jour le
+      view_account: Voir le profil client
+      shipping_address: Adresse de livraison
+      billing_address: Adresse de facturation
+      quantity: Quantité
+      unit_price: Prix unitaire
+      subtotal: Sous-total
+      tab_order: Commande
+      tab_payment: Paiement
+      tab_shipping: Livraison
+      payment_title: Détails du paiement
+      payment_method: Mode de paiement
+      payment_card: Carte bancaire
+      payment_paypal: PayPal
+      payment_link: Stripe Link
+      payment_unknown: Non renseigné
+      payment_card_ending: "Carte se terminant par"
+      payment_intent_id: Référence Stripe
+      payment_no_info: Aucune information de paiement disponible
+      shipping_title: Informations de livraison
+      shipping_status_label: Statut d'expédition
+      shipping_status_pending: En attente d'expédition
+      shipping_status_shipped: Expédié
+      shipping_status_in_transit: En transit
+      shipping_status_delivered: Livré
+      shipping_status_failed: Échec de livraison
+      shipping_date_label: Date d'expédition
+      tracking_number_label: "Numéro de suivi"
+      shipping_save: Enregistrer
+      shipping_no_tracking: Non renseigné
+      estimated_delivery_label: Livraison estimée
+      shipping_label_label: Étiquette d'expédition
+      shipping_label_download: Télécharger l'étiquette
+      carrier_label: Transporteur
+      carrier_none: Sélectionner un transporteur...
+      payment_edit_title: Modifier le paiement
+      payment_paypal_email: Courriel PayPal
+      payment_save: Enregistrer
+      page_title: "Commande #%id%"
+  categories:
+    created: Catégorie créée avec succès
+    updated: Catégorie mise à jour avec succès
+    deleted: Catégorie supprimée avec succès
+    index:
+      breadcrumb: Catégories
+      title: Gestion des catégories
+      categories: catégories
+      create_category: Créer une catégorie
+      col_name: Nom
+      col_articles: Articles
+      no_categories: Aucune catégorie pour le moment
+      confirm_delete: Êtes-vous sûr de vouloir supprimer cette catégorie ?
+    form:
+      info_title: Informations sur la catégorie
+      new_category: Nouvelle catégorie
+      create_btn: Créer la catégorie
+      name_label: Nom
+      name_placeholder: Entrez le nom de la catégorie...
+  settings:
+    title: Paramètres
+    saved: Paramètres enregistrés avec succès.
+    csrf_error: Erreur de validation du jeton de sécurité.
+    general_section: Paramètres généraux
+    free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    no_settings: Aucun paramètre disponible.
+    save: Enregistrer les paramètres
+  promotions:
+    created: Promotion créée avec succès
+    updated: Promotion mise à jour avec succès
+    deleted: Promotion supprimée avec succès
+    index:
+      breadcrumb: Promotions
+      title: Gestion des promotions
+      promotions: promotions
+      create_promotion: Créer une promotion
+      col_name: Nom
+      col_type: Type
+      col_value: Valeur
+      col_articles: Articles
+      no_promotions: Aucune promotion pour le moment
+      confirm_delete: Êtes-vous sûr de vouloir supprimer cette promotion ?
+      status_active: Active
+      status_inactive: Inactive
+    type:
+      percent_off: "% Rabais"
+      amount_off: Montant déduit
+      fixed_price: Prix fixe
+    form:
+      info_title: Informations sur la promotion
+      new_promotion: Nouvelle promotion
+      create_btn: Créer la promotion
+      name_label: Nom
+      name_placeholder: Entrez le nom de la promotion...
+      description_label: Description
+      description_placeholder: Description facultative...
+      type_label: Type
+      value_label: "Valeur (% ou $)"
+      starts_at_label: Date de début
+      ends_at_label: Date de fin
+      is_active_label: Active
+      articles_label: Appliquer aux articles
+      articles_search: Rechercher un article...
+      articles_selected_count: "%count% sélectionné(s)"
+      articles_select_all: Tout sélectionner
+      articles_clear_all: Tout désélectionner
+
+profile:
+  updated: "Profil mis à jour avec succès."
+  address_added: "Adresse ajoutée avec succès."
+  order_added_to_cart: "Articles ajoutés au panier."
+  my_profile: Mon profil
+  logout: Déconnexion
+  index:
+    title: Mon profil
+    edit_profile: Modifier le profil
+    personal_info: Informations personnelles
+    first_name: Prénom
+    last_name: Nom
+    email: Adresse courriel
+    username: Nom d'utilisateur
+    auto_fill_checkout: Remplissage automatique lors du paiement
+    save_changes: Enregistrer les modifications
+    back_to_profile: Retour au profil
+    addresses: Adresses
+    add_address: Ajouter une adresse
+    no_addresses: Aucune adresse enregistrée
+    activated: Activé
+    deactivated: Désactivé
+    shipping: Livraison
+    billing: Facturation
+  orders:
+    title: Mes commandes
+    view_all: Voir toutes les commandes
+    order: Commande
+    status_pending: En attente
+    status_in_progress: En cours
+    status_shipped: Expédiée
+    status_completed: Terminée
+    status_cancelled: Annulée
+    date: Date
+    customer_name: Client
+    shipping_address: Adresse de livraison
+    total: Total
+    item: article
+    items: articles
+    view_details: Voir les détails
+    no_orders: Aucune commande pour le moment
+    no_orders_description: Vous n'avez pas encore de commandes. Commencez à acheter maintenant.
+    start_shopping: Commencer vos achats
+    back_profile: Retour au profil
+  order_show:
+    title: Détails de la commande
+    back_orders: Retour aux commandes
+    status: Statut
+    items: Articles
+    item_name: Article
+    quantity: Quantité
+    unit_price: Prix unitaire
+    subtotal: Sous-total
+    shipping_address: Adresse de livraison
+    billing_address: Adresse de facturation
+    order_info: Informations sur la commande
+    order_id: Référence de commande
+    order_date: Date de commande
+    last_updated: Dernière mise à jour
+    order_summary: Récapitulatif de la commande
+    customer_contact: Contact client
+    order_again: Commander à nouveau
+    shipping: Livraison
+    tax: Taxe
+    total: Total
+  edit:
+    title: Modifier le profil
+    email: Adresse email
+    username: Nom d'utilisateur
+    first_name: Prénom
+    last_name: Nom
+    auto_fill_checkout: Remplissage automatique lors du paiement
+    save_changes: Enregistrer les modifications
+    back_to_profile: Retour au profil
+    personal_info: Informations personnelles
+    addresses: Adresses
+    no_addresses: Aucune adresse enregistrée.
+    add_address: Ajouter une adresse
+  address:
+    title: Ajouter une adresse
+    edit_title: Modifier l'adresse
+    info_title: Informations d'adresse
+    settings_title: Paramètres
+    address: Adresse
+    city: Ville
+    postal_code: Code postal
+    country: Pays
+    save: Enregistrer l'adresse
+    back_profile: Retour au profil
+    new:
+      title: Nouvelle adresse
+      save: Enregistrer l'adresse
+      back_profile: Retour au profil
+
+# Formulaire d'adresse
+address_form:
+  first_name_label: Prénom
+  last_name_label: Nom
+  street_label: Adresse
+  city_label: Ville
+  postal_code_label: Code postal
+  phone_label: "Téléphone (optionnel)"
+  type_label: Type d'adresse
+  type_shipping: Livraison
+  type_billing: Facturation
+  is_default_label: Définir comme adresse par défaut
+
+# Formulaires généraux
+form:
+  email: Adresse email
+  username: Nom d'utilisateur
+  first_name: Prénom
+  last_name: Nom
+  password: Mot de passe
+  confirm_password: Confirmer le mot de passe
+  new_password: Nouveau mot de passe
+  confirm_new_password: Confirmer le nouveau mot de passe
+
+#homepage
+email:
+  order_confirmation:
+    title: "Merci pour votre commande"
+    greeting: "Bonjour %name%,"
+    message: "Nous avons bien reçu votre paiement. Voici le récapitulatif de votre commande :"
+    order_number: "Numéro de commande"
+    order_date: "Date de commande"
+    order_status: "Statut"
+    items_title: "Articles commandés"
+    product: "Produit"
+    quantity: "Qté"
+    unit_price: "Prix unitaire"
+    subtotal: "Sous-total"
+    total: "Total de la commande"
+    shipping_address: "Adresse de livraison"
+    billing_address: "Adresse de facturation"
+    payment: "Paiement"
+    status_pending: "En attente"
+    status_in_progress: "En cours"
+    status_shipped: "Expédiée"
+    status_completed: "Terminée"
+    questions: "Si vous avez des questions, répondez simplement à cet e-mail."
+    goodbye: "Bonne journée,"
+    team: "L'équipe %app%"
+  password_reset:
+    title: "Réinitialisez votre mot de passe"
+    greeting: "Bonjour %name%,"
+    message: "Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte."
+    instruction: "Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :"
+    reset_btn: "Réinitialiser mon mot de passe"
+    expiry: "Ce lien expirera dans 24 heures."
+    no_request: "Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer ce message. Votre compte est sécurisé."
+    copy_url: "Ou copiez et collez l'URL suivante dans votre navigateur :"
+    goodbye: "Bonne journée,"
+    team: "L'équipe %app%"
+
+home:
+  hero:
+    title: Bienvenue dans notre magasin
+    subtitle: Découvrez nos derniers produits et offres
+    browse_products: Parcourir les produits
+    sign_in: Se connecter
+    featured_products: Produits en vedette
+    view_all_products: Voir tous les produits
+  stats:
+    title: Nos statistiques
+    customers: Clients satisfaits
+    products: Produits disponibles
+    orders: Commandes traitées
+  categories:
+    title: Magasinez par catégorie
+    subtitle: Explorez notre sélection de produits par univers
+  featured:
+    title: Produits en vedette
+    subtitle: Découvrez nos bestsellers et nouvelles arrivées
+    description: Découvrez nos bestsellers et nouvelles arrivées
+    add_to_cart: Ajouter
+    view: Voir
+    view_all: Voir tous les produits
+    no_products: "Aucun produit disponible"
+    come_back: "Revenez bientôt !"
+  cta:
+    title: Prêt à acheter?
+    text: Créez un compte ou connectez-vous pour profiter d'une expérience d'achat personnalisée et rapide.
+    sign_in: Se connecter
+    cart: Mon panier
+    join: Rejoindre maintenant
+
+search:
+  title: Recherche
+  placeholder: Rechercher un produit...
+  view_article: "Voir l'article"
+  view_all: "Voir tous les résultats"
+  no_results: "Aucun résultat pour cette recherche."
