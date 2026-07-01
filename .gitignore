@@ -22,3 +22,8 @@
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
+
+/public/build/
+/.idea/
+/.vscode/
+/node_modules/
