@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Tests PHPUnit
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: symfony_database_test
+          MYSQL_USER: symfony_user
+          MYSQL_PASSWORD: reda1234
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, intl, zip, mbstring, redis
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Installer les dépendances PHP
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Installer les dépendances JS
+        run: npm ci
+
+      - name: Build des assets
+        run: npm run build
+
+      - name: Générer les clés JWT
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        env:
+          APP_ENV: test
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+      - name: Créer le schéma de base de données
+        run: php bin/console doctrine:schema:create --env=test
+        env:
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+
+      - name: Lancer les tests PHPUnit
+        run: php bin/phpunit --testdox
+        env:
+          APP_ENV: test
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+          REDIS_URL: redis://127.0.0.1:6379
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          STRIPE_PUBLIC_KEY: pk_test_fake
+          STRIPE_SECRET_KEY: sk_test_fake
+          MEILISEARCH_URL: http://localhost:7700
+          MEILISEARCH_API_KEY: fake_key
+
+  build:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Build de l'image Docker
+        run: docker build -t monapp:${{ github.sha }} .
+
+      - name: Vérifier que l'image se construit
+        run: echo "✅ Image Docker construite avec succès — SHA ${{ github.sha }}"
