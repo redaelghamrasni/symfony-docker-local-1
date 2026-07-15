@@ -616,6 +616,11 @@ async function loadShippingRates() {
 
         const data = await response.json();
 
+        if (!response.ok) {
+            container.innerHTML = `<p style="color:#dc2626; font-size:14px;">${data.error || shippingTranslations.error}</p>`;
+            return;
+        }
+
         if (!data.rates || data.rates.length === 0) {
             container.innerHTML = `<p style="color:#dc2626; font-size:14px;">${shippingTranslations.empty}</p>`;
             return;

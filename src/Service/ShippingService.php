@@ -6,7 +6,7 @@ namespace App\Service;
 
 class ShippingService
 {
-    public function __construct(string $apiKey)
+    public function __construct(string $apiKey, private readonly string $environment)
     {
         \Shippo::setApiKey($apiKey);
     }
@@ -75,7 +75,37 @@ class ShippingService
         // Trie par prix croissant
         usort($rates, fn($a, $b) => $a['price'] <=> $b['price']);
 
+        // Aucun carrier Shippo n'est configuré pour ce compte (courant hors prod) :
+        // on retombe sur des tarifs simulés pour ne pas bloquer le checkout en dev/test.
+        if (empty($rates) && $this->environment !== 'prod') {
+            return $this->mockRates();
+        }
+
         return $rates;
+    }
+
+    private function mockRates(): array
+    {
+        return [
+            [
+                'object_id'      => 'mock_standard',
+                'carrier'        => 'Standard (simulé)',
+                'service'        => 'Livraison standard',
+                'price'          => '9.99',
+                'currency'       => 'CAD',
+                'days'           => 5,
+                'duration_terms' => null,
+            ],
+            [
+                'object_id'      => 'mock_express',
+                'carrier'        => 'Express (simulé)',
+                'service'        => 'Livraison express',
+                'price'          => '19.99',
+                'currency'       => 'CAD',
+                'days'           => 2,
+                'duration_terms' => null,
+            ],
+        ];
     }
 
     /**

@@ -167,16 +167,20 @@ class CheckoutController extends AbstractController
             return $this->json(['error' => 'Montant de paiement invalide.'], 400);
         }
 
-        $paymentIntent = $this->stripeClient->paymentIntents->create([
-            'amount'                  => $amount,
-            'currency'                => 'cad',
-            'automatic_payment_methods' => ['enabled' => true],
-            'metadata' => [
-                'cart_id'        => $cart->getId(),
-                'customer_email' => $email ?: '',
-                'customer_name'  => $name  ?: '',
-            ],
-        ]);
+        try {
+            $paymentIntent = $this->stripeClient->paymentIntents->create([
+                'amount'                  => $amount,
+                'currency'                => 'cad',
+                'automatic_payment_methods' => ['enabled' => true],
+                'metadata' => [
+                    'cart_id'        => $cart->getId(),
+                    'customer_email' => $email ?: '',
+                    'customer_name'  => $name  ?: '',
+                ],
+            ]);
+        } catch (\Throwable) {
+            return $this->json(['error' => 'Erreur de connexion au serveur de paiement.'], 502);
+        }
 
         // Store PI ID so we can update the amount later
         $request->getSession()->set('checkout_pi_id', $paymentIntent->id);
@@ -374,23 +378,27 @@ class CheckoutController extends AbstractController
             ]]]);
         }
 
-        $rates = $this->shippingService->getRates(
-            [
-                'name'    => $data['name'] ?? 'Client',
-                'street1' => $data['address'] ?? '',
-                'city'    => $data['city'],
-                'zip'     => $data['zip'],
-                'state'   => $data['province'] ?? 'QC',
-                'country' => $data['country'] ?? 'CA',
-                'email'   => $data['email'] ?? '',
-            ],
-            [
-                'weight' => max(0.5, $totalItems * 0.5),
-                'length' => '30',
-                'width'  => '20',
-                'height' => '15',
-            ]
-        );
+        try {
+            $rates = $this->shippingService->getRates(
+                [
+                    'name'    => $data['name'] ?? 'Client',
+                    'street1' => $data['address'] ?? '',
+                    'city'    => $data['city'],
+                    'zip'     => $data['zip'],
+                    'state'   => $data['province'] ?? 'QC',
+                    'country' => $data['country'] ?? 'CA',
+                    'email'   => $data['email'] ?? '',
+                ],
+                [
+                    'weight' => max(0.5, $totalItems * 0.5),
+                    'length' => '30',
+                    'width'  => '20',
+                    'height' => '15',
+                ]
+            );
+        } catch (\Throwable) {
+            return $this->json(['error' => 'Erreur lors du chargement des tarifs.'], 502);
+        }
 
         return $this->json(['rates' => $rates]);
     }
