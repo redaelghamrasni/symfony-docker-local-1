@@ -56,7 +56,7 @@ jobs:
           restore-keys: composer-
 
       - name: Installer les dépendances PHP
-        run: composer install --optimize-autoloader --no-interaction
+        run: composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
       - name: Cache npm
         uses: actions/cache@v4
@@ -82,6 +82,15 @@ jobs:
         env:
           DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
 
+      - name: Générer les clés JWT
+        run: |
+          mkdir -p config/jwt
+          php bin/console lexik:jwt:generate-keypair --skip-if-exists
+        env:
+          APP_ENV: test
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+      
       - name: Lancer les tests PHPUnit
         run: php bin/phpunit --testdox
         env:
@@ -89,8 +98,8 @@ jobs:
           DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
           REDIS_URL: redis://127.0.0.1:6379
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
-          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
-          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          JWT_SECRET_KEY: config/jwt/private.pem
+          JWT_PUBLIC_KEY: config/jwt/public.pem
           STRIPE_PUBLIC_KEY: pk_test_fake
           STRIPE_SECRET_KEY: sk_test_fake
           MEILISEARCH_URL: http://localhost:7700
