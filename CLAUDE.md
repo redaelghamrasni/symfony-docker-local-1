@@ -41,8 +41,10 @@ php bin/console doctrine:migrations:migrate
 php bin/phpunit
 php bin/phpunit --testsuite Unit
 php bin/phpunit --testsuite Functional
-# ⚠️ état connu : les 4 tests de tests/Functional/Api/ArticleApiTest.php échouent (500) à
-# cause du bug JWT_PASSPHRASE ci-dessous — ne pas confondre avec une régression que tu aurais introduite.
+# ⚠️ état connu : sur certains environnements locaux, les tests Functional échouent avec
+# "Access denied ... database 'symfony_database_test_test'" — problème de provisioning de
+# la base de test locale (nom/port/droits), pas une régression applicative. Le bug
+# JWT_PASSPHRASE historique (voir git log 1370284) est corrigé, ce n'est plus la cause.
 
 # Réindexation Meilisearch
 php bin/console app:meilisearch:reindex
@@ -62,5 +64,5 @@ npm run type-check
 - **`config/packages/security.yaml`** : 3 firewalls (`api_login`, `api` stateless JWT, `main` à session). Toute route censée être protégée par JWT doit répondre sous `/api/*` **exact**, sinon elle retombe sur le firewall session.
 - **`src/Entity/Order.php` / `OrderItem.php`** : les adresses et prix sont dénormalisés (snapshot au moment de la commande) volontairement — ne pas les remplacer par des FK vers `User`/`Address`/`Article` sans casser l'historique des commandes passées.
 - **Cache Redis à tags** (`ArticleController::list`) : les tags `articles`/`categories` sont posés mais jamais invalidés. Si vous ajoutez une invalidation, le faire dans les contrôleurs admin (create/edit/delete article et catégorie).
-- **`config/packages/lexik_jwt_authentication.yaml`** : `pass_phrase: '%env(02068707)%'` référence une variable d'environnement inexistante (faute de frappe probable pour `JWT_PASSPHRASE`). **Confirmé par les tests (4 échecs en 500)** : toute requête vers `/api/*` fait échouer la construction du firewall `api` — l'API publique elle-même est cassée, pas seulement l'auth. Priorité de correction n°1 si on touche à l'auth/API.
+- **`config/packages/lexik_jwt_authentication.yaml`** : corrigé (commit `1370284`) — `pass_phrase: '%env(JWT_PASSPHRASE)%'`. Le bug historique (`%env(02068707)%`, variable d'environnement inexistante) qui cassait toute requête `/api/*` en 500 n'existe plus ; ne pas réintroduire une valeur en dur à la place du nom de variable.
 - **Migrations** (`migrations/`) : ne jamais éditer une migration déjà appliquée ; en créer une nouvelle.

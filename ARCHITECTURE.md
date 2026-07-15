@@ -261,7 +261,7 @@ Le montage du widget de paiement (`templates/checkout/index.html.twig`, fonction
 
 ## 7. Dette technique et points de vigilance actuels
 
-Les éléments suivants ont été identifiés en relisant le code et **en vérifiant la table de routage réelle** (`php bin/console debug:router`). Ce ne sont pas des problèmes déjà résolus mais des points à traiter :
+Les éléments suivants ont été identifiés en relisant le code et **en vérifiant la table de routage réelle** (`php bin/console debug:router`). Ce sont des points à traiter, à l'exception du premier ci-dessous (passphrase JWT) qui a été corrigé depuis :
 
 ### Les contrôleurs API manuels ne sont pas montés sous `/api/*`
 
@@ -279,15 +279,9 @@ Conséquences concrètes :
 3. Seule la ressource `Article` exposée nativement par API Platform vit réellement sous `/api/articles` (routes `_api_/articles{._format}_*`, montées séparément via `config/routes/api_platform.yaml`, hors du préfixe locale) — c'est elle, et non les contrôleurs manuels, qui répond aux vrais appels `/api/articles` sans préfixe de langue.
 4. **Le garde-fou de `LocaleSubscriber` (§6) devient inefficace pour ces routes.** Le listener exclut le traitement de locale via `str_starts_with($request->getPathInfo(), '/api')` (`src/EventListener/LocaleSubscriber.php:36-38`), pensé pour ne jamais écrire de locale en session sur un appel API stateless. Mais le chemin réel de `ArticleApiController`, `Api/ArticleController` et `OrderApiController` est `/fr/api/...` ou `/en/api/...`, qui ne commence pas par `/api` : la condition ne matche pas, et `LocaleSubscriber` traite ces requêtes comme des requêtes web normales (détection de locale + écriture en session). Seules les vraies routes API Platform (montées sans préfixe locale) sont correctement exclues par ce garde-fou. Ce n'est pas un bug isolé de `LocaleSubscriber` : c'est une conséquence supplémentaire du même préfixage global de `config/routes.yaml` évoqué au point 2.
 
-### 🔴 Passphrase JWT mal référencée — confirmé reproductible, casse l'API publique
+### ✅ Passphrase JWT mal référencée — corrigé (commit `1370284`)
 
-`config/packages/lexik_jwt_authentication.yaml` :
-```yaml
-pass_phrase: '%env(02068707)%'
-```
-`.env` définit `JWT_PASSPHRASE` (pas de variable d'environnement nommée `02068707`). Le nom de variable semble avoir été substitué par erreur (probablement une valeur collée à la place du nom).
-
-**Confirmé par exécution de la suite de tests** (`php bin/phpunit`, Docker actif) : les 4 tests de `tests/Functional/Api/ArticleApiTest.php` échouent avec un `500 Internal Server Error` et le message `"Environment variable not found: \"02068707\"."`. Ce n'est pas un risque hypothétique limité au cas où la clé privée serait protégée par mot de passe : **la simple construction du contexte du firewall `api` (déclenchée par toute requête matchant `^/api`) fait échouer le conteneur de services**, avant toute tentative de signature/vérification de token. Concrètement, `GET /api/articles` — le vrai endpoint API Platform, censé être `PUBLIC_ACCESS` — renvoie 500 pour tout le monde, authentifié ou non. C'est la priorité de correction la plus élevée de cette liste : l'API publique est actuellement non fonctionnelle, pas seulement l'authentification JWT.
+`config/packages/lexik_jwt_authentication.yaml` référence désormais correctement `pass_phrase: '%env(JWT_PASSPHRASE)%'`. Le bug historique (`%env(02068707)%`, une valeur collée à la place du nom de variable, qui faisait échouer en 500 la construction du firewall `api` sur toute requête `^/api` — y compris `GET /api/articles`, censé être `PUBLIC_ACCESS`) a été corrigé après la rédaction initiale de ce document. Ne pas réintroduire une valeur en dur à la place du nom de la variable d'environnement dans ce fichier.
 
 ### CORS large sur `/api`
 
@@ -333,11 +327,7 @@ Mesuré par un rapport de couverture Xdebug réel (détail en §8) : **1.33% des
 
 ### Résultat d'exécution (état à la date de cette revue)
 
-```
-Tests: 21, Assertions: 46, Failures: 4, PHPUnit Notices: 2.
-```
-
-**Les 4 échecs sont les 4 tests de `ArticleApiTest`** (100% du fichier) — tous en `500 Internal Server Error` avec `"Environment variable not found: \"02068707\""`, la conséquence directe du bug de passphrase JWT documenté en §7 : toute requête vers `/api/*` fait échouer la construction du firewall `api`. Les 17 autres tests (`TaxServiceTest`, `CartServiceTest`, `ArticleTest`, `CartControllerTest`) passent tous.
+Le bug de passphrase JWT documenté précédemment en §7 est corrigé (commit `1370284`) : les échecs `ArticleApiTest` qu'il provoquait (`"Environment variable not found: \"02068707\""`) n'apparaissent plus. Sur cet environnement de revue, la suite échoue désormais pour une raison distincte et locale : la base de test n'est pas provisionnée correctement (`Access denied for user 'symfony_user'@'%' to database 'symfony_database_test_test'` — nom de base doublé/droits manquants, à vérifier au cas par cas selon la configuration locale de `DATABASE_URL` en environnement `test`). Ce n'est pas un bug applicatif ; ne pas le confondre avec une régression du code.
 
 ### Couverture réelle
 
@@ -357,6 +347,6 @@ Seul `TaxService` est couvert à 100% (méthodes et lignes) — c'est le seul se
 | `tests/Unit/Service/CartServiceTest.php` | Unitaire (mocks `EntityManagerInterface`/`CartRepository`/`RequestStack`/`Session`) | Création d'un panier quand la session ne contient pas de `cart_id`, panier vide initial |
 | `tests/Unit/Entity/ArticleTest.php` | Unitaire | Getters/setters, **documente** (sans l'imposer) l'absence de validation sur un prix négatif — voir §7 |
 | `tests/Functional/Controller/CartControllerTest.php` | Fonctionnel (`WebTestCase`, HTTP réel) | `GET /fr/cart` (200), `GET /fr/cart/add/1` (405 — méthode non autorisée), `POST /fr/cart/clear` (redirection) |
-| `tests/Functional/Api/ArticleApiTest.php` | Fonctionnel (`WebTestCase`, HTTP réel) | `GET /api/articles` (attend un JSON `{data, total}` et un 200), `GET /api/articles/{id}` (200 ou 404), `POST /api/articles` sans token (attend 401) — **les 4 échouent actuellement en 500**, voir ci-dessus |
+| `tests/Functional/Api/ArticleApiTest.php` | Fonctionnel (`WebTestCase`, HTTP réel) | `GET /api/articles` (attend un JSON `{data, total}` et un 200), `GET /api/articles/{id}` (200 ou 404), `POST /api/articles` sans token (attend 401) — le bug JWT qui les faisait échouer en 500 est corrigé ; peuvent encore échouer localement si la base de test n'est pas provisionnée, voir ci-dessus |
 
 Aucun test ne couvre actuellement le checkout (taxes + paiement + expédition bout en bout), les contrôleurs admin, ni les listeners d'événements en tant qu'unité isolée.
