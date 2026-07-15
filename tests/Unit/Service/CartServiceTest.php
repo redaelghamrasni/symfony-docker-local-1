@@ -17,8 +17,8 @@ class CartServiceTest extends TestCase
     protected function setUp(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('persist')->willReturn(null);
-        $em->method('flush')->willReturn(null);
+        $em->method('persist');
+        $em->method('flush');
 
         $cartRepository = $this->createMock(CartRepository::class);
         $cartRepository->method('find')->willReturn(null);
@@ -26,7 +26,7 @@ class CartServiceTest extends TestCase
 
         $session = $this->createMock(SessionInterface::class);
         $session->method('get')->willReturn(null);
-        $session->method('set')->willReturn(null);
+        $session->method('set');
 
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getSession')->willReturn($session);

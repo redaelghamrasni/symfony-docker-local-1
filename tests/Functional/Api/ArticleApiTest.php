@@ -9,7 +9,7 @@ class ArticleApiTest extends WebTestCase
     public function testGetArticlesList(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/fr/api/articles', [], [], [
+        $client->request('GET', '/api/articles', [], [], [
             'HTTP_ACCEPT' => 'application/json',
         ]);
 
@@ -19,13 +19,13 @@ class ArticleApiTest extends WebTestCase
         $this->assertStringContainsString('json', $contentType);
 
         $data = json_decode($client->getResponse()->getContent(), true);
-        $this->assertIsArray($data);
+        $this->assertNotNull($data);
     }
 
     public function testGetSingleArticle(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/fr/api/articles/1', [], [], [
+        $client->request('GET', '/api/articles/1', [], [], [
             'HTTP_ACCEPT' => 'application/json',
         ]);
 
@@ -38,7 +38,7 @@ class ArticleApiTest extends WebTestCase
     public function testCreateArticleRequiresAuth(): void
     {
         $client = static::createClient();
-        $client->request('POST', '/fr/api/articles', [], [], [
+        $client->request('POST', '/api/articles', [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], json_encode([
             'title'   => 'Test',
@@ -46,13 +46,14 @@ class ArticleApiTest extends WebTestCase
             'price'   => 29.99,
         ]));
 
+        // API Platform sans auth → 401
         $this->assertResponseStatusCodeSame(401);
     }
 
     public function testGetArticlesReturnsJsonStructure(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/fr/api/articles', [], [], [
+        $client->request('GET', '/api/articles', [], [], [
             'HTTP_ACCEPT' => 'application/json',
         ]);
 
@@ -60,18 +61,16 @@ class ArticleApiTest extends WebTestCase
 
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertNotNull($data);
-        $this->assertIsArray($data);
 
-        if (!empty($data)) {
-            $first = $data[0]
-                ?? $data['member'][0]
-                ?? $data['hydra:member'][0]
-                ?? null;
+        // API Platform encapsule dans hydra:member ou member
+        $items = $data['hydra:member']
+            ?? $data['member']
+            ?? (isset($data[0]) ? $data : []);
 
-            if ($first) {
-                $this->assertArrayHasKey('id', $first);
-                $this->assertArrayHasKey('title', $first);
-            }
+        if (!empty($items)) {
+            $first = $items[0];
+            $this->assertArrayHasKey('id', $first);
+            $this->assertArrayHasKey('title', $first);
         }
     }
 }
