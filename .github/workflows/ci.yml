@@ -16,7 +16,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: symfony_database_test
+          MYSQL_DATABASE: symfony_database
           MYSQL_USER: symfony_user
           MYSQL_PASSWORD: reda1234
         ports:
@@ -58,6 +58,14 @@ jobs:
       - name: Installer les dépendances PHP
         run: composer install --optimize-autoloader --no-interaction
 
+      - name: Créer la base de données test
+        run: |
+          mysql -u root -proot -h 127.0.0.1 -P 3306 -e "
+            CREATE DATABASE IF NOT EXISTS symfony_database_test;
+            GRANT ALL PRIVILEGES ON symfony_database_test.* TO 'symfony_user'@'%';
+            FLUSH PRIVILEGES;
+          "
+
       - name: Générer les clés JWT
         run: |
           mkdir -p config/jwt
@@ -65,13 +73,13 @@ jobs:
         env:
           APP_ENV: test
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
-          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database?serverVersion=8.0
 
       - name: Créer le schéma de base de données
         run: php bin/console doctrine:schema:create --env=test
         env:
           APP_ENV: test
-          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database?serverVersion=8.0
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
           JWT_SECRET_KEY: config/jwt/private.pem
           JWT_PUBLIC_KEY: config/jwt/public.pem
@@ -80,7 +88,7 @@ jobs:
         run: php bin/phpunit --testdox
         env:
           APP_ENV: test
-          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database?serverVersion=8.0
           REDIS_URL: redis://127.0.0.1:6379
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
           JWT_SECRET_KEY: config/jwt/private.pem
