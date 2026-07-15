@@ -56,33 +56,7 @@ jobs:
           restore-keys: composer-
 
       - name: Installer les dépendances PHP
-        run: composer install --optimize-autoloader --no-interaction --ignore-platform-reqs
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: npm-v2-${{ hashFiles('package-lock.json') }}
-          restore-keys: npm-v2-
-
-      - name: Installer les dépendances JS
-        run: npm ci
-
-      - name: Build des assets
-        run: npm run build
-        env:
-          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
-
-      - name: Générer les clés JWT
-        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
-        env:
-          APP_ENV: test
-          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
-
-      - name: Créer le schéma de base de données
-        run: php bin/console doctrine:schema:create --env=test
-        env:
-          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+        run: composer install --optimize-autoloader --no-interaction
 
       - name: Générer les clés JWT
         run: |
@@ -92,7 +66,16 @@ jobs:
           APP_ENV: test
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
           DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
-      
+
+      - name: Créer le schéma de base de données
+        run: php bin/console doctrine:schema:create --env=test
+        env:
+          APP_ENV: test
+          DATABASE_URL: mysql://symfony_user:reda1234@127.0.0.1:3306/symfony_database_test?serverVersion=8.0
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+          JWT_SECRET_KEY: config/jwt/private.pem
+          JWT_PUBLIC_KEY: config/jwt/public.pem
+
       - name: Lancer les tests PHPUnit
         run: php bin/phpunit --testdox
         env:
@@ -106,6 +89,7 @@ jobs:
           STRIPE_SECRET_KEY: sk_test_fake
           MEILISEARCH_URL: http://localhost:7700
           MEILISEARCH_API_KEY: fake_key
+          SHIPPO_API_KEY: shippo_test_fake
 
   build:
     name: Build Docker
@@ -120,5 +104,5 @@ jobs:
       - name: Build de l'image Docker
         run: docker build -t monapp:${{ github.sha }} .
 
-      - name: Vérifier que l'image se construit
-        run: echo "✅ Image Docker construite avec succès — SHA ${{ github.sha }}"
+      - name: Confirmer le build
+        run: echo "✅ Image Docker construite — SHA ${{ github.sha }}"
