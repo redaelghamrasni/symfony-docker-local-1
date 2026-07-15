@@ -56,7 +56,7 @@ jobs:
           restore-keys: composer-
 
       - name: Installer les dépendances PHP
-        run: composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+        run: composer install --optimize-autoloader --no-interaction --ignore-platform-reqs
 
       - name: Cache npm
         uses: actions/cache@v4
