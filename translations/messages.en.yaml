@@ -255,6 +255,7 @@ auth:
     username_label: Username
     first_name_label: First name
     last_name_label: Last name
+    locale_label: Preferred Communication Language
     password_label: Password
     submit: Create account
     login_link: Sign in
@@ -439,6 +440,7 @@ admin:
     username: Username
     first_name: First Name
     last_name: Last Name
+    locale: Preferred Communication Language
     password: Password
     confirm_password: Confirm Password
     plainPassword:
@@ -480,6 +482,7 @@ admin:
       username: Username
       first_name: First Name
       last_name: Last Name
+      locale: Preferred Communication Language
       auto_fill_checkout: Auto-fill checkout information
       save_changes: Save Changes
       back_to_profile: Back to profile
@@ -497,6 +500,7 @@ admin:
       username: Username
       first_name: First Name
       last_name: Last Name
+      locale: Preferred Communication Language
       auto_fill_checkout: Auto-fill checkout information
       save_changes: Save Changes
       back_to_profile: Back to profile
@@ -725,6 +729,7 @@ profile:
     username: Username
     first_name: First name
     last_name: Last name
+    locale: Preferred Communication Language
     auto_fill_checkout: Auto-fill checkout information
     save_changes: Save changes
     back_to_profile: Back to profile
@@ -761,9 +766,15 @@ form:
   confirm_password: Confirm Password
   new_password: New Password
   confirm_new_password: Confirm New Password
+  language: Preferred Communication Language
+  password_placeholder: Enter password
+  confirm_password_placeholder: Confirm password
+  new_password_placeholder: Leave empty to keep current
+  confirm_new_password_placeholder: Repeat new password
 
 email:
   order_confirmation:
+    subject: "Your order confirmation"
     title: "Thank you for your order"
     greeting: "Hello %name%,"
     message: "We have received your payment. Here is a summary of your order:"
@@ -775,6 +786,11 @@ email:
     quantity: "Qty"
     unit_price: "Unit Price"
     subtotal: "Subtotal"
+    price_summary: "Price Breakdown"
+    tax_gst: "GST"
+    tax_pst: "PST"
+    tax_qst: "QST"
+    tax_hst: "HST"
     total: "Order Total"
     shipping_address: "Shipping Address"
     billing_address: "Billing Address"

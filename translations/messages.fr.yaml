@@ -257,6 +257,7 @@ auth:
     username_label: Nom d'utilisateur
     first_name_label: Prénom
     last_name_label: Nom
+    locale_label: Langue préférée de communication
     password_label: Mot de passe
     submit: Créer un compte
     login_link: Se connecter
@@ -434,6 +435,7 @@ admin:
     username: Nom d'utilisateur
     first_name: Prénom
     last_name: Nom
+    locale: Langue préférée de communication
     password: Mot de passe
     confirm_password: Confirmer le mot de passe
     plainPassword:
@@ -475,6 +477,7 @@ admin:
       username: Nom d'utilisateur
       first_name: Prénom
       last_name: Nom
+      locale: Langue préférée de communication
       auto_fill_checkout: Remplissage automatique lors du paiement
       save_changes: Enregistrer les modifications
       back_to_profile: Retour au profil
@@ -492,6 +495,7 @@ admin:
       username: Nom d'utilisateur
       first_name: Prénom
       last_name: Nom
+      locale: Langue préférée de communication
       auto_fill_checkout: Remplissage automatique lors du paiement
       save_changes: Enregistrer les modifications
       back_to_profile: Retour au profil
@@ -660,6 +664,7 @@ profile:
     last_name: Nom
     email: Adresse courriel
     username: Nom d'utilisateur
+    locale: Langue préférée de communication
     auto_fill_checkout: Remplissage automatique lors du paiement
     save_changes: Enregistrer les modifications
     back_to_profile: Retour au profil
@@ -763,10 +768,16 @@ form:
   confirm_password: Confirmer le mot de passe
   new_password: Nouveau mot de passe
   confirm_new_password: Confirmer le nouveau mot de passe
+  language: Langue préférée de communication
+  password_placeholder: Entrez un mot de passe
+  confirm_password_placeholder: Confirmez le mot de passe
+  new_password_placeholder: Laissez vide pour conserver le mot de passe actuel
+  confirm_new_password_placeholder: Répétez le nouveau mot de passe
 
 #homepage
 email:
   order_confirmation:
+    subject: "Confirmation de votre commande"
     title: "Merci pour votre commande"
     greeting: "Bonjour %name%,"
     message: "Nous avons bien reçu votre paiement. Voici le récapitulatif de votre commande :"
@@ -778,6 +789,11 @@ email:
     quantity: "Qté"
     unit_price: "Prix unitaire"
     subtotal: "Sous-total"
+    price_summary: "Détail des montants"
+    tax_gst: "TPS"
+    tax_pst: "TVP"
+    tax_qst: "TVQ"
+    tax_hst: "TVH"
     total: "Total de la commande"
     shipping_address: "Adresse de livraison"
     billing_address: "Adresse de facturation"

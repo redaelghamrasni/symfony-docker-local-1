@@ -776,21 +776,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── Price Breakdown ──────────────────────────────────────────────────────
 const CART_SUBTOTAL = {{ cart.total }};
 
-const PROVINCE_TAXES = {
-    AB: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
-    BC: { gst: 0.05, pst: 0.07,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (7%)' },
-    MB: { gst: 0.05, pst: 0.07,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (7%)' },
-    NB: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
-    NL: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
-    NS: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
-    NT: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
-    NU: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
-    ON: { gst: 0.00, pst: 0.00,    hst: 0.13,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (13%)' },
-    PE: { gst: 0.00, pst: 0.00,    hst: 0.15,    gstLabel: '',           pstLabel: '', hstLabel: 'TVH (15%)' },
-    QC: { gst: 0.05, pst: 0.09975, hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVQ (9,975%)' },
-    SK: { gst: 0.05, pst: 0.06,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: 'TVP (6%)' },
-    YT: { gst: 0.05, pst: 0.00,    hst: 0.00,    gstLabel: 'TPS (5%)',   pstLabel: '' },
-};
+// Cache en mémoire pour éviter des appels API répétés
+const taxRatesCache = {};
+
+async function fetchTaxForProvince(province) {
+    if (!province) return null;
+    if (taxRatesCache[province]) return taxRatesCache[province];
+
+    try {
+        const response = await fetch('{{ path('app_checkout_tax') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ province }),
+        });
+
+        if (!response.ok) return null;
+
+        const tax = await response.json();
+
+        // Normalise la réponse vers le même format que l'ancien PROVINCE_TAXES
+        const rates = {
+            gst:      tax.gst_rate    ?? 0,
+            pst:      tax.pst_rate    ?? 0,
+            hst:      tax.hst_rate    ?? 0,
+            gstLabel: tax.gst_rate > 0 ? `TPS (${(tax.gst_rate * 100).toFixed(0)}%)` : '',
+            pstLabel: tax.pst_rate > 0 ? (province === 'QC' ? `TVQ (${(tax.pst_rate * 100).toFixed(3)}%)` : `TVP (${(tax.pst_rate * 100).toFixed(0)}%)`) : '',
+            hstLabel: tax.hst_rate > 0 ? `TVH (${(tax.hst_rate * 100).toFixed(0)}%)` : '',
+        };
+
+        taxRatesCache[province] = rates;
+        return rates;
+
+    } catch (err) {
+        console.warn('Tax API unavailable, using fallback:', err);
+        return null;
+    }
+}
 
 let selectedShippingAmount = null;
 
@@ -798,9 +819,10 @@ function fmt(amount) {
     return amount.toFixed(2).replace('.', ',') + ' $';
 }
 
-function updateBreakdown() {
+async function updateBreakdown() {
     const province = document.getElementById('shipping_province')?.value || '';
-    const rates    = PROVINCE_TAXES[province] || {};
+    const rates    = (await fetchTaxForProvince(province)) || { gst: 0, pst: 0, hst: 0, gstLabel: '', pstLabel: '', hstLabel: '' };
+
     const gst      = Math.round(CART_SUBTOTAL * (rates.gst || 0) * 100) / 100;
     const pst      = Math.round(CART_SUBTOTAL * (rates.pst || 0) * 100) / 100;
     const hst      = Math.round(CART_SUBTOTAL * (rates.hst || 0) * 100) / 100;
@@ -876,7 +898,7 @@ function updateRateLabelBorders() {
 function onShippingRateChange(input) {
     selectedShippingAmount = parseFloat(input.dataset.price) || 0;
     updateRateLabelBorders();
-    updateBreakdown();
+    updateBreakdown(); // async mais pas besoin d'await ici
     updatePaymentIntent();
 }
 
@@ -896,7 +918,7 @@ async function updatePaymentIntent() {
 
 // Trigger breakdown update when province changes (taxes update immediately)
 document.getElementById('shipping_province')?.addEventListener('change', () => {
-    updateBreakdown();
+    updateBreakdown(); // async
     if (selectedShippingAmount !== null) updatePaymentIntent();
 });
 
@@ -905,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const prov   = document.getElementById('shipping_province')?.value;
     const city   = document.getElementById('shipping_city')?.value?.trim();
     const postal = document.getElementById('shipping_postal')?.value?.trim();
-    if (prov) updateBreakdown();
+    if (prov) updateBreakdown(); // async
     if (city && postal) loadShippingRates();
 });
 

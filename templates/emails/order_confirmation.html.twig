@@ -12,7 +12,14 @@
         </tr>
         <tr style="background: #f3f4f6;">
             <td style="padding: 10px 16px; font-weight: bold; color: #6b7280;">{{ 'email.order_confirmation.order_date'|trans }}</td>
-            <td style="padding: 10px 16px;">{{ order.createdAt|date('F j, Y') }}</td>
+            <td style="padding: 10px 16px;">
+                {% if locale starts with 'fr' %}
+                    {% set frMonths = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'] %}
+                    {{ order.createdAt|date('j') }} {{ frMonths[order.createdAt|date('n')] }} {{ order.createdAt|date('Y') }}
+                {% else %}
+                    {{ order.createdAt|date('F j, Y') }}
+                {% endif %}
+            </td>
         </tr>
         <tr>
             <td style="padding: 10px 16px; font-weight: bold; color: #6b7280;">{{ 'email.order_confirmation.order_status'|trans }}</td>
@@ -45,12 +52,45 @@
                 </tr>
             {% endfor %}
         </tbody>
-        <tfoot>
-            <tr style="border-top: 2px solid #d1d5db;">
-                <td colspan="3" style="padding: 12px 8px; font-weight: bold; text-align: right;">{{ 'email.order_confirmation.total'|trans }}</td>
-                <td style="padding: 12px 8px; font-weight: bold; text-align: right;">{{ order.total|number_format(2, ',', ' ') }} $</td>
-            </tr>
-        </tfoot>
+    </table>
+
+    {# Price breakdown #}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+        <tr>
+            <td colspan="2" style="padding: 10px 16px 4px; font-size: 13px; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'email.order_confirmation.price_summary'|trans }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 16px;">{{ 'email.order_confirmation.subtotal'|trans }}</td>
+            <td style="padding: 4px 16px; text-align: right;">{{ order.subtotal|number_format(2, ',', ' ') }} $</td>
+        </tr>
+        {% if order.taxGst and order.taxGst > 0 %}
+        <tr>
+            <td style="padding: 4px 16px; color: #6b7280;">{{ 'email.order_confirmation.tax_gst'|trans }}</td>
+            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxGst|number_format(2, ',', ' ') }} $</td>
+        </tr>
+        {% endif %}
+        {% if order.taxPst and order.taxPst > 0 %}
+        <tr>
+            <td style="padding: 4px 16px; color: #6b7280;">{{ (order.shippingProvince == 'QC' ? 'email.order_confirmation.tax_qst' : 'email.order_confirmation.tax_pst')|trans }}</td>
+            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxPst|number_format(2, ',', ' ') }} $</td>
+        </tr>
+        {% endif %}
+        {% if order.taxHst and order.taxHst > 0 %}
+        <tr>
+            <td style="padding: 4px 16px; color: #6b7280;">{{ 'email.order_confirmation.tax_hst'|trans }}</td>
+            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxHst|number_format(2, ',', ' ') }} $</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td style="padding: 4px 16px; color: #6b7280;">{{ 'checkout.shipping'|trans }}</td>
+            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">
+                {% if order.shippingAmount is null %}—{% elseif order.shippingAmount == 0 %}{{ 'checkout.shipping_free'|trans }}{% else %}{{ order.shippingAmount|number_format(2, ',', ' ') }} $ {% endif %}
+            </td>
+        </tr>
+        <tr style="border-top: 2px solid #d1d5db;">
+            <td style="padding: 10px 16px; font-weight: bold;">{{ 'email.order_confirmation.total'|trans }}</td>
+            <td style="padding: 10px 16px; font-weight: bold; text-align: right;">{{ order.total|number_format(2, ',', ' ') }} $</td>
+        </tr>
     </table>
 
     {# Addresses #}
@@ -68,6 +108,7 @@
             <td style="width: 50%; vertical-align: top; padding-left: 12px; border-left: 1px solid #e5e7eb;">
                 <h3 style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">{{ 'email.order_confirmation.billing_address'|trans }}</h3>
                 <p style="margin: 0; line-height: 1.7; color: #374151;">
+                    {{ order.customerFirstName }} {{ order.customerLastName }}<br>
                     {{ order.billingStreet }}<br>
                     {{ order.billingCity }}, {{ order.billingPostalCode }}{% if order.billingProvince %}, {{ order.billingProvince }}{% endif %}
                 </p>

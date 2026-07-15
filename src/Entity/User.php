@@ -53,6 +53,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'auto_fill_checkout', type: 'boolean', options: ['default' => true])]
     private bool $autoFillCheckout = true;
 
+    #[ORM\Column(length: 2, options: ['default' => 'fr'])]
+    #[Assert\Choice(choices: ['fr', 'en'])]
+    private string $locale = 'fr';
+
     #[ORM\Column(type: 'json')]
     private array $roles = ['ROLE_USER'];
 
@@ -168,6 +172,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setAutoFillCheckout(bool $autoFillCheckout): self
     {
         $this->autoFillCheckout = $autoFillCheckout;
+        return $this;
+    }
+
+    public function getLocale(): string
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(string $locale): self
+    {
+        $this->locale = $locale;
         return $this;
     }
 

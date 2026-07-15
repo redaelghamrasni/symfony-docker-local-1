@@ -247,7 +247,7 @@
         var offset = btn.dataset.offset;
         var url    = btn.dataset.baseUrl + 'offset=' + offset;
         btn.disabled = true;
-        btn.textContent = '{{ 'common.loading'|trans }}';
+        btn.textContent = '{{ 'common.loading'|trans|e('js') }}';
         try {
             var resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             var data = await resp.json();
@@ -256,13 +256,13 @@
             if (data.hasMore) {
                 btn.dataset.offset = data.nextOffset;
                 btn.disabled = false;
-                btn.textContent = '{{ 'articles.load_more'|trans }}';
+                btn.textContent = '{{ 'articles.load_more'|trans|e('js') }}';
             } else {
                 document.getElementById('load-more-wrapper').remove();
             }
         } catch (e) {
             btn.disabled = false;
-            btn.textContent = '{{ 'articles.load_more'|trans }}';
+            btn.textContent = '{{ 'articles.load_more'|trans|e('js') }}';
         }
     });
 })();

@@ -6,6 +6,7 @@ use App\Entity\Address;
 use App\Service\CartService;
 use App\Service\PayPalService;
 use App\Service\SettingService;
+use App\Service\TaxService;
 use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
@@ -24,6 +25,8 @@ use Symfony\Component\Mime\Address as EmailAddress;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\ShippingService;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Translation\LocaleSwitcher;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutController extends AbstractController
 {
@@ -53,7 +56,9 @@ class CheckoutController extends AbstractController
         private ShippingService $shippingService,
         private SettingService $settingService,
         private AddressRepository $addressRepository,
-        private OrderRepository $orderRepository
+        private OrderRepository $orderRepository,
+        private LocaleSwitcher $localeSwitcher,
+        private TranslatorInterface $translator
     ) {
     }
 
@@ -411,10 +416,21 @@ class CheckoutController extends AbstractController
         $grandTotal = $session->get('checkout_grand_total');
         $total      = $grandTotal !== null ? (string) round((float)$grandTotal, 2) : $cart->getTotal();
 
+        $subtotal       = $session->get('checkout_subtotal');
+        $shippingAmount = $session->get('checkout_shipping_amount');
+        $taxGst         = $session->get('checkout_tax_gst');
+        $taxPst         = $session->get('checkout_tax_pst');
+        $taxHst         = $session->get('checkout_tax_hst');
+
         $order = new Order();
         $order->setUser($this->getUser());
         $order->setStatus('pending');
         $order->setTotal($total);
+        $order->setSubtotal($subtotal !== null ? (string) round((float) $subtotal, 2) : $cart->getTotal());
+        $order->setShippingAmount($shippingAmount !== null ? (string) round((float) $shippingAmount, 2) : null);
+        $order->setTaxGst($taxGst !== null ? (string) round((float) $taxGst, 2) : '0.00');
+        $order->setTaxPst($taxPst !== null ? (string) round((float) $taxPst, 2) : '0.00');
+        $order->setTaxHst($taxHst !== null ? (string) round((float) $taxHst, 2) : '0.00');
 
         $nameParts = explode(' ', trim($name), 2);
         $order->setCustomerFirstName($nameParts[0] ?? 'Client');
@@ -516,14 +532,19 @@ class CheckoutController extends AbstractController
 
     private function sendOrderConfirmationEmail(Order $order): void
     {
-        $message = (new TemplatedEmail())
-            ->from(new EmailAddress('no-reply@monapp.local', 'MonApp'))
-            ->to($order->getCustomerEmail())
-            ->subject('Confirmation de votre commande')
-            ->htmlTemplate('emails/order_confirmation.html.twig')
-            ->context(['order' => $order]);
+        // Send in the customer's preferred language; default to French when unavailable (e.g. guest checkout)
+        $locale = $order->getUser()?->getLocale() ?? 'fr';
 
-        $this->mailer->send($message);
+        $this->localeSwitcher->runWithLocale($locale, function () use ($order): void {
+            $message = (new TemplatedEmail())
+                ->from(new EmailAddress('no-reply@monapp.local', 'MonApp'))
+                ->to($order->getCustomerEmail())
+                ->subject($this->translator->trans('email.order_confirmation.subject'))
+                ->htmlTemplate('emails/order_confirmation.html.twig')
+                ->context(['order' => $order, 'locale' => $locale]);
+
+            $this->mailer->send($message);
+        });
     }
 
     private function clearCheckoutSession(\Symfony\Component\HttpFoundation\Session\SessionInterface $session): void
@@ -548,5 +569,16 @@ class CheckoutController extends AbstractController
         $pst   = round($subtotal * ($rates['pst'] ?? 0.0), 2);
         $hst   = round($subtotal * ($rates['hst'] ?? 0.0), 2);
         return [$gst, $pst, $hst];
+    }
+
+    #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]
+    public function calculateTaxApi(Request $request, TaxService $taxService): JsonResponse
+    {
+        $data     = json_decode($request->getContent(), true) ?? [];
+        $province = $data['province'] ?? 'QC';
+        $cart     = $this->cartService->getCurrentCart();
+        $tax = $taxService->calculateTax((float) $cart->getTotal(), $province);
+
+        return $this->json($tax);
     }
 }

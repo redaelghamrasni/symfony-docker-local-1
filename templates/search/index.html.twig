@@ -2,6 +2,101 @@
 
 {% block title %}{{ 'search.title'|trans }}{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ── Product grid (matches templates/article/list.html.twig) ── */
+        /* InstantSearch renders hits as #search-hits > div.ais-Hits > ul.ais-Hits-list > li.ais-Hits-item */
+        #search-hits .ais-Hits-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        #search-hits .ais-Hits-item {
+            display: flex;
+        }
+        #search-hits .ais-Hits-item .product-card {
+            width: 100%;
+        }
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: box-shadow 0.2s, transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.1); transform: translateY(-3px); }
+        .product-img-link { display: block; }
+        .product-img-wrap {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+            background: #f3f4f6;
+        }
+        .product-img-wrap img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.35s ease;
+            display: block;
+        }
+        .product-card:hover .product-img-wrap img { transform: scale(1.05); }
+        .product-img-placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; color: #d1d5db;
+        }
+        .product-body {
+            padding: 14px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .product-title {
+            margin: 0 0 8px;
+            font-size: 14px; font-weight: 600; color: #111827;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.45;
+            flex-grow: 1;
+        }
+        .product-title a { color: inherit; text-decoration: none; }
+        .product-title a:hover { color: #667eea; }
+        .product-price { margin: 8px 0 0; }
+        .product-price-current { font-size: 16px; font-weight: 700; color: #111827; }
+        .product-actions {
+            display: flex; gap: 8px;
+            margin-top: 14px; padding-top: 12px;
+            border-top: 1px solid #f3f4f6;
+        }
+        .product-btn-cart {
+            flex: 1; padding: 8px 10px;
+            color: white; border: none; border-radius: 7px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+            transition: opacity 0.15s, transform 0.15s; width: 100%;
+        }
+        .product-btn-view {
+            padding: 8px 12px; background: #f3f4f6; color: #374151;
+            border-radius: 7px; font-size: 12px; font-weight: 600;
+            text-decoration: none; white-space: nowrap;
+            display: inline-flex; align-items: center;
+            transition: background 0.15s; flex-shrink: 0;
+        }
+        .product-btn-view:hover { background: #e5e7eb; color: #111827; }
+
+        @media (max-width: 1100px) { #search-hits .ais-Hits-list { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { #search-hits .ais-Hits-list { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+        @media (max-width: 480px) { #search-hits .ais-Hits-list { grid-template-columns: 1fr; } }
+    </style>
+{% endblock %}
+
 {% block body %}
 <div class="container">
     <div class="header">
@@ -10,7 +105,7 @@
 
     <div id="search-stats" style="margin-bottom: 20px; color: #64748b; font-size: 14px;"></div>
     <div id="search-searchbox" style="margin-bottom: 24px;"></div>
-    <div id="search-hits" class="article-grid"></div>
+    <div id="search-hits"></div>
     <div id="search-pagination" style="margin-top: 32px; text-align: center;"></div>
 </div>
 
@@ -78,31 +173,29 @@ document.addEventListener('DOMContentLoaded', function() {
             templates: {
                 item(hit, { html, components }) {
                     return html`
-                        <div class="article-card search-hit-card-full">
-                            <a
-                                href="/${locale}/article/${hit.id}"
-                                class="search-hit-img-link"
-                                style="${hit.imageUrl ? '' : 'display:none'}"
-                            >
-                                <img src="${hit.imageUrl || ''}" alt="${hit.title}" class="search-hit-img" />
+                        <div class="product-card">
+                            <a href="/${locale}/article/${hit.id}" class="product-img-link">
+                                <div class="product-img-wrap">
+                                    ${hit.imageUrl
+                                        ? html`<img src="${hit.imageUrl}" alt="${hit.title}" loading="lazy" />`
+                                        : html`<div class="product-img-placeholder"><i class="bi bi-box-seam"></i></div>`}
+                                </div>
                             </a>
-                            <div class="article-header">
-                                <h2 class="article-title">
-                                    ${components.Highlight({ hit, attribute: 'title' })}
-                                </h2>
-                                <span class="article-id">#${hit.id}</span>
-                            </div>
-                            <p class="article-content">
-                                ${components.Highlight({ hit, attribute: 'content' })}
-                            </p>
-                            <div class="article-price">
-                                ${parseFloat(hit.price).toFixed(2)} $
-                            </div>
-                            <div class="article-footer">
-                                <div></div>
-                                <div class="article-actions">
-                                    <a href="/${locale}/article/${hit.id}" class="action-link view">
-                                        ${locale === 'fr' ? 'Voir' : 'View'}
+                            <div class="product-body">
+                                <h3 class="product-title">
+                                    <a href="/${locale}/article/${hit.id}">${components.Highlight({ hit, attribute: 'title' })}</a>
+                                </h3>
+                                <div class="product-price">
+                                    <span class="product-price-current">${parseFloat(hit.price).toFixed(2)} $</span>
+                                </div>
+                                <div class="product-actions">
+                                    <form class="form-add-to-cart" data-url="/${locale}/cart/add/${hit.id}" style="flex: 1; display: flex;">
+                                        <button type="submit" class="product-btn-cart btn-action-primary">
+                                            <i class="bi bi-cart-plus"></i> {{ 'articles.actions.add_to_cart'|trans }}
+                                        </button>
+                                    </form>
+                                    <a href="/${locale}/article/${hit.id}" class="product-btn-view btn-action-secondary">
+                                        {{ 'articles.actions.view'|trans }}
                                     </a>
                                 </div>
                             </div>
@@ -126,6 +219,10 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 2,
         }),
     ]);
+
+    search.on('render', function() {
+        if (typeof initCartForms === 'function') initCartForms();
+    });
 
     search.start();
 });

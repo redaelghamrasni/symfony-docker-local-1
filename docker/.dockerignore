@@ -1,0 +1,9 @@
+.git
+.env.local
+.env.test
+var/cache
+var/log
+node_modules
+tests
+docker
+*.md

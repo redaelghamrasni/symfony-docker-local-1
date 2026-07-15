@@ -144,6 +144,10 @@
                         <span class="profile-info-value">{{ user.username }}</span>
                     </div>
                     <div class="profile-info-item">
+                        <span class="profile-info-label">{{ 'profile.index.locale'|trans }}</span>
+                        <span class="profile-info-value">{{ (user.locale == 'fr' ? 'lang.french' : 'lang.english')|trans }}</span>
+                    </div>
+                    <div class="profile-info-item">
                         <span class="profile-info-label">{{ 'profile.index.auto_fill_checkout'|trans }}</span>
                         <span class="profile-info-value">{{ user.autoFillCheckout ? 'profile.index.activated'|trans : 'profile.index.deactivated' |trans }}
                     </div>

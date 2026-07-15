@@ -56,6 +56,16 @@ class AdminUserType extends AbstractType
                     'placeholder' => 'Doe',
                 ],
             ])
+            ->add('locale', ChoiceType::class, [
+                'label' => 'admin.users.locale',
+                'choices' => [
+                    'Français' => 'fr',
+                    'English' => 'en',
+                ],
+                'attr' => [
+                    'class' => 'form-control',
+                ],
+            ])
             ->add('plainPassword', RepeatedType::class, [
                 'type' => PasswordType::class,
                 'mapped' => false,

@@ -3,7 +3,9 @@
 namespace App\Form;
 
 use App\Entity\User;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -17,6 +19,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 class UserType extends AbstractType
 {
+    public function __construct(private TranslatorInterface $translator)
+    {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $isEdit = $options['data'] && $options['data']->getId();
@@ -67,6 +73,17 @@ class UserType extends AbstractType
                     'class' => 'form-control',
                     'placeholder' => 'Doe',
                 ],
+            ])
+            ->add('locale', ChoiceType::class, [
+                'label' => 'form.language',
+                'translation_domain' => 'messages',
+                'choices' => [
+                    'Français' => 'fr',
+                    'English' => 'en',
+                ],
+                'attr' => [
+                    'class' => 'form-control',
+                ],
             ]);
 
         if (!$isEdit) {
@@ -81,7 +98,7 @@ class UserType extends AbstractType
                     ],
                     'attr' => [
                         'class' => 'form-control',
-                        'placeholder' => 'Enter password',
+                        'placeholder' => $this->translator->trans('form.password_placeholder'),
                     ],
                 ],
                 'second_options' => [
@@ -89,7 +106,7 @@ class UserType extends AbstractType
                     'translation_domain' => 'messages',
                     'attr' => [
                         'class' => 'form-control',
-                        'placeholder' => 'Confirm password',
+                        'placeholder' => $this->translator->trans('form.confirm_password_placeholder'),
                     ],
                 ],
                 'invalid_message' => 'form.passwords_match',
@@ -108,7 +125,7 @@ class UserType extends AbstractType
                     'attr' => [
                         'class' => 'form-control',
                         'autocomplete' => 'new-password',
-                        'placeholder' => 'Leave empty to keep current',
+                        'placeholder' => $this->translator->trans('form.new_password_placeholder'),
                     ],
                 ],
                 'second_options' => [
@@ -117,10 +134,17 @@ class UserType extends AbstractType
                     'attr' => [
                         'class' => 'form-control',
                         'autocomplete' => 'new-password',
-                        'placeholder' => 'Repeat new password',
+                        'placeholder' => $this->translator->trans('form.confirm_new_password_placeholder'),
                     ],
                 ],
                 'invalid_message' => 'form.passwords_match',
+            ]);
+        }
+
+        if ($isEdit) {
+            $builder->add('autoFillCheckout', CheckboxType::class, [
+                'label' => false,
+                'required' => false,
             ]);
         }
     }

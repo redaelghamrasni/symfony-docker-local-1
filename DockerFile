@@ -1,0 +1,61 @@
+FROM php:8.3-fpm-alpine AS base
+
+# Extensions système nécessaires
+RUN apk add --no-cache \
+    nginx \
+    nodejs \
+    npm \
+    git \
+    zip \
+    unzip \
+    icu-dev \
+    oniguruma-dev \
+    libzip-dev \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        intl \
+        zip \
+        opcache \
+        mbstring
+
+# Extension Redis
+RUN apk add --no-cache $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del $PHPIZE_DEPS
+
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# ── Build ──────────────────────────────────────────────────────────────
+FROM base AS build
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+RUN composer dump-autoload --optimize --no-dev
+RUN npm run build
+
+# ── Production ─────────────────────────────────────────────────────────
+FROM base AS production
+
+COPY --from=build /var/www/html /var/www/html
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY docker/entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh \
+    && chown -R www-data:www-data /var/www/html/var \
+    && mkdir -p /run/nginx
+
+EXPOSE 8080
+
+ENTRYPOINT ["/entrypoint.sh"]

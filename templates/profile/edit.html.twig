@@ -115,21 +115,25 @@
                     {{ form_widget(form.last_name, {'attr': {'class': 'profile-input', 'placeholder': 'Dupont'}}) }}
                     {{ form_errors(form.last_name) }}
                 </div>
+                <div class="profile-group">
+                    <label for="{{ form.locale.vars.id }}">{{ 'admin.profile.edit.locale'|trans }}</label>
+                    {{ form_widget(form.locale, {'attr': {'class': 'profile-input'}}) }}
+                    {{ form_errors(form.locale) }}
+                </div>
                 <div class="profile-checkbox">
                     {{ form_widget(form.autoFillCheckout) }}
                     <label for="{{ form.autoFillCheckout.vars.id }}">{{ 'admin.profile.edit.auto_fill_checkout'|trans }}</label>
                 </div>
 
                 <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem; margin-top: 0.5rem;">
-                    <p style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0;">{{ 'admin.users.edit.change_password'|trans }}</p>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 1rem 0;">{{ 'admin.users.edit.password_hint'|trans }}</p>
+                    <p style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 0.80rem 0;">{{ 'admin.users.edit.change_password'|trans }}</p>
                     <div class="profile-group" style="margin-bottom: 1rem;">
-                        <label for="{{ form.plainPassword.first.vars.id }}">{{ form.plainPassword.first.vars.label }}</label>
+                        <label for="{{ form.plainPassword.first.vars.id }}">{{ form.plainPassword.first.vars.label|trans }}</label>
                         {{ form_widget(form.plainPassword.first, {'attr': {'class': 'profile-input'}}) }}
                         {{ form_errors(form.plainPassword.first) }}
                     </div>
                     <div class="profile-group">
-                        <label for="{{ form.plainPassword.second.vars.id }}">{{ form.plainPassword.second.vars.label }}</label>
+                        <label for="{{ form.plainPassword.second.vars.id }}">{{ form.plainPassword.second.vars.label|trans }}</label>
                         {{ form_widget(form.plainPassword.second, {'attr': {'class': 'profile-input'}}) }}
                         {{ form_errors(form.plainPassword.second) }}
                     </div>

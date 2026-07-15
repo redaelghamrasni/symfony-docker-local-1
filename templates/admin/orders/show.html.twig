@@ -407,7 +407,12 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 13px; color: #64748b;">{{ 'admin.orders.show.status'|trans }}</span>
                     <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">
-                        {{ order.status|capitalize }}
+                        {{ {
+                            'pending': 'admin.orders.show.status_pending'|trans|capitalize,
+                            'processing': 'admin.orders.show.status_processing'|trans|capitalize,
+                            'completed': 'admin.orders.show.status_completed'|trans|capitalize,
+                            'cancelled': 'admin.orders.show.status_cancelled'|trans|capitalize
+                        }[order.status]|default(order.status|capitalize) }}
                     </span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">

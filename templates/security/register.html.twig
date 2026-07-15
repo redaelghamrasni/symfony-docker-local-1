@@ -231,6 +231,11 @@
                     {{ form_errors(form.last_name) }}
                 </div>
                 <div class="auth-group">
+                    <label for="{{ form.locale.vars.id }}">{{ 'auth.register.locale_label' | trans }}</label>
+                    {{ form_widget(form.locale, {'attr': {'class': 'auth-input'}}) }}
+                    {{ form_errors(form.locale) }}
+                </div>
+                <div class="auth-group">
                     <label for="{{ form.password.vars.id }}">{{ 'auth.register.password_label' | trans }}</label>
                     {{ form_widget(form.password, {'attr': {'class': 'auth-input', 'placeholder': '••••••••'}}) }}
                     {{ form_errors(form.password) }}

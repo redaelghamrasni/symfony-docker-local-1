@@ -28,6 +28,21 @@ class Order
     #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
     private ?string $total = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $subtotal = null;
+
+    #[ORM\Column(name: 'shipping_amount', type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $shippingAmount = null;
+
+    #[ORM\Column(name: 'tax_gst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $taxGst = null;
+
+    #[ORM\Column(name: 'tax_pst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $taxPst = null;
+
+    #[ORM\Column(name: 'tax_hst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $taxHst = null;
+
     #[ORM\Column(name: 'created_at')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -160,6 +175,21 @@ class Order
         $this->total = $total;
         return $this;
     }
+
+    public function getSubtotal(): ?string { return $this->subtotal; }
+    public function setSubtotal(?string $v): self { $this->subtotal = $v; return $this; }
+
+    public function getShippingAmount(): ?string { return $this->shippingAmount; }
+    public function setShippingAmount(?string $v): self { $this->shippingAmount = $v; return $this; }
+
+    public function getTaxGst(): ?string { return $this->taxGst; }
+    public function setTaxGst(?string $v): self { $this->taxGst = $v; return $this; }
+
+    public function getTaxPst(): ?string { return $this->taxPst; }
+    public function setTaxPst(?string $v): self { $this->taxPst = $v; return $this; }
+
+    public function getTaxHst(): ?string { return $this->taxHst; }
+    public function setTaxHst(?string $v): self { $this->taxHst = $v; return $this; }
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {
