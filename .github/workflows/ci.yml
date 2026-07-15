@@ -70,6 +70,8 @@ jobs:
 
       - name: Build des assets
         run: npm run build
+        env:
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
 
       - name: Générer les clés JWT
         run: php bin/console lexik:jwt:generate-keypair --skip-if-exists
