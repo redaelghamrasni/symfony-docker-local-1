@@ -1,0 +1,25 @@
+{% for category in categories %}
+<tr style="border-bottom: 1px solid #e2e8f0;">
+    <td style="padding: 16px; color: #0f172a;">
+        <strong>{{ category.name }}</strong><br>
+        <span style="font-size: 12px; color: #94a3b8;">{{ category.slug }}</span>
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {{ category.articles|length }}
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {{ category.createdAt|date('Y-m-d') }}
+    </td>
+    <td style="padding: 16px; text-align: right;">
+        <a href="{{ path('admin_categories_edit', {id: category.id}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 12px;">
+            <i class="bi bi-pencil"></i> {{ 'common.edit'|trans }}
+        </a>
+        <form action="{{ path('admin_categories_delete', {id: category.id}) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ 'admin.categories.index.confirm_delete'|trans|e('js') }}');">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ category.id) }}">
+            <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                <i class="bi bi-trash"></i> {{ 'common.delete'|trans }}
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}

@@ -6,6 +6,7 @@ use App\Entity\Order;
 use App\Repository\OrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -22,7 +23,22 @@ class OrderController extends AbstractController
     public function index(Request $request): Response
     {
         $status = $request->query->get('status');
-        $orders = $this->orderRepository->findForAdmin($status);
+        $idsParam = $request->query->get('ids');
+
+        if ($idsParam !== null) {
+            $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $idsParam)))));
+            $orders = $this->orderRepository->findByIds($ids);
+        } else {
+            $orders = $this->orderRepository->findForAdmin($status);
+        }
+
+        if ($request->isXmlHttpRequest()) {
+            $html = $this->renderView('admin/orders/_rows.html.twig', ['orders' => $orders]);
+            return new JsonResponse([
+                'html'  => $html,
+                'total' => count($orders),
+            ]);
+        }
 
         return $this->render('admin/orders/index.html.twig', [
             'orders'        => $orders,

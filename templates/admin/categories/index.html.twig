@@ -8,18 +8,37 @@
 {% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<div
+    data-admin-search
+    data-meili-index="categories"
+    data-index-url="{{ app.request.requestUri }}"
+    data-count-template="{{ 'admin.categories.index.count'|trans({'%count%': '__COUNT__'})|e('html_attr') }}"
+    data-search-empty-template="{{ 'admin.categories.index.search_no_results'|trans({'%query%': '__QUERY__'})|e('html_attr') }}"
+>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 20px; flex-wrap: wrap;">
     <div>
         <h2 style="margin: 0; font-size: 20px;">{{ 'admin.categories.index.title'|trans }}</h2>
-        <p style="margin: 5px 0 0 0; color: #64748b;">{{ categories|length }} {{ 'admin.categories.index.categories'|trans }}</p>
+        <p data-admin-search-count style="margin: 5px 0 0 0; color: #64748b;">{{ 'admin.categories.index.count'|trans({'%count%': categories|length}) }}</p>
     </div>
-    <a href="{{ path('admin_categories_new') }}" class="btn-action-primary">
-        <i class="bi bi-plus-lg"></i> {{ 'admin.categories.index.create_category'|trans }}
-    </a>
+    <div style="display: flex; align-items: center; gap: 12px; flex: 1; max-width: 360px; min-width: 220px;">
+        <div style="position: relative; flex: 1;">
+            <i class="bi bi-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; pointer-events: none;"></i>
+            <input
+                type="text"
+                data-admin-search-input
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="{{ 'admin.categories.index.search_placeholder'|trans }}"
+                style="width: 100%; padding: 9px 12px 9px 32px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+            >
+        </div>
+        <a href="{{ path('admin_categories_new') }}" class="btn-action-primary" style="white-space: nowrap;">
+            <i class="bi bi-plus-lg"></i> {{ 'admin.categories.index.create_category'|trans }}
+        </a>
+    </div>
 </div>
 
-{% if categories %}
-<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+<div data-admin-search-list style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); {% if not categories %}display: none;{% endif %}">
     <div class="admin-table-wrap">
     <table style="width: 100%; border-collapse: collapse;">
         <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
@@ -30,43 +49,24 @@
                 <th style="padding: 16px; text-align: right; font-weight: 600; color: #334155; font-size: 14px;">{{ 'admin.articles.index.col_actions'|trans }}</th>
             </tr>
         </thead>
-        <tbody>
-            {% for category in categories %}
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 16px; color: #0f172a;">
-                    <strong>{{ category.name }}</strong><br>
-                    <span style="font-size: 12px; color: #94a3b8;">{{ category.slug }}</span>
-                </td>
-                <td style="padding: 16px; color: #64748b; font-size: 14px;">
-                    {{ category.articles|length }}
-                </td>
-                <td style="padding: 16px; color: #64748b; font-size: 14px;">
-                    {{ category.createdAt|date('Y-m-d') }}
-                </td>
-                <td style="padding: 16px; text-align: right;">
-                    <a href="{{ path('admin_categories_edit', {id: category.id}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 12px;">
-                        <i class="bi bi-pencil"></i> {{ 'common.edit'|trans }}
-                    </a>
-                    <form action="{{ path('admin_categories_delete', {id: category.id}) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ 'admin.categories.index.confirm_delete'|trans|e('js') }}');">
-                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ category.id) }}">
-                        <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
-                            <i class="bi bi-trash"></i> {{ 'common.delete'|trans }}
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
+        <tbody data-admin-search-tbody>
+            {% include 'admin/categories/_rows.html.twig' %}
         </tbody>
     </table>
     </div>
 </div>
-{% else %}
-<div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
+
+<div data-admin-search-empty style="background: white; padding: 40px; text-align: center; border-radius: 8px; {% if categories %}display: none;{% endif %}">
     <i class="bi bi-tag" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px; display: block;"></i>
     <h3 style="margin: 0 0 10px 0; color: #334155;">{{ 'admin.categories.index.no_categories'|trans }}</h3>
     <a href="{{ path('admin_categories_new') }}" class="btn-action-primary" style="margin-top: 16px; display: inline-flex;">
         {{ 'admin.categories.index.create_category'|trans }}
     </a>
 </div>
-{% endif %}
+
+<div data-admin-search-noresults style="background: white; padding: 40px; text-align: center; border-radius: 8px; display: none;">
+    <i class="bi bi-search" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px; display: block;"></i>
+    <h3 data-admin-search-noresults-title style="margin: 0; color: #334155;"></h3>
+</div>
+</div>
 {% endblock %}

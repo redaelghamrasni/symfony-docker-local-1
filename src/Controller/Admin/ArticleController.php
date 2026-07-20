@@ -34,11 +34,21 @@ class ArticleController extends AbstractController
     #[Route('/', name: 'index')]
     public function index(Request $request): Response
     {
-        $offset = max(0, (int) $request->query->get('offset', 0));
-        $total  = $this->articleRepository->countAll();
-        $articles = $this->articleRepository->findPaginated(self::PAGE_SIZE, $offset);
-        $nextOffset = $offset + self::PAGE_SIZE;
-        $hasMore = $nextOffset < $total;
+        $idsParam = $request->query->get('ids');
+
+        if ($idsParam !== null) {
+            $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $idsParam)))));
+            $articles = $this->articleRepository->findByIds($ids);
+            $total = count($articles);
+            $nextOffset = 0;
+            $hasMore = false;
+        } else {
+            $offset = max(0, (int) $request->query->get('offset', 0));
+            $total  = $this->articleRepository->countAll();
+            $articles = $this->articleRepository->findPaginated(self::PAGE_SIZE, $offset);
+            $nextOffset = $offset + self::PAGE_SIZE;
+            $hasMore = $nextOffset < $total;
+        }
 
         if ($request->isXmlHttpRequest()) {
             $html = $this->renderView('admin/articles/_rows.html.twig', ['articles' => $articles]);
@@ -46,6 +56,7 @@ class ArticleController extends AbstractController
                 'html'       => $html,
                 'hasMore'    => $hasMore,
                 'nextOffset' => $nextOffset,
+                'total'      => $total,
             ]);
         }
 

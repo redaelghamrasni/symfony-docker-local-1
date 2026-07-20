@@ -422,6 +422,7 @@ admin:
       breadcrumb: Articles
       title: Gestion des articles
       articles: articles
+      count: "%count% articles"
       create_article: Créer un article
       col_title: Titre
       col_created: Créé
@@ -434,6 +435,8 @@ admin:
       no_articles: Aucun article pour le moment
       no_articles_description: Commencez par créer votre premier article.
       create_first_article: Créer un article
+      search_placeholder: Rechercher un article...
+      search_no_results: "Aucun résultat pour « %query% »"
   users:
     updated: Utilisateur mis à jour avec succès
     deleted: Utilisateur supprimé avec succès
@@ -460,6 +463,8 @@ admin:
       col_role: Rôle
       col_joined: Inscrit
       no_users: Aucun utilisateur pour le moment
+      search_placeholder: Rechercher un utilisateur...
+      search_no_results: "Aucun résultat pour « %query% »"
     show:
       info_title: Informations utilisateur
       joined: Inscrit
@@ -534,6 +539,8 @@ admin:
       no_orders_found: Aucune commande trouvée
       no_orders_yet: Aucune commande pour le moment.
       no_orders_with_status: "Aucune commande avec le statut « %status% »."
+      search_placeholder: Rechercher par n° de commande, nom ou courriel...
+      search_no_results: "Aucun résultat pour « %query% »"
     show:
       article: Article
       articles: Articles
@@ -602,11 +609,14 @@ admin:
       breadcrumb: Catégories
       title: Gestion des catégories
       categories: catégories
+      count: "%count% catégories"
       create_category: Créer une catégorie
       col_name: Nom
       col_articles: Articles
       no_categories: Aucune catégorie pour le moment
       confirm_delete: Êtes-vous sûr de vouloir supprimer cette catégorie ?
+      search_placeholder: Rechercher une catégorie...
+      search_no_results: "Aucun résultat pour « %query% »"
     form:
       info_title: Informations sur la catégorie
       new_category: Nouvelle catégorie

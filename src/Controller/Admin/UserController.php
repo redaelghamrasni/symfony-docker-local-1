@@ -7,6 +7,7 @@ use App\Form\Admin\AdminUserType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -22,9 +23,24 @@ class UserController extends AbstractController
     ) {}
 
     #[Route('/', name: 'index')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $users = $this->userRepository->findBy([], ['createdAt' => 'DESC']);
+        $idsParam = $request->query->get('ids');
+
+        if ($idsParam !== null) {
+            $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $idsParam)))));
+            $users = $this->userRepository->findByIds($ids);
+        } else {
+            $users = $this->userRepository->findBy([], ['createdAt' => 'DESC']);
+        }
+
+        if ($request->isXmlHttpRequest()) {
+            $html = $this->renderView('admin/users/_rows.html.twig', ['users' => $users]);
+            return new JsonResponse([
+                'html'  => $html,
+                'total' => count($users),
+            ]);
+        }
 
         return $this->render('admin/users/index.html.twig', [
             'users' => $users,

@@ -25,22 +25,41 @@
     'cancelled':  'admin.orders.show.status_cancelled'|trans
 } %}
 
-<div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
-    {% for value, label in statuses %}
-        <a href="{{ path('admin_orders_index', value ? {status: value} : {}) }}"
-           style="padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid {{ activeStatus == value ? '#0f172a' : '#e2e8f0' }}; background: {{ activeStatus == value ? '#0f172a' : '#fff' }}; color: {{ activeStatus == value ? '#fff' : '#64748b' }};">
-            {{ label }}
-            {% if value and statusCounts[value] is defined %}
-                <span style="margin-left: 4px; opacity: 0.8;">({{ statusCounts[value] }})</span>
-            {% elseif not value %}
-                <span style="margin-left: 4px; opacity: 0.8;">({{ orders|length }})</span>
-            {% endif %}
-        </a>
-    {% endfor %}
+<div
+    data-admin-search
+    data-meili-index="orders"
+    data-index-url="{{ app.request.requestUri }}"
+    data-search-empty-template="{{ 'admin.orders.index.search_no_results'|trans({'%query%': '__QUERY__'})|e('html_attr') }}"
+>
+
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        {% for value, label in statuses %}
+            <a href="{{ path('admin_orders_index', value ? {status: value} : {}) }}"
+               style="padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid {{ activeStatus == value ? '#0f172a' : '#e2e8f0' }}; background: {{ activeStatus == value ? '#0f172a' : '#fff' }}; color: {{ activeStatus == value ? '#fff' : '#64748b' }};">
+                {{ label }}
+                {% if value and statusCounts[value] is defined %}
+                    <span style="margin-left: 4px; opacity: 0.8;">({{ statusCounts[value] }})</span>
+                {% elseif not value %}
+                    <span style="margin-left: 4px; opacity: 0.8;">({{ orders|length }})</span>
+                {% endif %}
+            </a>
+        {% endfor %}
+    </div>
+    <div style="position: relative; flex: 1; max-width: 320px; min-width: 220px;">
+        <i class="bi bi-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; pointer-events: none;"></i>
+        <input
+            type="text"
+            data-admin-search-input
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="{{ 'admin.orders.index.search_placeholder'|trans }}"
+            style="width: 100%; padding: 9px 12px 9px 32px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+        >
+    </div>
 </div>
 
-{% if orders %}
-<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+<div data-admin-search-list style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); {% if not orders %}display: none;{% endif %}">
     <div class="admin-table-wrap">
     <table style="width: 100%; border-collapse: collapse;">
         <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
@@ -55,45 +74,14 @@
                 <th style="padding: 14px 16px; text-align: right; font-weight: 600; color: #334155; font-size: 13px;">{{ 'admin.orders.index.col_actions'|trans }}</th>
             </tr>
         </thead>
-        <tbody>
-            {% for order in orders %}
-            {% set statusStyles = {
-                'pending':    'background:#fef9c3;color:#854d0e;',
-                'processing': 'background:#dbeafe;color:#1e40af;',
-                'completed':  'background:#dcfce7;color:#166534;',
-                'cancelled':  'background:#fee2e2;color:#991b1b;'
-            } %}
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 14px 16px; color: #64748b; font-size: 13px; font-weight: 600;">#{{ order.id }}</td>
-                <td style="padding: 14px 16px; color: #0f172a; font-weight: 500;">
-                    {{ order.customerFirstName }} {{ order.customerLastName }}
-                </td>
-                <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ order.customerEmail }}</td>
-                <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ order.items|length }}</td>
-                <td style="padding: 14px 16px; text-align: right; font-weight: 600; color: #0f172a;">
-                    {{ order.total|number_format(2, ',', ' ') }} $
-                </td>
-                <td style="padding: 14px 16px; text-align: center;">
-                    <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">
-                        {{ statusLabels[order.status] ?? order.status|capitalize }}
-                    </span>
-                </td>
-                <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">
-                    {{ order.createdAt|date('Y-m-d H:i') }}
-                </td>
-                <td style="padding: 14px 16px; text-align: right;">
-                    <a href="{{ path('admin_orders_show', {id: order.id}) }}" class="btn-action-secondary" style="font-size: 12px; padding: 5px 12px;">
-                        <i class="bi bi-eye"></i> {{ 'admin.orders.index.view'|trans }}
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
+        <tbody data-admin-search-tbody>
+            {% include 'admin/orders/_rows.html.twig' %}
         </tbody>
     </table>
     </div>
 </div>
-{% else %}
-<div style="background: white; padding: 60px 40px; text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+
+<div data-admin-search-empty style="background: white; padding: 60px 40px; text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); {% if orders %}display: none;{% endif %}">
     <i class="bi bi-bag-x" style="font-size: 48px; color: #cbd5e1; display: block; margin-bottom: 16px;"></i>
     <h3 style="margin: 0 0 8px 0; color: #334155;">{{ 'admin.orders.index.no_orders_found'|trans }}</h3>
     <p style="margin: 0; color: #94a3b8;">
@@ -104,6 +92,11 @@
         {% endif %}
     </p>
 </div>
-{% endif %}
+
+<div data-admin-search-noresults style="background: white; padding: 60px 40px; text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: none;">
+    <i class="bi bi-search" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px; display: block;"></i>
+    <h3 data-admin-search-noresults-title style="margin: 0; color: #334155;"></h3>
+</div>
+</div>
 
 {% endblock %}

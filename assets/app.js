@@ -7,6 +7,7 @@
 
 import './stimulus_bootstrap.js';
 import './autocomplete.js';
+import './admin_list_search.js';
 
 import './styles/app.css';
 import './styles/custom.css';

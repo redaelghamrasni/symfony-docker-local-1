@@ -66,4 +66,35 @@ class OrderRepository extends ServiceEntityRepository
         }
         return $counts;
     }
+
+    /**
+     * Fetches orders by id, preserving the given order (e.g. Meilisearch relevance ranking).
+     *
+     * @param int[] $ids
+     * @return Order[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $orders = $this->createQueryBuilder('o')
+            ->leftJoin('o.user', 'u')
+            ->addSelect('u')
+            ->andWhere('o.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $byId = [];
+        foreach ($orders as $order) {
+            $byId[$order->getId()] = $order;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $id) => $byId[$id] ?? null,
+            $ids
+        )));
+    }
 }

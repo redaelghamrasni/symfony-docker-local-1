@@ -35,4 +35,33 @@ class CategoryRepository extends ServiceEntityRepository
         }
         return $counts;
     }
+
+    /**
+     * Fetches categories by id, preserving the given order (e.g. Meilisearch relevance ranking).
+     *
+     * @param int[] $ids
+     * @return Category[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $categories = $this->createQueryBuilder('c')
+            ->andWhere('c.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $byId = [];
+        foreach ($categories as $category) {
+            $byId[$category->getId()] = $category;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $id) => $byId[$id] ?? null,
+            $ids
+        )));
+    }
 }
