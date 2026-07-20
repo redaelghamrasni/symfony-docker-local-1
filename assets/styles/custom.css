@@ -1487,7 +1487,7 @@ body.admin-body {
                 color: white;
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 20px;
             }
             .admin-nav {
                 display: flex;
