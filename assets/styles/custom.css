@@ -1470,6 +1470,16 @@ body.admin-body {
     background: #f8fafc;
     min-height: 100vh;
 }
+            .admin-badge {
+                position: absolute;
+                top: 16px;
+                right: 18px;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #64748b;
+            }
             .admin-logo {
                 font-size: 20px;
                 font-weight: 700;

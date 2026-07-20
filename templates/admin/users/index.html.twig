@@ -20,16 +20,21 @@
         <h2 style="margin: 0; font-size: 20px;">{{ 'admin.users.index.title'|trans }}</h2>
         <p data-admin-search-count style="margin: 5px 0 0 0; color: #64748b;">{{ 'admin.users.index.count'|trans({'%count%': users|length}) }}</p>
     </div>
-    <div style="position: relative; flex: 1; max-width: 320px; min-width: 220px;">
-        <i class="bi bi-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; pointer-events: none;"></i>
-        <input
-            type="text"
-            data-admin-search-input
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="{{ 'admin.users.index.search_placeholder'|trans }}"
-            style="width: 100%; padding: 9px 12px 9px 32px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
-        >
+    <div style="display: flex; align-items: center; gap: 12px; flex: 1; max-width: 360px; min-width: 220px;">
+        <div style="position: relative; flex: 1;">
+            <i class="bi bi-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; pointer-events: none;"></i>
+            <input
+                type="text"
+                data-admin-search-input
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="{{ 'admin.users.index.search_placeholder'|trans }}"
+                style="width: 100%; padding: 9px 12px 9px 32px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+            >
+        </div>
+        <a href="{{ path('admin_users_new') }}" class="btn-action-primary" style="white-space: nowrap;">
+            <i class="bi bi-plus-lg"></i> {{ 'admin.users.index.create_user'|trans }}
+        </a>
     </div>
 </div>
 
@@ -55,6 +60,9 @@
 <div data-admin-search-empty style="background: white; padding: 40px; text-align: center; border-radius: 8px; {% if users %}display: none;{% endif %}">
     <i class="bi bi-inbox" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px; display: block;"></i>
     <h3 style="margin: 0 0 10px 0; color: #334155;">{{ 'admin.users.index.no_users'|trans }}</h3>
+    <a href="{{ path('admin_users_new') }}" class="btn-action-primary" style="margin-top: 16px; display: inline-flex;">
+        {{ 'admin.users.index.create_user'|trans }}
+    </a>
 </div>
 
 <div data-admin-search-noresults style="background: white; padding: 40px; text-align: center; border-radius: 8px; display: none;">

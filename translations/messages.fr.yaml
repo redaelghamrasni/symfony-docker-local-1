@@ -358,6 +358,7 @@ checkout:
 admin:
   nav:
     panel: Panneau Admin
+    badge: Admin
     dashboard: Tableau de bord
     articles: Articles
     users: Utilisateurs
@@ -438,6 +439,7 @@ admin:
       search_placeholder: Rechercher un article...
       search_no_results: "Aucun résultat pour « %query% »"
   users:
+    created: Utilisateur créé avec succès
     updated: Utilisateur mis à jour avec succès
     deleted: Utilisateur supprimé avec succès
     password_reset: Le mot de passe a été réinitialisé
@@ -465,6 +467,7 @@ admin:
       no_users: Aucun utilisateur pour le moment
       search_placeholder: Rechercher un utilisateur...
       search_no_results: "Aucun résultat pour « %query% »"
+      create_user: Créer un utilisateur
     show:
       info_title: Informations utilisateur
       joined: Inscrit
@@ -486,6 +489,10 @@ admin:
       change_password: Changer le mot de passe
       password_hint: Laissez vide pour conserver le mot de passe actuel.
       update_btn: Mettre à jour l'utilisateur
+    new:
+      title: Nouvel utilisateur
+      password_title: Mot de passe
+      create_btn: Créer l'utilisateur
   profile:
     index:
       title: Modifier le profil

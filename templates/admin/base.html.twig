@@ -24,9 +24,10 @@
         <div class="admin-layout">
             {# Sidebar Navigation #}
             <nav class="admin-sidebar" id="adminSidebar">
+                <span class="admin-badge">{{ 'admin.nav.badge'|trans }}</span>
                 <div class="admin-logo">
                     <i class="bi bi-speedometer2"></i>
-                    {{ 'admin.nav.panel'|trans }}
+                    {{ app.user ? app.user.username : 'admin.nav.panel'|trans }}
                 </div>
 
                 <div class="admin-nav">

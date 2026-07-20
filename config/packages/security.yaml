@@ -58,7 +58,7 @@ security:
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
         # Routes web
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/(fr|en)/admin, roles: ROLE_ADMIN }
         - { path: ^/login$, roles: PUBLIC_ACCESS }
         - { path: ^/register$, roles: PUBLIC_ACCESS }
         - { path: ^/forgot-password, roles: PUBLIC_ACCESS }

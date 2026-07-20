@@ -47,6 +47,29 @@ class UserController extends AbstractController
         ]);
     }
 
+    #[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+    public function new(Request $request): Response
+    {
+        $user = new User();
+        $form = $this->createForm(AdminUserType::class, $user, ['is_new' => true]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $plainPassword = $form->get('plainPassword')->getData();
+            $user->setPassword($this->passwordHasher->hashPassword($user, $plainPassword));
+
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+
+            $this->addFlash('success', 'admin.users.created');
+            return $this->redirectToRoute('admin_users_index');
+        }
+
+        return $this->render('admin/users/new.html.twig', [
+            'form' => $form->createView(),
+        ]);
+    }
+
     #[Route('/{id}', name: 'show')]
     public function show(User $user): Response
     {
