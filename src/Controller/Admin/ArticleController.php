@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Article;
+use App\Entity\ArticleImage;
 use App\Form\ArticleType;
 use App\Repository\ArticleRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -107,12 +108,111 @@ class ArticleController extends AbstractController
         ]);
     }
 
-    private function handleImageUpload(FormInterface $form, Article $article): void
+    #[Route('/{id}/images', name: 'images_add', methods: ['POST'])]
+    public function imagesAdd(Article $article, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('add_images' . $article->getId(), $request->request->get('_token'))) {
+            return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
+        }
+
+        $uploadDir = $this->getUploadDir();
+        $files = $request->files->get('images') ?? [];
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        $position = $this->nextImagePosition($article);
+        foreach ($files as $file) {
+            if ($file === null) {
+                continue;
+            }
+            $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeFilename = $this->slugger->slug($originalFilename);
+            $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+            $file->move($uploadDir, $newFilename);
+
+            $image = new ArticleImage();
+            $image->setPath('/' . self::UPLOAD_DIR . '/' . $newFilename);
+            $image->setPosition($position++);
+            $article->addImage($image);
+            $this->entityManager->persist($image);
+        }
+        $this->entityManager->flush();
+
+        $this->addFlash('success', 'admin.articles.form.gallery_added');
+        return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
+    }
+
+    #[Route('/{id}/images/{imageId}/delete', name: 'images_delete', methods: ['POST'], requirements: ['imageId' => '\d+'])]
+    public function imagesDelete(Article $article, int $imageId, Request $request): Response
+    {
+        if ($this->isCsrfTokenValid('delete_image' . $imageId, $request->request->get('_token'))) {
+            foreach ($article->getImages() as $image) {
+                if ($image->getId() === $imageId) {
+                    $this->removeImageFile($image->getPath(), $this->getUploadDir());
+                    $article->removeImage($image);
+                    $this->entityManager->remove($image);
+                    break;
+                }
+            }
+            $this->entityManager->flush();
+
+            $this->addFlash('success', 'admin.articles.form.gallery_deleted');
+        }
+
+        return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
+    }
+
+    #[Route('/{id}/images/{imageId}/move', name: 'images_move', methods: ['POST'], requirements: ['imageId' => '\d+'])]
+    public function imagesMove(Article $article, int $imageId, Request $request): Response
+    {
+        if ($this->isCsrfTokenValid('move_image' . $imageId, $request->request->get('_token'))) {
+            $direction = $request->request->get('direction');
+            $images = $article->getImages()->toArray();
+
+            $index = null;
+            foreach ($images as $i => $image) {
+                if ($image->getId() === $imageId) {
+                    $index = $i;
+                    break;
+                }
+            }
+
+            $targetIndex = $index === null ? null : ($direction === 'up' ? $index - 1 : $index + 1);
+            if ($index !== null && $targetIndex !== null && $targetIndex >= 0 && $targetIndex < count($images)) {
+                $current = $images[$index];
+                $target = $images[$targetIndex];
+                $currentPosition = $current->getPosition();
+                $current->setPosition($target->getPosition());
+                $target->setPosition($currentPosition);
+                $this->entityManager->flush();
+            }
+        }
+
+        return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
+    }
+
+    private function nextImagePosition(Article $article): int
+    {
+        $max = -1;
+        foreach ($article->getImages() as $image) {
+            $max = max($max, $image->getPosition());
+        }
+        return $max + 1;
+    }
+
+    private function getUploadDir(): string
     {
         $uploadDir = $this->projectDir . '/public/' . self::UPLOAD_DIR;
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
+        return $uploadDir;
+    }
+
+    private function handleImageUpload(FormInterface $form, Article $article): void
+    {
+        $uploadDir = $this->getUploadDir();
 
         if ($form->get('deleteImage')->getData()) {
             $this->removeImageFile($article->getImageUrl(), $uploadDir);

@@ -402,6 +402,17 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP or GIF · max 4 MB"
       image_delete_label: Delete current image
       image_delete_confirm: The image will be deleted on save
+      gallery_title: Image gallery
+      gallery_empty: No images in the gallery
+      gallery_upload_label: Add images
+      gallery_upload_hint: "JPEG, PNG, WebP or GIF · multiple files allowed"
+      gallery_upload_btn: Add to gallery
+      gallery_move_up: Move up
+      gallery_move_down: Move down
+      gallery_delete: Delete this image
+      gallery_delete_confirm: This image will be permanently deleted. Continue?
+      gallery_added: Image(s) added to the gallery
+      gallery_deleted: Image removed from the gallery
     show:
       title: Article Details
       details: Information

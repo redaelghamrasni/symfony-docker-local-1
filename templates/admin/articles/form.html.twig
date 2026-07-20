@@ -246,6 +246,71 @@
 
     {{ form_end(form, {render_rest: false}) }}
 
+    {# Gallery card — edit mode only; managed outside the main form (own upload/delete/reorder actions) #}
+    {% if isEdit %}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.gallery_title'|trans }}</h2>
+        </div>
+        <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 20px;">
+
+            {# Existing gallery images #}
+            {% if article.images|length > 0 %}
+            <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                {% for image in article.images %}
+                <div style="position: relative; width: 160px; border: 1px solid #d6dde6; border-radius: 6px; overflow: hidden; background: #f8fafc;">
+                    <img src="{{ image.path }}" alt="" style="width: 100%; height: 120px; object-fit: cover; display: block;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #fff; border-top: 1px solid #eef1f5;">
+                        <div style="display: flex; gap: 2px;">
+                            <form method="POST" action="{{ path('admin_articles_images_move', {id: article.id, imageId: image.id}) }}" style="margin: 0;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('move_image' ~ image.id) }}">
+                                <input type="hidden" name="direction" value="up">
+                                <button type="submit" title="{{ 'admin.articles.form.gallery_move_up'|trans }}" {% if loop.first %}disabled{% endif %} style="border: none; background: none; cursor: {% if loop.first %}default{% else %}pointer{% endif %}; color: {% if loop.first %}#cbd5e1{% else %}#374155{% endif %}; padding: 2px 4px; font-size: 14px;">
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ path('admin_articles_images_move', {id: article.id, imageId: image.id}) }}" style="margin: 0;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('move_image' ~ image.id) }}">
+                                <input type="hidden" name="direction" value="down">
+                                <button type="submit" title="{{ 'admin.articles.form.gallery_move_down'|trans }}" {% if loop.last %}disabled{% endif %} style="border: none; background: none; cursor: {% if loop.last %}default{% else %}pointer{% endif %}; color: {% if loop.last %}#cbd5e1{% else %}#374155{% endif %}; padding: 2px 4px; font-size: 14px;">
+                                    <i class="bi bi-arrow-down"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <form method="POST" action="{{ path('admin_articles_images_delete', {id: article.id, imageId: image.id}) }}"
+                              onsubmit="return confirm('{{ 'admin.articles.form.gallery_delete_confirm'|trans|e('js') }}');" style="margin: 0;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_image' ~ image.id) }}">
+                            <button type="submit" title="{{ 'admin.articles.form.gallery_delete'|trans }}" style="border: none; background: none; cursor: pointer; color: #dc2626; padding: 2px 4px; font-size: 14px;">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="margin: 0; font-size: 13px; color: #8a9ab5; font-style: italic;">{{ 'admin.articles.form.gallery_empty'|trans }}</p>
+            {% endif %}
+
+            {# Upload new images #}
+            <form method="POST" action="{{ path('admin_articles_images_add', {id: article.id}) }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid #f1f3f7;">
+                <input type="hidden" name="_token" value="{{ csrf_token('add_images' ~ article.id) }}">
+                <label style="font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">
+                    {{ 'admin.articles.form.gallery_upload_label'|trans }}
+                </label>
+                <input type="file" name="images[]" multiple accept="image/jpeg,image/png,image/webp,image/gif" style="display: block; font-size: 13px; color: #374155;">
+                <p style="margin: 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.articles.form.gallery_upload_hint'|trans }}</p>
+                <div>
+                    <button type="submit" class="btn-action-primary" style="margin-top: 4px;">
+                        <i class="bi bi-cloud-upload"></i> {{ 'admin.articles.form.gallery_upload_btn'|trans }}
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+    {% endif %}
+
 {% endblock %}
 
 {% block javascripts %}

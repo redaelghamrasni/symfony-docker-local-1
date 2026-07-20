@@ -397,6 +397,17 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP ou GIF · max. 4 Mo"
       image_delete_label: Supprimer l'image actuelle
       image_delete_confirm: L'image sera supprimée lors de l'enregistrement
+      gallery_title: Galerie d'images
+      gallery_empty: Aucune image dans la galerie
+      gallery_upload_label: Ajouter des images
+      gallery_upload_hint: "JPEG, PNG, WebP ou GIF · plusieurs fichiers possibles"
+      gallery_upload_btn: Ajouter à la galerie
+      gallery_move_up: Déplacer vers le haut
+      gallery_move_down: Déplacer vers le bas
+      gallery_delete: Supprimer cette image
+      gallery_delete_confirm: Cette image sera supprimée définitivement. Continuer ?
+      gallery_added: Image(s) ajoutée(s) à la galerie
+      gallery_deleted: Image supprimée de la galerie
     show:
       title: Détails de l'article
       details: Informations
