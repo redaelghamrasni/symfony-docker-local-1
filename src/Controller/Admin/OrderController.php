@@ -59,16 +59,42 @@ class OrderController extends AbstractController
     public function updateStatus(Order $order, Request $request): Response
     {
         $status = $request->request->get('status');
-        $allowed = ['pending', 'in_progress', 'shipped', 'completed'];
+        $allowed = ['pending', 'in_progress', 'shipped', 'completed', 'cancelled'];
 
-        if (in_array($status, $allowed, true)) {
-            $order->setStatus($status);
-            $order->setUpdatedAt(new \DateTimeImmutable());
-            $this->entityManager->flush();
-            $this->addFlash('success', 'admin.orders.status_updated');
+        if (!in_array($status, $allowed, true)) {
+            $this->addFlash('error', 'admin.orders.status_invalid');
+            return $this->redirectToRoute('admin_orders_show', ['id' => $order->getId()]);
         }
 
-        return $this->redirectToRoute('admin_orders_show', ['id' => $order->getId()]);
+        // Marking an order "shipped" is, until an automated carrier feed exists, the moment the
+        // admin must record the tracking number by hand — require it unless already on file.
+        if ($status === 'shipped' && !$order->getTrackingNumber()) {
+            $trackingNumber = trim($request->request->get('tracking_number', ''));
+            if ($trackingNumber === '') {
+                $this->addFlash('error', 'admin.orders.tracking_required');
+                return $this->redirect($this->generateUrl('admin_orders_show', ['id' => $order->getId()]) . '#tab-shipping');
+            }
+
+            $order->setTrackingNumber($trackingNumber);
+            $carrier = trim($request->request->get('carrier', ''));
+            if ($carrier !== '') {
+                $order->setShippingCarrier($carrier);
+            }
+            $order->setShippingCarrierStatus('shipped');
+            if (!$order->getShippingDate()) {
+                $order->setShippingDate(new \DateTimeImmutable('now', new \DateTimeZone('America/Toronto')));
+            }
+        }
+
+        $justRecordedTracking = $status === 'shipped' && $request->request->get('tracking_number');
+
+        $order->setStatus($status);
+        $order->setUpdatedAt(new \DateTimeImmutable());
+        $this->entityManager->flush();
+        $this->addFlash('success', 'admin.orders.status_updated');
+
+        $url = $this->generateUrl('admin_orders_show', ['id' => $order->getId()]);
+        return $this->redirect($justRecordedTracking ? $url . '#tab-shipping' : $url);
     }
 
     #[Route('/{id}/shipping', name: 'update_shipping', methods: ['POST'])]

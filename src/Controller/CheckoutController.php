@@ -198,6 +198,10 @@ class CheckoutController extends AbstractController
         $province = strtoupper(trim($data['province'] ?? ''));
         $shipping = (float) ($data['shipping_amount'] ?? 0.0);
 
+        $shippingCarrier   = trim((string) ($data['shipping_carrier'] ?? ''));
+        $shippingMethod    = trim((string) ($data['shipping_method'] ?? ''));
+        $shippingReference = trim((string) ($data['shipping_reference'] ?? ''));
+
         $cart     = $this->cartService->getCurrentCart();
         $subtotal = (float) $cart->getTotal();
 
@@ -209,6 +213,9 @@ class CheckoutController extends AbstractController
         $session = $request->getSession();
         $session->set('checkout_subtotal',         $subtotal);
         $session->set('checkout_shipping_amount',  $shipping);
+        $session->set('checkout_shipping_carrier',   $shippingCarrier !== '' ? $shippingCarrier : null);
+        $session->set('checkout_shipping_method',    $shippingMethod !== '' ? $shippingMethod : null);
+        $session->set('checkout_shipping_reference',  $shippingReference !== '' ? $shippingReference : null);
         $session->set('checkout_tax_gst',          $gst);
         $session->set('checkout_tax_pst',          $pst);
         $session->set('checkout_tax_hst',          $hst);
@@ -426,6 +433,9 @@ class CheckoutController extends AbstractController
 
         $subtotal       = $session->get('checkout_subtotal');
         $shippingAmount = $session->get('checkout_shipping_amount');
+        $shippingCarrier   = $session->get('checkout_shipping_carrier');
+        $shippingMethod    = $session->get('checkout_shipping_method');
+        $shippingReference = $session->get('checkout_shipping_reference');
         $taxGst         = $session->get('checkout_tax_gst');
         $taxPst         = $session->get('checkout_tax_pst');
         $taxHst         = $session->get('checkout_tax_hst');
@@ -436,6 +446,9 @@ class CheckoutController extends AbstractController
         $order->setTotal($total);
         $order->setSubtotal($subtotal !== null ? (string) round((float) $subtotal, 2) : $cart->getTotal());
         $order->setShippingAmount($shippingAmount !== null ? (string) round((float) $shippingAmount, 2) : null);
+        $order->setShippingMethodCarrier($shippingCarrier ?: null);
+        $order->setShippingMethodName($shippingMethod ?: null);
+        $order->setShippingMethodReference($shippingReference ?: null);
         $order->setTaxGst($taxGst !== null ? (string) round((float) $taxGst, 2) : '0.00');
         $order->setTaxPst($taxPst !== null ? (string) round((float) $taxPst, 2) : '0.00');
         $order->setTaxHst($taxHst !== null ? (string) round((float) $taxHst, 2) : '0.00');
@@ -543,7 +556,7 @@ class CheckoutController extends AbstractController
         // Send in the customer's preferred language; default to French when unavailable (e.g. guest checkout)
         $locale = $order->getUser()?->getLocale() ?? 'fr';
 
-        $this->localeSwitcher->runWithLocale($locale, function () use ($order): void {
+        $this->localeSwitcher->runWithLocale($locale, function () use ($order, $locale): void {
             $message = (new TemplatedEmail())
                 ->from(new EmailAddress('no-reply@monapp.local', 'MonApp'))
                 ->to($order->getCustomerEmail())
@@ -564,6 +577,7 @@ class CheckoutController extends AbstractController
             'checkout_billing_same', 'checkout_billing_address',
             'checkout_billing_city', 'checkout_billing_postal', 'checkout_billing_province',
             'checkout_pi_id', 'checkout_subtotal', 'checkout_shipping_amount',
+            'checkout_shipping_carrier', 'checkout_shipping_method', 'checkout_shipping_reference',
             'checkout_tax_gst', 'checkout_tax_pst', 'checkout_tax_hst', 'checkout_grand_total',
         ] as $key) {
             $session->remove($key);

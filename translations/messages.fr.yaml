@@ -385,7 +385,7 @@ admin:
       info_title: Informations sur l'article
       content_title: Contenu de l'article
       pricing_title: Tarification
-      base_price_label: Prix de base
+      base_price_label: Prix régulier
       promotions_label: Promotions applicables
       promotions_hint: "Maintenez Ctrl / Cmd pour sélectionner plusieurs promotions"
       effective_price: Prix effectif
@@ -414,7 +414,7 @@ admin:
       details: Informations
       sku: SKU
       pricing: Tarification
-      base_price: Prix de base
+      base_price: Prix régulier
       promotional_price: Prix promotionnel
       savings: Économie
       no_active_promotion: Aucune promotion active
@@ -528,6 +528,8 @@ admin:
       add_address: Ajouter une adresse
   orders:
     status_updated: "Statut de la commande mis à jour."
+    status_invalid: "Statut invalide."
+    tracking_required: "Veuillez renseigner un numéro de suivi pour marquer la commande comme expédiée."
     shipping_updated: "Informations de livraison mises à jour."
     payment_updated: "Informations de paiement mises à jour."
     csrf_error: Erreur de validation du jeton de sécurité
@@ -589,6 +591,17 @@ admin:
       payment_intent_id: Référence Stripe
       payment_no_info: Aucune information de paiement disponible
       shipping_title: Informations de livraison
+      shipping_method_title: Mode d'expédition choisi
+      shipping_method_label: Mode d'expédition
+      shipping_method_price_label: Prix de la livraison
+      shipping_method_reference_label: Référence
+      shipping_method_free: Gratuite
+      shipping_method_none: "Aucune information sur le mode d'expédition choisi pour cette commande."
+      status_change_tracking_hint: "Renseignez le transporteur et le numéro de suivi pour marquer cette commande comme expédiée."
+      shipping_status_title: Statut d'expédition
+      shipping_status_update_btn: Mettre à jour
+      shipping_status_cancel_btn: Annuler
+      shipping_status_none: "Aucune information de suivi pour le moment."
       shipping_status_label: Statut d'expédition
       shipping_status_pending: En attente d'expédition
       shipping_status_shipped: Expédié

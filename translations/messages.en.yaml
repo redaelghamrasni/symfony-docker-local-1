@@ -390,7 +390,7 @@ admin:
       info_title: Article Information
       content_title: Article Content
       pricing_title: Pricing
-      base_price_label: Base Price
+      base_price_label: Regular Price
       promotions_label: Applicable Promotions
       promotions_hint: "Hold Ctrl / Cmd to select multiple promotions"
       effective_price: Effective Price
@@ -419,7 +419,7 @@ admin:
       details: Information
       sku: SKU
       pricing: Pricing
-      base_price: Base Price
+      base_price: Regular Price
       promotional_price: Promotional Price
       savings: Savings
       no_active_promotion: No active promotion
@@ -533,6 +533,8 @@ admin:
       add_address: Add new address
   orders:
     status_updated: "Order status updated."
+    status_invalid: "Invalid status."
+    tracking_required: "Please enter a tracking number to mark the order as shipped."
     shipping_updated: "Shipping information updated."
     payment_updated: "Payment information updated."
     csrf_error: Security token validation failed
@@ -594,6 +596,17 @@ admin:
       payment_intent_id: Stripe Reference
       payment_no_info: No payment information available
       shipping_title: Shipping Information
+      shipping_method_title: Shipping Method Chosen
+      shipping_method_label: Shipping Method
+      shipping_method_price_label: Shipping Price
+      shipping_method_reference_label: Reference
+      shipping_method_free: Free
+      shipping_method_none: "No shipping method information recorded for this order."
+      status_change_tracking_hint: "Enter the carrier and tracking number to mark this order as shipped."
+      shipping_status_title: Shipment Status
+      shipping_status_update_btn: Update
+      shipping_status_cancel_btn: Cancel
+      shipping_status_none: "No tracking information yet."
       shipping_status_label: Shipping Status
       shipping_status_pending: Awaiting shipment
       shipping_status_shipped: Shipped

@@ -44,10 +44,11 @@
 </style>
 
 {% set statusStyles = {
-    'pending':    'background:#fef9c3;color:#854d0e;border:1px solid #fde047;',
-    'processing': 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;',
-    'completed':  'background:#dcfce7;color:#166534;border:1px solid #86efac;',
-    'cancelled':  'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;'
+    'pending':     'background:#fef9c3;color:#854d0e;border:1px solid #fde047;',
+    'in_progress': 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;',
+    'shipped':     'background:#cffafe;color:#155e75;border:1px solid #67e8f9;',
+    'completed':   'background:#dcfce7;color:#166534;border:1px solid #86efac;',
+    'cancelled':   'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;'
 } %}
 
 {% set shipStatusStyles = {
@@ -265,6 +266,55 @@
             <div class="otab-panel" id="tab-panel-shipping" style="padding: 28px;">
                 <h2 style="margin: 0 0 24px 0; font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">{{ 'admin.orders.show.shipping_title'|trans }}</h2>
 
+                {# Shipping method chosen by the customer at checkout (read-only snapshot) #}
+                <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em;">{{ 'admin.orders.show.shipping_method_title'|trans }}</h3>
+                {% if order.shippingMethodName or order.shippingMethodCarrier %}
+                <div style="padding: 16px 18px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em;">{{ 'admin.orders.show.shipping_method_label'|trans }}</p>
+                        <p style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-box-seam" style="color: #64748b;"></i>
+                            {% if order.shippingMethodCarrier and order.shippingMethodName %}
+                                {{ order.shippingMethodCarrier }} — {{ order.shippingMethodName }}
+                            {% else %}
+                                {{ order.shippingMethodName ?? order.shippingMethodCarrier }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% set refIsMeaningful = order.shippingMethodReference and order.shippingMethodReference != 'free_shipping' and not (order.shippingMethodReference starts with 'mock_') %}
+                    {% if refIsMeaningful %}
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em;">{{ 'admin.orders.show.shipping_method_reference_label'|trans }}</p>
+                        <code style="font-family: monospace; font-size: 12px; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; color: #374155; word-break: break-all;">{{ order.shippingMethodReference }}</code>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em;">{{ 'admin.orders.show.shipping_method_price_label'|trans }}</p>
+                        <p style="margin: 0; font-size: 14px; font-weight: 700; {{ order.shippingAmount and order.shippingAmount > 0 ? 'color:#0f172a;' : 'color:#16a34a;' }}">
+                            {% if order.shippingAmount is null %}
+                                —
+                            {% elseif order.shippingAmount > 0 %}
+                                {{ order.shippingAmount|number_format(2, ',', ' ') }} $
+                            {% else %}
+                                {{ 'admin.orders.show.shipping_method_free'|trans }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 24px; color: #94a3b8; margin-bottom: 24px; border: 1px dashed #d6dde6; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 13px;">{{ 'admin.orders.show.shipping_method_none'|trans }}</p>
+                </div>
+                {% endif %}
+
+                {# Carrier tracking, set manually by the admin (temporary, until an automated carrier feed exists) #}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .05em;">{{ 'admin.orders.show.shipping_status_title'|trans }}</h3>
+                    <button type="button" onclick="toggleShippingUpdateForm()" id="shipping-update-toggle-btn" class="btn-action-secondary" style="font-size: 12px; padding: 5px 12px;">
+                        <i class="bi bi-pencil"></i> {{ 'admin.orders.show.shipping_status_update_btn'|trans }}
+                    </button>
+                </div>
+
                 {# Current tracking summary (read-only view) #}
                 {% if order.shippingCarrierStatus or order.shippingCarrier or order.trackingNumber or order.shippingDate %}
                 <div style="padding: 16px 18px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px;">
@@ -315,10 +365,14 @@
                     </div>
                     {% endif %}
                 </div>
+                {% else %}
+                <div style="text-align: center; padding: 24px; color: #94a3b8; margin-bottom: 24px; border: 1px dashed #d6dde6; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 13px;">{{ 'admin.orders.show.shipping_status_none'|trans }}</p>
+                </div>
                 {% endif %}
 
-                {# Edit form #}
-                <form action="{{ path('admin_orders_update_shipping', {id: order.id}) }}" method="POST">
+                {# Edit form — hidden by default, revealed via the "Update" button above #}
+                <form action="{{ path('admin_orders_update_shipping', {id: order.id}) }}" method="POST" id="shipping-update-form" style="display: none; padding-top: 4px; border-top: 1px solid #e2e8f0;">
                     <input type="hidden" name="_token" value="{{ csrf_token('shipping' ~ order.id) }}">
 
                     <div class="ship-field-row">
@@ -409,7 +463,8 @@
                     <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">
                         {{ {
                             'pending': 'admin.orders.show.status_pending'|trans|capitalize,
-                            'processing': 'admin.orders.show.status_processing'|trans|capitalize,
+                            'in_progress': 'admin.orders.show.status_in_progress'|trans|capitalize,
+                            'shipped': 'admin.orders.show.status_shipped'|trans|capitalize,
                             'completed': 'admin.orders.show.status_completed'|trans|capitalize,
                             'cancelled': 'admin.orders.show.status_cancelled'|trans|capitalize
                         }[order.status]|default(order.status|capitalize) }}
@@ -429,12 +484,33 @@
         {# Change order status #}
         <div style="background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0f172a;">{{ 'admin.orders.show.change_status'|trans }}</h2>
-            <form action="{{ path('admin_orders_update_status', {id: order.id}) }}" method="POST">
-                <select name="status" style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; color: #0f172a; background: #f8fafc; margin-bottom: 12px; cursor: pointer;">
-                    {% for value, label in {'pending': 'admin.orders.show.status_pending'|trans, 'processing': 'admin.orders.show.status_processing'|trans, 'completed': 'admin.orders.show.status_completed'|trans, 'cancelled': 'admin.orders.show.status_cancelled'|trans} %}
+            <form action="{{ path('admin_orders_update_status', {id: order.id}) }}" method="POST" id="status-form">
+                <select name="status" id="status-select" onchange="toggleShippedFields()" style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; color: #0f172a; background: #f8fafc; margin-bottom: 12px; cursor: pointer;">
+                    {% for value, label in {'pending': 'admin.orders.show.status_pending'|trans, 'in_progress': 'admin.orders.show.status_in_progress'|trans, 'shipped': 'admin.orders.show.status_shipped'|trans, 'completed': 'admin.orders.show.status_completed'|trans, 'cancelled': 'admin.orders.show.status_cancelled'|trans} %}
                         <option value="{{ value }}" {{ order.status == value ? 'selected' : '' }}>{{ label }}</option>
                     {% endfor %}
                 </select>
+
+                {# Revealed only when "Expédiée" is selected and no tracking info exists yet #}
+                <div id="status-shipped-fields" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px dashed #93c5fd; border-radius: 6px; background: #eff6ff;">
+                    <p style="margin: 0 0 10px; font-size: 12px; color: #1e40af;">{{ 'admin.orders.show.status_change_tracking_hint'|trans }}</p>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display:block; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;">{{ 'admin.orders.show.carrier_label'|trans }}</label>
+                        <select name="carrier" style="width: 100%; padding: 8px 10px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 13px; background: #fff;">
+                            <option value="">{{ 'admin.orders.show.carrier_none'|trans }}</option>
+                            {% for c in ['Canada Post', 'Purolator', 'FedEx', 'UPS', 'DHL', 'Canpar', 'GLS Canada', 'Intelcom', 'USPS', 'Amazon Logistics'] %}
+                                <option value="{{ c }}" {{ order.shippingCarrier == c ? 'selected' : '' }}>{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;">{{ 'admin.orders.show.tracking_number_label'|trans }}</label>
+                        <input type="text" name="tracking_number" id="status-tracking-input" value="{{ order.trackingNumber ?? '' }}"
+                               placeholder="{{ 'admin.orders.show.shipping_no_tracking'|trans }}"
+                               style="width: 100%; padding: 8px 10px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 13px; background: #fff; box-sizing: border-box;">
+                    </div>
+                </div>
+
                 <div style="display: flex; justify-content: flex-end;">
                     <button type="submit" class="btn-action-primary">
                         <i class="bi bi-check-lg"></i> {{ 'admin.orders.show.update_status'|trans }}
@@ -458,6 +534,27 @@
 {% block javascripts %}
 {{ parent() }}
 <script>
+function toggleShippedFields() {
+    var select = document.getElementById('status-select');
+    var fields = document.getElementById('status-shipped-fields');
+    var trackingInput = document.getElementById('status-tracking-input');
+    var isShipped = select.value === 'shipped';
+    fields.style.display = isShipped ? 'block' : 'none';
+    // Only force entry when there is no tracking number yet; editing an already-shipped order shouldn't re-demand it.
+    trackingInput.required = isShipped && trackingInput.value.trim() === '';
+}
+document.addEventListener('DOMContentLoaded', toggleShippedFields);
+
+function toggleShippingUpdateForm(forceOpen) {
+    var form = document.getElementById('shipping-update-form');
+    var btn  = document.getElementById('shipping-update-toggle-btn');
+    var open = forceOpen === true || form.style.display === 'none';
+    form.style.display = open ? 'block' : 'none';
+    btn.innerHTML = open
+        ? '<i class="bi bi-x-lg"></i> {{ 'admin.orders.show.shipping_status_cancel_btn'|trans|e('js') }}'
+        : '<i class="bi bi-pencil"></i> {{ 'admin.orders.show.shipping_status_update_btn'|trans|e('js') }}';
+}
+
 function switchTab(name) {
     document.querySelectorAll('.otab-btn').forEach(function(b) { b.classList.remove('active'); });
     document.querySelectorAll('.otab-panel').forEach(function(p) { p.classList.remove('active'); });
@@ -465,10 +562,13 @@ function switchTab(name) {
     document.getElementById('tab-panel-' + name).classList.add('active');
 }
 
-// Open shipping tab if redirected back after saving
-(function () {
-    if (window.location.hash === '#tab-shipping') { switchTab('shipping'); }
+// Open shipping tab (and its update form, e.g. when tracking info is required) if redirected back after saving
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.location.hash === '#tab-shipping') {
+        switchTab('shipping');
+        toggleShippingUpdateForm(true);
+    }
     if (window.location.hash === '#tab-payment')  { switchTab('payment'); }
-})();
+});
 </script>
 {% endblock %}

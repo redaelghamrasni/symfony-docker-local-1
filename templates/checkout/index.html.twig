@@ -684,7 +684,10 @@ async function loadShippingRates() {
         // Auto-select first rate and update breakdown
         const firstRate = data.rates[0];
         if (firstRate) {
-            onShippingRateChange({ dataset: { price: firstRate.price } });
+            onShippingRateChange({
+                value: firstRate.object_id,
+                dataset: { price: firstRate.price, carrier: firstRate.carrier, service: firstRate.service },
+            });
         }
 
     } catch (err) {
@@ -819,6 +822,9 @@ async function fetchTaxForProvince(province) {
 }
 
 let selectedShippingAmount = null;
+let selectedShippingCarrier = null;
+let selectedShippingMethod = null;
+let selectedShippingReference = null;
 
 function fmt(amount) {
     return amount.toFixed(2).replace('.', ',') + ' $';
@@ -901,7 +907,10 @@ function updateRateLabelBorders() {
 }
 
 function onShippingRateChange(input) {
-    selectedShippingAmount = parseFloat(input.dataset.price) || 0;
+    selectedShippingAmount    = parseFloat(input.dataset.price) || 0;
+    selectedShippingCarrier   = input.dataset.carrier || null;
+    selectedShippingMethod    = input.dataset.service || null;
+    selectedShippingReference = input.value || null;
     updateRateLabelBorders();
     updateBreakdown(); // async mais pas besoin d'await ici
     updatePaymentIntent();
@@ -914,7 +923,13 @@ async function updatePaymentIntent() {
         await fetch('{{ path('app_checkout_update_payment') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ province, shipping_amount: selectedShippingAmount }),
+            body: JSON.stringify({
+                province,
+                shipping_amount:    selectedShippingAmount,
+                shipping_carrier:   selectedShippingCarrier,
+                shipping_method:    selectedShippingMethod,
+                shipping_reference: selectedShippingReference,
+            }),
         });
     } catch (e) {
         console.warn('Could not sync payment amount', e);

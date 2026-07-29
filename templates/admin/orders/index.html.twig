@@ -11,18 +11,20 @@
 
 {# Status filter tabs #}
 {% set statuses = {
-    '':           'admin.orders.index.status_all'|trans,
-    'pending':    'admin.orders.show.status_pending'|trans,
-    'processing': 'admin.orders.show.status_processing'|trans,
-    'completed':  'admin.orders.show.status_completed'|trans,
-    'cancelled':  'admin.orders.show.status_cancelled'|trans
+    '':            'admin.orders.index.status_all'|trans,
+    'pending':     'admin.orders.show.status_pending'|trans,
+    'in_progress': 'admin.orders.show.status_in_progress'|trans,
+    'shipped':     'admin.orders.show.status_shipped'|trans,
+    'completed':   'admin.orders.show.status_completed'|trans,
+    'cancelled':   'admin.orders.show.status_cancelled'|trans
 } %}
 
 {% set statusLabels = {
-    'pending':    'admin.orders.show.status_pending'|trans,
-    'processing': 'admin.orders.show.status_processing'|trans,
-    'completed':  'admin.orders.show.status_completed'|trans,
-    'cancelled':  'admin.orders.show.status_cancelled'|trans
+    'pending':     'admin.orders.show.status_pending'|trans,
+    'in_progress': 'admin.orders.show.status_in_progress'|trans,
+    'shipped':     'admin.orders.show.status_shipped'|trans,
+    'completed':   'admin.orders.show.status_completed'|trans,
+    'cancelled':   'admin.orders.show.status_cancelled'|trans
 } %}
 
 <div
