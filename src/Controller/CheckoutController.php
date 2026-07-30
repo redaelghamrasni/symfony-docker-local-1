@@ -140,6 +140,21 @@ class CheckoutController extends AbstractController
         $session->set('checkout_billing_postal',    trim($data['checkout_billing_postal'] ?? ''));
         $session->set('checkout_billing_province',  trim($data['checkout_billing_province'] ?? ''));
 
+        // Sync customer info to the already-created Stripe PaymentIntent metadata
+        $piId = $session->get('checkout_pi_id');
+        if ($piId) {
+            try {
+                $this->stripeClient->paymentIntents->update($piId, [
+                    'metadata' => [
+                        'customer_email' => $email,
+                        'customer_name'  => $name !== '' ? $name : 'Client',
+                    ],
+                ]);
+            } catch (\Throwable) {
+                // Non-fatal; metadata is a convenience field, not required for payment to succeed
+            }
+        }
+
         return $this->json(['ok' => true]);
     }
 
