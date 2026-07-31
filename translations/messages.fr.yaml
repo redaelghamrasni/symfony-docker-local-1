@@ -553,6 +553,11 @@ admin:
     show:
       article: Article
       articles: Articles
+      order_subtotal_label: Sous-total
+      order_shipping_label: Livraison
+      order_tax_gst_label: TPS
+      order_tax_pst_label: TVP
+      order_tax_hst_label: TVH
       back_to_orders: Retour aux commandes
       status: Statut
       update_status: Mettre à jour le statut
@@ -755,8 +760,33 @@ profile:
     customer_contact: Contact client
     order_again: Commander à nouveau
     shipping: Livraison
+    shipping_free: Gratuite
     tax: Taxe
+    tax_gst: TPS
+    tax_pst: TVP
+    tax_hst: TVH
     total: Total
+    payment_title: Mode de paiement
+    payment_card: Carte bancaire
+    payment_paypal: PayPal
+    payment_link: Stripe Link
+    payment_card_ending: "Carte se terminant par"
+    payment_no_info: Aucune information de paiement disponible pour cette commande.
+    shipment_title: Livraison
+    shipment_method_label: Mode d'expédition
+    carrier_label: Transporteur
+    shipment_status_label: Statut d'expédition
+    shipment_status_pending: En attente d'expédition
+    shipment_status_shipped: Expédié
+    shipment_status_in_transit: En transit
+    shipment_status_delivered: Livré
+    shipment_status_failed: Échec de livraison
+    tracking_number_label: Numéro de suivi
+    shipping_date_label: Date d'expédition
+    estimated_delivery_label: Livraison estimée
+    shipping_label_label: Étiquette d'expédition
+    shipping_label_download: Télécharger l'étiquette
+    shipment_no_info: Aucune information d'expédition disponible pour le moment.
   edit:
     title: Modifier le profil
     email: Adresse email

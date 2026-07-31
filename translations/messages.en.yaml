@@ -558,6 +558,11 @@ admin:
     show:
       article: Article
       articles: Articles
+      order_subtotal_label: Subtotal
+      order_shipping_label: Shipping
+      order_tax_gst_label: GST
+      order_tax_pst_label: PST
+      order_tax_hst_label: HST
       back_to_orders: Back to Orders
       status: Status
       update_status: Update Status
@@ -735,8 +740,33 @@ profile:
     customer_contact: Customer contact
     order_again: Order Again
     shipping: Shipping
+    shipping_free: Free
     tax: Tax
+    tax_gst: GST
+    tax_pst: PST
+    tax_hst: HST
     total: Total
+    payment_title: Payment Method
+    payment_card: Credit / Debit Card
+    payment_paypal: PayPal
+    payment_link: Stripe Link
+    payment_card_ending: "Card ending in"
+    payment_no_info: No payment information available for this order.
+    shipment_title: Shipping
+    shipment_method_label: Shipping Method
+    carrier_label: Carrier
+    shipment_status_label: Shipping Status
+    shipment_status_pending: Awaiting shipment
+    shipment_status_shipped: Shipped
+    shipment_status_in_transit: In transit
+    shipment_status_delivered: Delivered
+    shipment_status_failed: Delivery failed
+    tracking_number_label: Tracking Number
+    shipping_date_label: Shipping Date
+    estimated_delivery_label: Estimated Delivery
+    shipping_label_label: Shipping Label
+    shipping_label_download: Download Label
+    shipment_no_info: No shipping information available yet.
   edit:
     title: Edit Profile
     email: Email Address

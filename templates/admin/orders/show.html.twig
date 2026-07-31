@@ -157,6 +157,40 @@
                     </tbody>
                     <tfoot>
                         <tr>
+                            <td colspan="3" style="padding: 10px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_subtotal_label'|trans }}</td>
+                            <td style="padding: 10px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ (order.subtotal ?? order.total)|number_format(2, ',', ' ') }} $</td>
+                        </tr>
+                        {% if order.shippingAmount is not null %}
+                        <tr>
+                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_shipping_label'|trans }}</td>
+                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">
+                                {% if order.shippingAmount > 0 %}
+                                    {{ order.shippingAmount|number_format(2, ',', ' ') }} $
+                                {% else %}
+                                    {{ 'admin.orders.show.shipping_method_free'|trans }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if order.taxGst and order.taxGst > 0 %}
+                        <tr>
+                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_gst_label'|trans }}</td>
+                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxGst|number_format(2, ',', ' ') }} $</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.taxPst and order.taxPst > 0 %}
+                        <tr>
+                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_pst_label'|trans }}</td>
+                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxPst|number_format(2, ',', ' ') }} $</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.taxHst and order.taxHst > 0 %}
+                        <tr>
+                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_hst_label'|trans }}</td>
+                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxHst|number_format(2, ',', ' ') }} $</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
                             <td colspan="3" style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; border-top: 2px solid #0f172a;">{{ 'common.total'|trans }}</td>
                             <td style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; font-size: 18px; border-top: 2px solid #0f172a; white-space: nowrap;">
                                 {{ order.total|number_format(2, ',', ' ') }} $
