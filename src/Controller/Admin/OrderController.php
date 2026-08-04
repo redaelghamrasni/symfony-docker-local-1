@@ -80,9 +80,20 @@ class OrderController extends AbstractController
             if ($carrier !== '') {
                 $order->setShippingCarrier($carrier);
             }
-            $order->setShippingCarrierStatus('shipped');
             if (!$order->getShippingDate()) {
                 $order->setShippingDate(new \DateTimeImmutable('now', new \DateTimeZone('America/Toronto')));
+            }
+        }
+
+        // Keep the carrier-tracking status in sync with the order status so the two badges
+        // (order status tab vs. shipping tab) never contradict each other. Never downgrade a
+        // carrier status that's already further along (in_transit/delivered) than "shipped".
+        if ($status === 'shipped' && !in_array($order->getShippingCarrierStatus(), ['in_transit', 'delivered'], true)) {
+            $order->setShippingCarrierStatus('shipped');
+        } elseif ($status === 'completed' && $order->getShippingCarrierStatus() !== 'delivered') {
+            $order->setShippingCarrierStatus('delivered');
+            if (!$order->getEstimatedDeliveryDate()) {
+                $order->setEstimatedDeliveryDate(new \DateTimeImmutable('now', new \DateTimeZone('America/Toronto')));
             }
         }
 
@@ -109,6 +120,17 @@ class OrderController extends AbstractController
         $carrierStatus = $request->request->get('carrier_status');
         if ($carrierStatus && in_array($carrierStatus, $allowedStatuses, true)) {
             $order->setShippingCarrierStatus($carrierStatus);
+
+            // Mirror the carrier status onto the order's own status so the two never drift apart
+            // (this is the form that was silently leaving the order "En attente" while the
+            // shipping tab already showed tracking info — see order #188). Never downgrade a
+            // status the admin already moved forward manually (completed/cancelled).
+            if (in_array($carrierStatus, ['shipped', 'in_transit'], true)
+                && in_array($order->getStatus(), ['pending', 'in_progress'], true)) {
+                $order->setStatus('shipped');
+            } elseif ($carrierStatus === 'delivered' && $order->getStatus() !== 'cancelled') {
+                $order->setStatus('completed');
+            }
         } elseif ($carrierStatus === '') {
             $order->setShippingCarrierStatus(null);
         }

@@ -764,6 +764,7 @@ profile:
     tracking_number_label: Tracking Number
     shipping_date_label: Shipping Date
     estimated_delivery_label: Estimated Delivery
+    delivered_date_label: Delivered on
     shipping_label_label: Shipping Label
     shipping_label_download: Download Label
     shipment_no_info: No shipping information available yet.

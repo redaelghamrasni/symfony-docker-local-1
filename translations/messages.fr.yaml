@@ -784,6 +784,7 @@ profile:
     tracking_number_label: Numéro de suivi
     shipping_date_label: Date d'expédition
     estimated_delivery_label: Livraison estimée
+    delivered_date_label: Livré le
     shipping_label_label: Étiquette d'expédition
     shipping_label_download: Télécharger l'étiquette
     shipment_no_info: Aucune information d'expédition disponible pour le moment.

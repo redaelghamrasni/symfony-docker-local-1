@@ -353,11 +353,12 @@
                         </div>
                     {% endif %}
 
-                    {% if order.shippingCarrierStatus %}
+                    {% if order.shippingMethodName or order.shippingMethodCarrier or order.shippingCarrierStatus %}
+                        {% set shipStatus = order.shippingCarrierStatus ?? 'pending' %}
                         <div class="info-block">
                             <span class="info-label">{{ 'profile.order_show.shipment_status_label'|trans }}</span>
-                            <span class="ship-status ship-status--{{ order.shippingCarrierStatus }}">
-                                {{ ('profile.order_show.shipment_status_' ~ order.shippingCarrierStatus)|trans }}
+                            <span class="ship-status ship-status--{{ shipStatus }}">
+                                {{ ('profile.order_show.shipment_status_' ~ shipStatus)|trans }}
                             </span>
                         </div>
                     {% endif %}
@@ -378,7 +379,9 @@
 
                     {% if order.estimatedDeliveryDate %}
                         <div class="info-block">
-                            <span class="info-label">{{ 'profile.order_show.estimated_delivery_label'|trans }}</span>
+                            <span class="info-label">
+                                {{ (order.shippingCarrierStatus == 'delivered' ? 'profile.order_show.delivered_date_label' : 'profile.order_show.estimated_delivery_label')|trans }}
+                            </span>
                             <span class="info-value">{{ order.estimatedDeliveryDate|date('d/m/Y') }}</span>
                         </div>
                     {% endif %}
