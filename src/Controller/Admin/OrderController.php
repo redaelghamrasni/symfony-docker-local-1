@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Order;
 use App\Repository\OrderRepository;
+use App\Service\OrderNotificationMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,7 +17,8 @@ class OrderController extends AbstractController
 {
     public function __construct(
         private OrderRepository $orderRepository,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private OrderNotificationMailer $orderNotificationMailer,
     ) {}
 
     #[Route('/', name: 'index')]
@@ -58,6 +60,7 @@ class OrderController extends AbstractController
     #[Route('/{id}/status', name: 'update_status', methods: ['POST'])]
     public function updateStatus(Order $order, Request $request): Response
     {
+        $previousStatus = $order->getStatus();
         $status = $request->request->get('status');
         $allowed = ['pending', 'in_progress', 'shipped', 'completed', 'cancelled'];
 
@@ -102,6 +105,7 @@ class OrderController extends AbstractController
         $order->setStatus($status);
         $order->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+        $this->orderNotificationMailer->notifyStatusChange($order, $previousStatus);
         $this->addFlash('success', 'admin.orders.status_updated');
 
         $url = $this->generateUrl('admin_orders_show', ['id' => $order->getId()]);
@@ -115,6 +119,8 @@ class OrderController extends AbstractController
             $this->addFlash('error', 'admin.orders.csrf_error');
             return $this->redirectToRoute('admin_orders_show', ['id' => $order->getId()]);
         }
+
+        $previousStatus = $order->getStatus();
 
         $allowedStatuses = ['pending', 'shipped', 'in_transit', 'delivered', 'failed'];
         $carrierStatus = $request->request->get('carrier_status');
@@ -164,6 +170,7 @@ class OrderController extends AbstractController
 
         $order->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+        $this->orderNotificationMailer->notifyStatusChange($order, $previousStatus);
         $this->addFlash('success', 'admin.orders.shipping_updated');
 
         return $this->redirectToRoute('admin_orders_show', ['id' => $order->getId()]);
