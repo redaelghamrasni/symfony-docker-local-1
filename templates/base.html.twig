@@ -494,8 +494,8 @@ function initSearch() {
         `).join('');
 
         footer.href = `/${locale}/search?q=${encodeURIComponent(query)}`;
+        footer.setAttribute('data-turbo', 'false'); // désactive Turbo sur ce lien
         footer.style.display = 'block';
-        dropdown.style.display = 'block';
     });
 
     search.addWidgets([

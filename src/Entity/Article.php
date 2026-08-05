@@ -73,10 +73,15 @@ class Article
     #[ORM\OneToMany(targetEntity: ArticleTranslation::class, mappedBy: 'article', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $translations;
 
+    #[ORM\OneToMany(targetEntity: ArticleImage::class, mappedBy: 'article', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['position' => 'ASC'])]
+    private Collection $images;
+
     public function __construct()
     {
         $this->promotions = new ArrayCollection();
         $this->translations = new ArrayCollection();
+        $this->images = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -243,6 +248,28 @@ class Article
     public function setImageUrl(?string $imageUrl): static
     {
         $this->imageUrl = $imageUrl;
+        return $this;
+    }
+
+    // ── Gallery images ───────────────────────────────────────────────────────
+
+    public function getImages(): Collection
+    {
+        return $this->images;
+    }
+
+    public function addImage(ArticleImage $image): static
+    {
+        if (!$this->images->contains($image)) {
+            $this->images->add($image);
+            $image->setArticle($this);
+        }
+        return $this;
+    }
+
+    public function removeImage(ArticleImage $image): static
+    {
+        $this->images->removeElement($image);
         return $this;
     }
 

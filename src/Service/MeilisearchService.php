@@ -2,12 +2,17 @@
 
 namespace App\Service;
 
-use App\Entity\Article;
-
+/**
+ * Thin generic wrapper around the Meilisearch PHP client.
+ *
+ * Callers own document serialization and per-index settings (searchable/filterable
+ * attributes) — this service just knows how to push documents into a named index,
+ * remove one, search it, and configure it. See MeilisearchReindexCommand for the
+ * per-entity indexing logic (articles, categories, users, orders).
+ */
 class MeilisearchService
 {
-    private mixed $client;
-    private string $indexName = 'articles';
+    private \Meilisearch\Client $client;
 
     public function __construct(string $meilisearchUrl, string $apiKey)
     {
@@ -18,32 +23,19 @@ class MeilisearchService
         $this->client = new \Meilisearch\Client($meilisearchUrl, $apiKey);
     }
 
-    public function indexArticle(Article $article): void
+    public function index(string $indexName, array $documents): void
     {
-        $index = $this->client->index($this->indexName);
-        $index->addDocuments([$this->serializeArticle($article)]);
+        $this->client->index($indexName)->addDocuments($documents);
     }
 
-    public function indexAll(array $articles): void
+    public function removeDocument(string $indexName, int|string $id): void
     {
-        $index = $this->client->index($this->indexName);
-        $documents = array_map(
-            fn(Article $a) => $this->serializeArticle($a),
-            $articles
-        );
-        $index->addDocuments($documents);
+        $this->client->index($indexName)->deleteDocument($id);
     }
 
-    public function removeArticle(int $articleId): void
+    public function search(string $indexName, string $query, array $options = []): array
     {
-        $index = $this->client->index($this->indexName);
-        $index->deleteDocument($articleId);
-    }
-
-    public function search(string $query, array $options = []): array
-    {
-        $index = $this->client->index($this->indexName);
-        $results = $index->search($query, $options);
+        $results = $this->client->index($indexName)->search($query, $options);
 
         return [
             'hits'             => $results->getHits(),
@@ -52,25 +44,8 @@ class MeilisearchService
         ];
     }
 
-    public function configureIndex(): void
+    public function configureIndex(string $indexName, array $settings): void
     {
-        $index = $this->client->index($this->indexName);
-        $index->updateSettings([
-            'searchableAttributes' => ['title', 'content'],
-            'filterableAttributes' => ['price'],
-            'sortableAttributes'   => ['price', 'createdAt'],
-        ]);
-    }
-
-    private function serializeArticle(Article $article): array
-    {
-        return [
-            'id'        => $article->getId(),
-            'title'     => $article->getTitle(),
-            'content'   => $article->getContent(),
-            'price'     => $article->getPrice(),
-            'imageUrl'  => $article->getImageUrl(),
-            'createdAt' => $article->getCreatedAt()?->getTimestamp(),
-        ];
+        $this->client->index($indexName)->updateSettings($settings);
     }
 }

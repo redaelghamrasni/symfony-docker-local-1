@@ -28,7 +28,7 @@ E-commerce fullstack : back-office Symfony (Twig/Stimulus/Turbo), API REST hybri
 | API Platform | ^4.3 (core 4.2 installé) | Exposition REST/JSON-LD automatique |
 | Doctrine ORM | ^3.5 | Persistance |
 | doctrine-bundle | ^2.18 | Intégration Symfony |
-| doctrine-migrations-bundle | ^3.7 | Migrations de schéma (25 migrations à date) |
+| doctrine-migrations-bundle | ^3.7 | Migrations de schéma (26 migrations à date) |
 | lexik/jwt-authentication-bundle | ^3.2 | Authentification JWT pour l'API |
 | knpuniversity/oauth2-client-bundle | ^2.20 | Client OAuth2 (installé, **non configuré**, voir §7) |
 | predis/predis | ^3.4 | Client Redis (cache applicatif) |
@@ -77,7 +77,7 @@ src/
 │   ├── Admin/          # back-office (CRUD articles/catégories/commandes/promotions/users/settings)
 │   └── Api/            # contrôleurs API "manuels" (voir §7 — chevauchement avec API Platform)
 ├── DataFixtures/       # fixtures Doctrine (dev/test)
-├── Entity/             # 13 entités Doctrine (attributs #[ORM\...])
+├── Entity/             # 14 entités Doctrine (attributs #[ORM\...])
 ├── EventListener/      # listeners kernel (404, locale, timezone)
 ├── EventSubscriber/    # subscriber sécurité (préservation panier au logout)
 ├── Form/               # types de formulaire Symfony (dont Form/Admin/)
@@ -91,7 +91,7 @@ templates/              # Twig — pages web + back-office + emails + point de m
 assets/                 # JS/CSS gérés par AssetMapper (Stimulus) et par Vite (React, sous assets/js)
 config/packages/        # configuration par bundle
 config/routes/          # imports de routes (api_platform, security, sylius_resource, web_profiler)
-migrations/             # 25 migrations Doctrine
+migrations/             # 26 migrations Doctrine
 tests/Unit/ tests/Functional/
 ```
 
@@ -109,13 +109,15 @@ tests/Unit/ tests/Functional/
 
 ## 3. Modèle de données
 
-13 entités Doctrine, mapping par attributs PHP (`config/packages/doctrine.yaml`, `type: attribute`, `dir: src/Entity`). Toutes les entités horodatées utilisent explicitement le fuseau `America/Toronto` dans leurs callbacks de cycle de vie (`#[ORM\PrePersist]`/`#[ORM\PreUpdate]`), plutôt que le fuseau serveur par défaut.
+14 entités Doctrine, mapping par attributs PHP (`config/packages/doctrine.yaml`, `type: attribute`, `dir: src/Entity`). Toutes les entités horodatées utilisent explicitement le fuseau `America/Toronto` dans leurs callbacks de cycle de vie (`#[ORM\PrePersist]`/`#[ORM\PreUpdate]`), plutôt que le fuseau serveur par défaut.
 
 ### Catalogue
 
-- **Article** — champs `title`, `content`, `sku` (généré automatiquement en `PrePersist` sous la forme `ART-XXXXXXXX`), `price` (`decimal(10,2)`), `imageUrl`, relation `ManyToOne` vers `Category`, `ManyToMany` vers `Promotion`. Seule entité exposée via `#[ApiResource]` (CRUD complet, groupes de sérialisation `article:read`/`article:write`).
+- **Article** — champs `title`, `content`, `sku` (généré automatiquement en `PrePersist` sous la forme `ART-XXXXXXXX`), `price` (`decimal(10,2)`), `imageUrl` (image de couverture unique, historique — voir ci-dessous), relation `ManyToOne` vers `Category`, `ManyToMany` vers `Promotion`, `OneToMany` vers `ArticleImage` (galerie, ajoutée par la migration `20260716120000`). Seule entité exposée via `#[ApiResource]` (CRUD complet, groupes de sérialisation `article:read`/`article:write`).
   - `getEffectivePrice()` applique la promotion active (si toujours dans sa fenêtre `startsAt`/`endsAt`) selon son `type` : `PERCENT_OFF`, `AMOUNT_OFF`, `FIXED_PRICE`.
   - Système de traduction par lookup dans une collection `ArticleTranslation` (locale → titre/contenu), avec repli sur l'autre locale puis sur le champ de base si la traduction est absente.
+- **ArticleImage** *(nouveau)* — galerie d'images multiples par article : `path` (chemin sous `/uploads/articles/`, même convention que `Article::imageUrl`), `position` (entier, ordre d'affichage), `article` (`ManyToOne`, `onDelete: CASCADE`). Triée par `#[ORM\OrderBy(['position' => 'ASC'])]` sur `Article::$images`. Gérée exclusivement depuis `Admin/ArticleController` (upload multi-fichiers, suppression, réordonnancement par échange de `position` avec le voisin) — voir §4 et §5 « Galerie d'images d'articles ».
+  - ⚠️ `ArticleImage` porte un callback `#[ORM\PrePersist]` pour horodater `createdAt` (`America/Toronto`, même convention que le reste du projet) : la classe **doit** porter l'attribut `#[ORM\HasLifecycleCallbacks]`, sans quoi Doctrine n'invoque jamais le callback et l'insertion échoue (`created_at` NOT NULL en base). Erreur commise puis corrigée pendant le développement de cette fonctionnalité — vérifier cet attribut en priorité sur toute nouvelle entité utilisant un callback de cycle de vie.
 - **Category** — même pattern de traduction via `CategoryTranslation` (contrainte d'unicité `(category_id, locale)`).
 - **Promotion** — 3 types de réduction (`isCurrentlyActive()` vérifie `isActive` + fenêtre de dates), liée aux articles en `ManyToMany`.
 
@@ -136,6 +138,7 @@ tests/Unit/ tests/Functional/
 
 ### Évolution du schéma (migrations notables)
 
+- `20260716120000` — table `article_image` (galerie d'images multiples par article, voir ci-dessus)
 - `20260703002924` — ajout du breakdown de taxes/frais sur `Order` + `User.locale`
 - `20260625000000` — renommage du statut de commande `processing` → `in_progress`
 - `20260620000000` — `Address.province` + table `Setting`
@@ -146,10 +149,11 @@ tests/Unit/ tests/Functional/
 
 - **Catalogue multilingue** (FR/EN) avec catégories, promotions et recherche Meilisearch (indexation via `MeilisearchService`/`MeilisearchReindexCommand`, filtrable sur le prix, triable prix/date).
 - **Listing d'articles avec pagination infinie** (`ArticleController::list`, requêtes XHR gérées via `isXmlHttpRequest()`, cf. `templates/article/list.html.twig` — bouton « load more »), filtrage par catégorie, cache Redis à tags.
+- **Page de détail article** (`templates/article/show.html.twig`) : affiche la galerie d'images (`Article::images`, ordonnée) dans un balisage prêt pour Swiper.js (`.swiper` / `.swiper-wrapper` / `.swiper-slide`), avec repli sur l'image de couverture unique `imageUrl` si la galerie est vide — voir §5.
 - **Panier** persistant en session + base, préservé lors de la déconnexion.
 - **Checkout complet** : calcul de taxes canadiennes par province (GST/PST/HST), calcul de frais de port via Shippo, paiement par carte (Stripe PaymentIntent) ou PayPal (Orders API v2), génération d'étiquette d'expédition.
 - **Compte utilisateur** : inscription, connexion (formulaire web + JWT API), réinitialisation de mot de passe par email, historique de commandes, gestion d'adresses, auto-remplissage du checkout.
-- **Back-office admin** (`ROLE_ADMIN`) : CRUD articles (avec upload d'image), catégories, promotions, utilisateurs (dont réinitialisation de mot de passe et génération de mot de passe temporaire), commandes (changement de statut, informations de paiement/expédition), réglages globaux.
+- **Back-office admin** (`ROLE_ADMIN`) : CRUD articles (avec upload d'image de couverture + galerie d'images multiples — ajouter/supprimer/réordonner, voir §5 « Galerie d'images d'articles »), catégories, promotions, utilisateurs (création, édition, réinitialisation de mot de passe et génération de mot de passe temporaire), commandes (changement de statut, informations de paiement/expédition), réglages globaux. Recherche instantanée sur les listings articles/catégories/utilisateurs/commandes (voir §5 « Recherche admin »). La barre latérale du back-office affiche le login (`app.user.username`) de l'admin connecté plutôt qu'un libellé statique.
 - **API REST** : lecture publique du catalogue (`GET /api/articles`), écriture protégée par JWT, historique de commandes protégé par rôle.
 - **SPA React** (`/react`) : listing d'articles côté client via React Query + axios, indépendant du rendu Twig.
 - **Internationalisation** : détection de locale (session → `Accept-Language` → défaut), URLs préfixées `/{_locale}` sur tout le périmètre web.
@@ -203,6 +207,25 @@ Le projet sert deux clients différents : le site web rendu côté serveur (Twig
 
 **Pourquoi** : le contenu traduit ici est du **contenu métier géré en base par les admins** (titre/description d'un article, nom d'une catégorie), pas des libellés d'UI fixes livrés avec le code. Le composant Translation est conçu pour le second cas, pas pour du contenu éditable dynamiquement ; une entité pivot permet de créer/éditer les traductions depuis le back-office et de les requêter en SQL (jointures, recherche).
 
+### Recherche admin : Meilisearch client-side + rendu des lignes côté serveur
+
+Chaque listing back-office avec recherche (`admin/articles`, `admin/categories`, `admin/users`, `admin/orders`) suit le même mécanisme, porté par un unique module JS générique (`assets/admin_list_search.js`, importé une fois dans `assets/app.js`) plutôt que par du JS dupliqué par page :
+
+1. La saisie (debounce 220ms) interroge **directement depuis le navigateur** l'index Meilisearch correspondant (`articles`/`categories`/`users`/`orders`), avec la même clé master hardcodée que `assets/autocomplete.js` — pas d'appel serveur à ce stade.
+2. Les identifiants renvoyés par Meilisearch (ordre de pertinence) sont ensuite envoyés au contrôleur admin existant via `?ids=1,2,3` (nouveau paramètre, en plus de `offset` pour la pagination classique d'`admin_articles_index`).
+3. Le contrôleur charge les entités via un nouveau `Repository::findByIds()` (qui préserve l'ordre de pertinence de Meilisearch, pas l'ordre SQL) et rend le même partiel `_rows.html.twig` que le listing normal — les lignes affichées gardent donc les jointures (catégorie, utilisateur), le formatage de date `America/Toronto`, et les tokens CSRF des actions (édition/suppression), que Meilisearch ne connaît pas.
+4. Le JS remplace le `<tbody>` avec le HTML reçu. Vider le champ de recherche refait un appel XHR classique vers la même URL (sans `ids`) pour revenir à la vue initiale — pour `admin/orders`, cette URL inclut le filtre de statut actif (`?status=...`), donc l'onglet courant est préservé après un aller-retour recherche.
+
+**Pourquoi Meilisearch plutôt qu'une recherche SQL `LIKE`** : c'était déjà le mécanisme de recherche utilisé côté public (`templates/search/index.html.twig`, `assets/autocomplete.js`) — le choix explicite ici est la cohérence technique (un seul mécanisme de recherche dans tout le projet, un seul index à maintenir par entité) plutôt que la simplicité d'implémentation. La contrepartie : `MeilisearchService` (`src/Service/MeilisearchService.php`) a dû être généralisé (il ne servait qu'à indexer des `Article`) en un wrapper générique par nom d'index, utilisé uniquement par `MeilisearchReindexCommand`, qui réindexe désormais 4 entités au lieu d'une (voir §7 pour les limites de cette approche, notamment l'exposition de données personnelles).
+
+### Galerie d'images d'articles : entité additive plutôt que remplacement de `imageUrl`
+
+`ArticleImage` (voir §3) a été ajoutée **en plus** du champ `Article::imageUrl` existant, pas à sa place. `imageUrl` reste tel quel et continue d'alimenter tout ce qui affichait déjà une vignette unique (`templates/article/_cards.html.twig`, `templates/home/index.html.twig`, `templates/search/index.html.twig` côté Meilisearch, `CartController` pour le toast d'ajout au panier). La galerie n'est consommée que par la page de détail article (`templates/article/show.html.twig`), avec repli explicite sur `imageUrl` si `Article::images` est vide.
+
+**Pourquoi ne pas avoir fusionné les deux** : migrer tous les usages existants de `imageUrl` vers une collection aurait touché de nombreux templates/services sans rapport avec le besoin exprimé (une galerie pour la fiche produit), pour un bénéfice marginal — une vignette de listing n'a pas besoin de plusieurs images. Garder les deux mécanismes séparés limite le rayon d'impact du changement, au prix d'avoir deux notions d'image sur `Article` (compromis assumé, à documenter si un futur besoin justifie une fusion).
+
+**Formulaires de galerie hors du formulaire principal** : dans `templates/admin/articles/form.html.twig`, la carte « Galerie d'images » est rendue **après** `{{ form_end(form) }}`, avec ses propres balises `<form>` (upload, suppression, déplacement haut/bas) pointant vers des actions dédiées de `Admin/ArticleController` (`images_add`, `images_delete`, `images_move`). Nécessaire car ces actions ne font pas partie de `ArticleType` (pas de champs mappés) — les imbriquer à l'intérieur du `<form id="article-form">` existant produirait des formulaires HTML imbriqués (invalide, comportement de soumission indéfini selon les navigateurs). Le réordonnancement est volontairement un simple échange de `position` avec le voisin (boutons ▲/▼, POST + redirection), pas du drag-and-drop JS, pour rester cohérent avec le reste du back-office (formulaires classiques + redirection, pas de couche AJAX dédiée ailleurs dans l'admin Twig).
+
 ### Fuseau horaire centralisé America/Toronto
 
 Toutes les entités horodatées fixent explicitement `new DateTimeZone('America/Toronto')` dans leurs callbacks de cycle de vie, et `TimezoneListener` fixe `date_default_timezone_set()` sur chaque requête (priorité 300, avant `LocaleSubscriber` à 2000). Cohérent avec un commerce ciblant le marché canadien, où les horodatages de commande/expédition doivent s'afficher dans le fuseau local des clients/opérateurs plutôt qu'en UTC serveur.
@@ -227,7 +250,9 @@ Deux points d'entrée déclenchent une authentification « en cours de route » 
 
 **Checkout invité → connexion → retour au checkout (mécanisme explicite)** : `templates/base.html.twig:333-399` définit une modale (`checkout-modal-overlay`) rendue uniquement pour les invités (`{% if not app.user %}`), déclenchée par le bouton « passer commande » du mini-panier (`base.html.twig:196`) et de la page panier (`cart/index.html.twig:156`). Elle propose deux choix : « Se connecter » (`{{ path('app_auth_login') }}?redirect={{ path('app_checkout_index')|url_encode }}`) ou « Continuer en invité » (lien direct vers `app_checkout_index`). `AuthController::login` (`src/Controller/AuthController.php:25-34`) lit `?redirect=` et appelle explicitement `$this->saveTargetPath($session, 'main', $redirect)` — c'est ce code applicatif qui force Symfony à mémoriser la destination, puisque `/checkout` étant `PUBLIC_ACCESS` (achat invité autorisé, `security.yaml:67`), le framework ne déclencherait jamais ce comportement de lui-même sur cette route.
 
-**`/admin` → connexion → retour à la page admin demandée (comportement natif, pas de code dédié)** : `^/admin` est protégé par `access_control: { roles: ROLE_ADMIN }` (`security.yaml:61`). Quand un utilisateur non authentifié (ou insuffisamment privilégié) accède à une URL admin, le firewall `main` intercepte automatiquement la requête, sauvegarde l'URL demandée dans la **même** clé de session via le même `TargetPathTrait` — mais cette fois déclenché par le framework lui-même (l'entry point du firewall `form_login`), pas par du code écrit dans le projet —, redirige vers `/login`, puis renvoie l'utilisateur vers la page admin initialement demandée une fois connecté. Aucun contrôleur `Admin/*` ne contient de logique de redirection dédiée (vérifié : aucun `IsGranted`/redirect custom hormis `SettingController`).
+**`/admin` → connexion → retour à la page admin demandée (comportement natif, pas de code dédié)** : `^/(fr|en)/admin` est protégé par `access_control: { roles: ROLE_ADMIN }` (`security.yaml:61`). Quand un utilisateur non authentifié (ou insuffisamment privilégié) accède à une URL admin, le firewall `main` intercepte automatiquement la requête, sauvegarde l'URL demandée dans la **même** clé de session via le même `TargetPathTrait` — mais cette fois déclenché par le framework lui-même (l'entry point du firewall `form_login`), pas par du code écrit dans le projet —, redirige vers `/login`, puis renvoie l'utilisateur vers la page admin initialement demandée une fois connecté. Aucun contrôleur `Admin/*` ne contient de logique de redirection dédiée (vérifié : aucun `IsGranted`/redirect custom hormis `SettingController`).
+
+⚠️ Jusqu'à ce que la règle soit corrigée en `^/(fr|en)/admin` (voir §7, « `access_control` pour `/admin` neutralisé... — corrigé »), ce paragraphe décrivait un comportement **prévu mais jamais exécuté en pratique** : la règle d'origine (`^/admin`) ne matchait jamais l'URL réelle (préfixée `/{_locale}`), donc ni le blocage `ROLE_ADMIN` ni la redirection `TargetPathTrait` ne se déclenchaient jamais — n'importe qui pouvait atteindre `/fr/admin/...` sans authentification.
 
 ---
 
@@ -261,7 +286,7 @@ Le montage du widget de paiement (`templates/checkout/index.html.twig`, fonction
 
 ## 7. Dette technique et points de vigilance actuels
 
-Les éléments suivants ont été identifiés en relisant le code et **en vérifiant la table de routage réelle** (`php bin/console debug:router`). Ce sont des points à traiter, à l'exception du premier ci-dessous (passphrase JWT) qui a été corrigé depuis :
+Les éléments suivants ont été identifiés en relisant le code et **en vérifiant la table de routage réelle** (`php bin/console debug:router`). Ce sont des points à traiter, à l'exception de ceux marqués ✅ (passphrase JWT, `access_control` du back-office) qui ont été corrigés depuis :
 
 ### Les contrôleurs API manuels ne sont pas montés sous `/api/*`
 
@@ -282,6 +307,12 @@ Conséquences concrètes :
 ### ✅ Passphrase JWT mal référencée — corrigé (commit `1370284`)
 
 `config/packages/lexik_jwt_authentication.yaml` référence désormais correctement `pass_phrase: '%env(JWT_PASSPHRASE)%'`. Le bug historique (`%env(02068707)%`, une valeur collée à la place du nom de variable, qui faisait échouer en 500 la construction du firewall `api` sur toute requête `^/api` — y compris `GET /api/articles`, censé être `PUBLIC_ACCESS`) a été corrigé après la rédaction initiale de ce document. Ne pas réintroduire une valeur en dur à la place du nom de la variable d'environnement dans ce fichier.
+
+### ✅ `access_control` pour `/admin` neutralisé par le préfixe `/{_locale}` — corrigé
+
+Même classe de bug que le point 4 ci-dessus (préfixage global de `config/routes.yaml`), mais côté firewall web plutôt qu'API. `security.yaml` définissait `- { path: ^/admin, roles: ROLE_ADMIN }` — une règle qui ne matche jamais l'URL réelle du back-office (`/fr/admin/...` ou `/en/admin/...`). Vérifié en pratique avant correctif : `GET /fr/admin/users/` répondait `200` **sans aucune session ni cookie**, pour tous les contrôleurs `Admin/*` à l'exception de `SettingController` (seul à porter son propre `#[IsGranted('ROLE_ADMIN')]`). Le back-office entier (utilisateurs, commandes, catégories, promotions, tableau de bord) était donc consultable et modifiable sans authentification.
+
+Corrigé en changeant la règle en `- { path: ^/(fr|en)/admin, roles: ROLE_ADMIN }` (`security.yaml:61`). Vérifié après correctif : `GET /fr/admin/users/` et `GET /en/admin/users/` redirigent désormais (`302`) vers `/fr/login` pour un client sans session, sans affecter les autres règles (`/api/*`, `/login`, `/checkout`, listing public d'articles). Ne pas revenir à `^/admin` seul — voir aussi la note dans CLAUDE.md « Zones sensibles ».
 
 ### CORS large sur `/api`
 
@@ -312,6 +343,12 @@ Conséquence concrète : si le navigateur se ferme, perd la connexion, ou si le 
 ### Validation métier absente sur certains champs
 
 `Article::price` n'a pas de contrainte de validation empêchant une valeur négative (documenté explicitement par un test, `tests/Unit/Entity/ArticleTest.php::testArticlePriceCannotBeNegative`, qui constate le comportement actuel plutôt que de l'imposer).
+
+### Recherche admin : clé Meilisearch master exposée côté client, désormais sur des données personnelles
+
+La recherche back-office (§5 « Recherche admin ») interroge Meilisearch directement depuis le navigateur avec la clé `changeme_master_key_dev` hardcodée en JS (`assets/admin_list_search.js`, `assets/autocomplete.js`) — c'était déjà le cas côté catalogue public, mais les index `users` (prénom/nom/email) et `orders` (prénom/nom/email client) rendent maintenant des données personnelles interrogeables via cette même clé côté client, pas seulement du contenu produit public. Ce choix a été fait consciemment (voir §5) plutôt que de dupliquer une recherche SQL séparée pour l'admin ; à resserrer avant mise en production (clé API restreinte en lecture seule côté recherche, plutôt que la master key).
+
+De plus, aucun des 4 index Meilisearch n'est resynchronisé automatiquement à la création/modification/suppression d'une entité (même limitation, déjà connue, que l'invalidation du cache Redis ci-dessous) : seul `php bin/console app:meilisearch:reindex`, lancé manuellement, met les index à jour. Un article/utilisateur/commande/catégorie créé ou modifié depuis la dernière réindexation n'apparaîtra pas dans la recherche admin tant que la commande n'a pas été relancée.
 
 ### Couverture de tests très faible (~3% des lignes)
 

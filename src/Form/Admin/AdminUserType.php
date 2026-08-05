@@ -17,6 +17,8 @@ class AdminUserType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $isNew = $options['is_new'];
+
         $builder
             ->add('email', EmailType::class, [
                 'label' => 'admin.users.email',
@@ -69,7 +71,7 @@ class AdminUserType extends AbstractType
             ->add('plainPassword', RepeatedType::class, [
                 'type' => PasswordType::class,
                 'mapped' => false,
-                'required' => false,
+                'required' => $isNew,
                 'first_options' => [
                     'label' => 'admin.users.plainPassword.first',
                     'translation_domain' => 'messages',
@@ -87,13 +89,16 @@ class AdminUserType extends AbstractType
                     ],
                 ],
                 'invalid_message' => 'form.passwords_match',
-                'constraints' => [
-                    new Assert\Length([
-                        'min' => 6,
-                        'max' => 100,
-                        'minMessage' => 'form.password_min',
-                    ]),
-                ],
+                'constraints' => array_merge(
+                    $isNew ? [new Assert\NotBlank(['message' => 'form.password_required'])] : [],
+                    [
+                        new Assert\Length([
+                            'min' => 6,
+                            'max' => 100,
+                            'minMessage' => 'form.password_min',
+                        ]),
+                    ]
+                ),
             ])
             ->add('roles', ChoiceType::class, [
                 'label' => 'admin.users.roles',
@@ -113,6 +118,7 @@ class AdminUserType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => User::class,
+            'is_new' => false,
         ]);
     }
 }

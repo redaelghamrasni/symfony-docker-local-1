@@ -110,7 +110,14 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', initSearchPage);
+document.addEventListener('turbo:load', initSearchPage);
+
+function initSearchPage() {
+    // évite la double initialisation
+    if (document.getElementById('search-hits')?.dataset.searchInit === '1') return;
+    document.getElementById('search-hits').dataset.searchInit = '1';
+
     const locale = document.documentElement.lang || 'fr';
     const urlParams = new URLSearchParams(window.location.search);
     const initialQuery = urlParams.get('q') || '';
@@ -225,6 +232,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     search.start();
-});
+}
 </script>
 {% endblock %}

@@ -1,0 +1,30 @@
+{% for user in users %}
+<tr style="border-bottom: 1px solid #e2e8f0;">
+    <td style="padding: 16px; color: #0f172a;">
+        <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {{ user.email }}
+    </td>
+    <td style="padding: 16px; font-size: 12px;">
+        {% for role in user.roles %}
+            {% if role == 'ROLE_ADMIN' %}
+                <span style="background: #fecaca; color: #991b1b; padding: 4px 8px; border-radius: 4px;">{{ role|role_label }}</span>
+            {% else %}
+                <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px;">{{ role|role_label }}</span>
+            {% endif %}
+        {% endfor %}
+    </td>
+    <td style="padding: 16px; color: #64748b; font-size: 14px;">
+        {{ user.createdAt|date('Y-m-d') }}
+    </td>
+    <td style="padding: 16px; text-align: right;">
+        <a href="{{ path('admin_users_show', {id: user.id}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 12px;">
+            <i class="bi bi-eye"></i> {{ 'common.view'|trans }}
+        </a>
+        <a href="{{ path('admin_users_edit', {id: user.id}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 12px;">
+            <i class="bi bi-pencil"></i> {{ 'common.edit'|trans }}
+        </a>
+    </td>
+</tr>
+{% endfor %}

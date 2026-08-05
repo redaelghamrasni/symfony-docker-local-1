@@ -45,4 +45,33 @@ class ArticleRepository extends ServiceEntityRepository
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
+
+    /**
+     * Fetches articles by id, preserving the given order (e.g. Meilisearch relevance ranking).
+     *
+     * @param int[] $ids
+     * @return Article[]
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $articles = $this->createQueryBuilder('a')
+            ->andWhere('a.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $byId = [];
+        foreach ($articles as $article) {
+            $byId[$article->getId()] = $article;
+        }
+
+        return array_values(array_filter(array_map(
+            static fn (int $id) => $byId[$id] ?? null,
+            $ids
+        )));
+    }
 }

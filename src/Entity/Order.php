@@ -23,7 +23,7 @@ class Order
     private ?User $user = null;
 
     #[ORM\Column(length: 50)]
-    private string $status = 'pending'; // pending, in_progress, shipped, completed
+    private string $status = 'pending'; // pending, in_progress, shipped, completed, cancelled
 
     #[ORM\Column(type: 'decimal', precision: 10, scale: 2)]
     private ?string $total = null;
@@ -33,6 +33,16 @@ class Order
 
     #[ORM\Column(name: 'shipping_amount', type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $shippingAmount = null;
+
+    // Shipping method chosen by the customer at checkout (Shippo rate), captured as a snapshot
+    #[ORM\Column(name: 'shipping_method_carrier', length: 100, nullable: true)]
+    private ?string $shippingMethodCarrier = null; // e.g. "UPS"
+
+    #[ORM\Column(name: 'shipping_method_name', length: 150, nullable: true)]
+    private ?string $shippingMethodName = null; // e.g. "UPS Express"
+
+    #[ORM\Column(name: 'shipping_method_reference', length: 100, nullable: true)]
+    private ?string $shippingMethodReference = null; // Shippo rate object_id (when applicable)
 
     #[ORM\Column(name: 'tax_gst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $taxGst = null;
@@ -181,6 +191,15 @@ class Order
 
     public function getShippingAmount(): ?string { return $this->shippingAmount; }
     public function setShippingAmount(?string $v): self { $this->shippingAmount = $v; return $this; }
+
+    public function getShippingMethodCarrier(): ?string { return $this->shippingMethodCarrier; }
+    public function setShippingMethodCarrier(?string $v): self { $this->shippingMethodCarrier = $v; return $this; }
+
+    public function getShippingMethodName(): ?string { return $this->shippingMethodName; }
+    public function setShippingMethodName(?string $v): self { $this->shippingMethodName = $v; return $this; }
+
+    public function getShippingMethodReference(): ?string { return $this->shippingMethodReference; }
+    public function setShippingMethodReference(?string $v): self { $this->shippingMethodReference = $v; return $this; }
 
     public function getTaxGst(): ?string { return $this->taxGst; }
     public function setTaxGst(?string $v): self { $this->taxGst = $v; return $this; }

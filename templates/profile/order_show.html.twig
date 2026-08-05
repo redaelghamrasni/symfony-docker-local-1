@@ -85,9 +85,14 @@
             background: #fef3c7;
             color: #92400e;
         }
-        .order-status--processing {
+        .order-status--processing,
+        .order-status--in_progress {
             background: #dbeafe;
             color: #1e40af;
+        }
+        .order-status--shipped {
+            background: #cffafe;
+            color: #155e75;
         }
         .order-status--completed {
             background: #dcfce7;
@@ -204,6 +209,38 @@
             color: #0f172a;
             margin-bottom: 0.5rem;
         }
+        .pm-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .empty-state {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+        }
+        .ship-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .ship-status--pending { background: #fef9c3; color: #854d0e; }
+        .ship-status--shipped { background: #dbeafe; color: #1e40af; }
+        .ship-status--in_transit { background: #ede9fe; color: #6d28d9; }
+        .ship-status--delivered { background: #dcfce7; color: #166534; }
+        .ship-status--failed { background: #fee2e2; color: #991b1b; }
         @media (max-width: 968px) {
             .order-detail-grid {
                 grid-template-columns: 1fr;
@@ -263,6 +300,104 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+                {# Payment Method #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.payment_title'|trans }}</h2>
+                    {% if order.paymentMethod %}
+                        <div class="pm-badge">
+                            {% if order.paymentMethod == 'card' %}
+                                <i class="bi bi-credit-card-2-front"></i>
+                                <span>
+                                    {{ order.paymentBrand ? order.paymentBrand|capitalize : 'profile.order_show.payment_card'|trans }}
+                                    {% if order.paymentLast4 %}&nbsp;·&nbsp;{{ 'profile.order_show.payment_card_ending'|trans }} <strong>{{ order.paymentLast4 }}</strong>{% endif %}
+                                </span>
+                            {% elseif order.paymentMethod == 'paypal' %}
+                                <i class="bi bi-paypal"></i>
+                                <span>{{ 'profile.order_show.payment_paypal'|trans }}</span>
+                            {% elseif order.paymentMethod == 'link' %}
+                                <i class="bi bi-link-45deg"></i>
+                                <span>{{ 'profile.order_show.payment_link'|trans }}</span>
+                            {% else %}
+                                <i class="bi bi-wallet2"></i>
+                                <span>{{ order.paymentMethod|capitalize }}</span>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="empty-state">{{ 'profile.order_show.payment_no_info'|trans }}</p>
+                    {% endif %}
+                </div>
+
+                {# Shipment #}
+                <div class="order-detail-section">
+                    <h2 class="section-title">{{ 'profile.order_show.shipment_title'|trans }}</h2>
+
+                    {% if order.shippingMethodName or order.shippingMethodCarrier %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.shipment_method_label'|trans }}</span>
+                            <span class="info-value">
+                                {% if order.shippingMethodCarrier and order.shippingMethodName %}
+                                    {{ order.shippingMethodCarrier }} — {{ order.shippingMethodName }}
+                                {% else %}
+                                    {{ order.shippingMethodName ?? order.shippingMethodCarrier }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.shippingCarrier %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.carrier_label'|trans }}</span>
+                            <span class="info-value">{{ order.shippingCarrier }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.shippingMethodName or order.shippingMethodCarrier or order.shippingCarrierStatus %}
+                        {% set shipStatus = order.shippingCarrierStatus ?? 'pending' %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.shipment_status_label'|trans }}</span>
+                            <span class="ship-status ship-status--{{ shipStatus }}">
+                                {{ ('profile.order_show.shipment_status_' ~ shipStatus)|trans }}
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.trackingNumber %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.tracking_number_label'|trans }}</span>
+                            <span class="info-value"><code>{{ order.trackingNumber }}</code></span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.shippingDate %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.shipping_date_label'|trans }}</span>
+                            <span class="info-value">{{ order.shippingDate|date('d/m/Y') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.estimatedDeliveryDate %}
+                        <div class="info-block">
+                            <span class="info-label">
+                                {{ (order.shippingCarrierStatus == 'delivered' ? 'profile.order_show.delivered_date_label' : 'profile.order_show.estimated_delivery_label')|trans }}
+                            </span>
+                            <span class="info-value">{{ order.estimatedDeliveryDate|date('d/m/Y') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if order.shippingLabelUrl %}
+                        <div class="info-block">
+                            <span class="info-label">{{ 'profile.order_show.shipping_label_label'|trans }}</span>
+                            <a href="{{ order.shippingLabelUrl }}" target="_blank" rel="noopener noreferrer" class="item-link">
+                                {{ 'profile.order_show.shipping_label_download'|trans }}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if not (order.shippingMethodName or order.shippingMethodCarrier or order.shippingCarrierStatus) %}
+                        <p class="empty-state">{{ 'profile.order_show.shipment_no_info'|trans }}</p>
+                    {% endif %}
                 </div>
 
                 {# Shipping Address #}
@@ -326,16 +461,38 @@
                     <h2 class="section-title">{{ 'profile.order_show.order_summary'|trans }}</h2>
                     <div class="total-row">
                         <span>{{ 'profile.order_show.subtotal'|trans }}</span>
-                        <span>{{ order.total|number_format(2, ',', ' ') }} $</span>
+                        <span>{{ (order.subtotal ?? order.total)|number_format(2, ',', ' ') }} $</span>
                     </div>
-                    <div class="total-row">
-                        <span>{{ 'profile.order_show.shipping'|trans }}</span>
-                        <span>0,00 $</span>
-                    </div>
-                    <div class="total-row">
-                        <span>{{ 'profile.order_show.tax'|trans }}</span>
-                        <span>0,00 $</span>
-                    </div>
+                    {% if order.shippingAmount is not null %}
+                        <div class="total-row">
+                            <span>{{ 'profile.order_show.shipping'|trans }}</span>
+                            <span>
+                                {% if order.shippingAmount > 0 %}
+                                    {{ order.shippingAmount|number_format(2, ',', ' ') }} $
+                                {% else %}
+                                    {{ 'profile.order_show.shipping_free'|trans }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+                    {% if order.taxGst and order.taxGst > 0 %}
+                        <div class="total-row">
+                            <span>{{ 'profile.order_show.tax_gst'|trans }}</span>
+                            <span>{{ order.taxGst|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    {% endif %}
+                    {% if order.taxPst and order.taxPst > 0 %}
+                        <div class="total-row">
+                            <span>{{ 'profile.order_show.tax_pst'|trans }}</span>
+                            <span>{{ order.taxPst|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    {% endif %}
+                    {% if order.taxHst and order.taxHst > 0 %}
+                        <div class="total-row">
+                            <span>{{ 'profile.order_show.tax_hst'|trans }}</span>
+                            <span>{{ order.taxHst|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    {% endif %}
                     <div class="total-row final">
                         <span>{{ 'profile.order_show.total'|trans }}</span>
                         <span>{{ order.total|number_format(2, ',', ' ') }} $</span>

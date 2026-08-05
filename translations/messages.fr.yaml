@@ -358,6 +358,7 @@ checkout:
 admin:
   nav:
     panel: Panneau Admin
+    badge: Admin
     dashboard: Tableau de bord
     articles: Articles
     users: Utilisateurs
@@ -384,7 +385,7 @@ admin:
       info_title: Informations sur l'article
       content_title: Contenu de l'article
       pricing_title: Tarification
-      base_price_label: Prix de base
+      base_price_label: Prix régulier
       promotions_label: Promotions applicables
       promotions_hint: "Maintenez Ctrl / Cmd pour sélectionner plusieurs promotions"
       effective_price: Prix effectif
@@ -397,12 +398,23 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP ou GIF · max. 4 Mo"
       image_delete_label: Supprimer l'image actuelle
       image_delete_confirm: L'image sera supprimée lors de l'enregistrement
+      gallery_title: Galerie d'images
+      gallery_empty: Aucune image dans la galerie
+      gallery_upload_label: Ajouter des images
+      gallery_upload_hint: "JPEG, PNG, WebP ou GIF · plusieurs fichiers possibles"
+      gallery_upload_btn: Ajouter à la galerie
+      gallery_move_up: Déplacer vers le haut
+      gallery_move_down: Déplacer vers le bas
+      gallery_delete: Supprimer cette image
+      gallery_delete_confirm: Cette image sera supprimée définitivement. Continuer ?
+      gallery_added: Image(s) ajoutée(s) à la galerie
+      gallery_deleted: Image supprimée de la galerie
     show:
       title: Détails de l'article
       details: Informations
       sku: SKU
       pricing: Tarification
-      base_price: Prix de base
+      base_price: Prix régulier
       promotional_price: Prix promotionnel
       savings: Économie
       no_active_promotion: Aucune promotion active
@@ -411,6 +423,7 @@ admin:
       breadcrumb: Articles
       title: Gestion des articles
       articles: articles
+      count: "%count% articles"
       create_article: Créer un article
       col_title: Titre
       col_created: Créé
@@ -423,7 +436,10 @@ admin:
       no_articles: Aucun article pour le moment
       no_articles_description: Commencez par créer votre premier article.
       create_first_article: Créer un article
+      search_placeholder: Rechercher un article...
+      search_no_results: "Aucun résultat pour « %query% »"
   users:
+    created: Utilisateur créé avec succès
     updated: Utilisateur mis à jour avec succès
     deleted: Utilisateur supprimé avec succès
     password_reset: Le mot de passe a été réinitialisé
@@ -449,6 +465,9 @@ admin:
       col_role: Rôle
       col_joined: Inscrit
       no_users: Aucun utilisateur pour le moment
+      search_placeholder: Rechercher un utilisateur...
+      search_no_results: "Aucun résultat pour « %query% »"
+      create_user: Créer un utilisateur
     show:
       info_title: Informations utilisateur
       joined: Inscrit
@@ -470,6 +489,10 @@ admin:
       change_password: Changer le mot de passe
       password_hint: Laissez vide pour conserver le mot de passe actuel.
       update_btn: Mettre à jour l'utilisateur
+    new:
+      title: Nouvel utilisateur
+      password_title: Mot de passe
+      create_btn: Créer l'utilisateur
   profile:
     index:
       title: Modifier le profil
@@ -505,6 +528,8 @@ admin:
       add_address: Ajouter une adresse
   orders:
     status_updated: "Statut de la commande mis à jour."
+    status_invalid: "Statut invalide."
+    tracking_required: "Veuillez renseigner un numéro de suivi pour marquer la commande comme expédiée."
     shipping_updated: "Informations de livraison mises à jour."
     payment_updated: "Informations de paiement mises à jour."
     csrf_error: Erreur de validation du jeton de sécurité
@@ -523,9 +548,16 @@ admin:
       no_orders_found: Aucune commande trouvée
       no_orders_yet: Aucune commande pour le moment.
       no_orders_with_status: "Aucune commande avec le statut « %status% »."
+      search_placeholder: Rechercher par n° de commande, nom ou courriel...
+      search_no_results: "Aucun résultat pour « %query% »"
     show:
       article: Article
       articles: Articles
+      order_subtotal_label: Sous-total
+      order_shipping_label: Livraison
+      order_tax_gst_label: TPS
+      order_tax_pst_label: TVP
+      order_tax_hst_label: TVH
       back_to_orders: Retour aux commandes
       status: Statut
       update_status: Mettre à jour le statut
@@ -564,6 +596,17 @@ admin:
       payment_intent_id: Référence Stripe
       payment_no_info: Aucune information de paiement disponible
       shipping_title: Informations de livraison
+      shipping_method_title: Mode d'expédition choisi
+      shipping_method_label: Mode d'expédition
+      shipping_method_price_label: Prix de la livraison
+      shipping_method_reference_label: Référence
+      shipping_method_free: Gratuite
+      shipping_method_none: "Aucune information sur le mode d'expédition choisi pour cette commande."
+      status_change_tracking_hint: "Renseignez le transporteur et le numéro de suivi pour marquer cette commande comme expédiée."
+      shipping_status_title: Statut d'expédition
+      shipping_status_update_btn: Mettre à jour
+      shipping_status_cancel_btn: Annuler
+      shipping_status_none: "Aucune information de suivi pour le moment."
       shipping_status_label: Statut d'expédition
       shipping_status_pending: En attente d'expédition
       shipping_status_shipped: Expédié
@@ -591,11 +634,14 @@ admin:
       breadcrumb: Catégories
       title: Gestion des catégories
       categories: catégories
+      count: "%count% catégories"
       create_category: Créer une catégorie
       col_name: Nom
       col_articles: Articles
       no_categories: Aucune catégorie pour le moment
       confirm_delete: Êtes-vous sûr de vouloir supprimer cette catégorie ?
+      search_placeholder: Rechercher une catégorie...
+      search_no_results: "Aucun résultat pour « %query% »"
     form:
       info_title: Informations sur la catégorie
       new_category: Nouvelle catégorie
@@ -714,8 +760,34 @@ profile:
     customer_contact: Contact client
     order_again: Commander à nouveau
     shipping: Livraison
+    shipping_free: Gratuite
     tax: Taxe
+    tax_gst: TPS
+    tax_pst: TVP
+    tax_hst: TVH
     total: Total
+    payment_title: Mode de paiement
+    payment_card: Carte bancaire
+    payment_paypal: PayPal
+    payment_link: Stripe Link
+    payment_card_ending: "Carte se terminant par"
+    payment_no_info: Aucune information de paiement disponible pour cette commande.
+    shipment_title: Livraison
+    shipment_method_label: Mode d'expédition
+    carrier_label: Transporteur
+    shipment_status_label: Statut d'expédition
+    shipment_status_pending: En attente d'expédition
+    shipment_status_shipped: Expédié
+    shipment_status_in_transit: En transit
+    shipment_status_delivered: Livré
+    shipment_status_failed: Échec de livraison
+    tracking_number_label: Numéro de suivi
+    shipping_date_label: Date d'expédition
+    estimated_delivery_label: Livraison estimée
+    delivered_date_label: Livré le
+    shipping_label_label: Étiquette d'expédition
+    shipping_label_download: Télécharger l'étiquette
+    shipment_no_info: Aucune information d'expédition disponible pour le moment.
   edit:
     title: Modifier le profil
     email: Adresse email
@@ -805,6 +877,22 @@ email:
     questions: "Si vous avez des questions, répondez simplement à cet e-mail."
     goodbye: "Bonne journée,"
     team: "L'équipe %app%"
+  order_status_changed:
+    subject_in_progress: "Votre commande #%id% est en cours de traitement"
+    subject_shipped: "Votre commande #%id% a été expédiée"
+    subject_completed: "Votre commande #%id% a été livrée"
+    title_in_progress: "Votre commande est en cours de traitement"
+    title_shipped: "Votre commande a été expédiée"
+    title_completed: "Votre commande a été livrée"
+    greeting: "Bonjour %name%,"
+    body_in_progress: "Bonne nouvelle : la préparation de votre commande #%id% a commencé."
+    body_shipped: "Votre commande #%id% vient d'être expédiée. Voici les détails de livraison :"
+    body_completed: "Votre commande #%id% a été livrée. Nous espérons qu'elle vous plaira !"
+    carrier: "Transporteur"
+    tracking_number: "Numéro de suivi"
+    estimated_delivery: "Livraison estimée"
+    delivered_date: "Livrée le"
+    view_order_button: "Voir ma commande"
   password_reset:
     title: "Réinitialisez votre mot de passe"
     greeting: "Bonjour %name%,"
