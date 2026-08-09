@@ -26,12 +26,16 @@ class FaqEntry
     #[ORM\Column(length: 100, nullable: false)]
     private ?string $category = null;
 
+    #[ORM\Column(length: 32)]
+    private ?string $groupKey = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
+        $this->groupKey = bin2hex(random_bytes(8));
     }
 
     public function getId(): ?int
@@ -83,6 +87,18 @@ class FaqEntry
     public function setCategory(string $category): static
     {
         $this->category = $category;
+
+        return $this;
+    }
+
+    public function getGroupKey(): ?string
+    {
+        return $this->groupKey;
+    }
+
+    public function setGroupKey(string $groupKey): static
+    {
+        $this->groupKey = $groupKey;
 
         return $this;
     }

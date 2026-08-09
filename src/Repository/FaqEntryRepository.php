@@ -16,28 +16,55 @@ class FaqEntryRepository extends ServiceEntityRepository
         parent::__construct($registry, FaqEntry::class);
     }
 
-    //    /**
-    //     * @return FaqEntry[] Returns an array of FaqEntry objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('f')
-    //            ->andWhere('f.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('f.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * @return array<string, FaqEntry[]> FAQ entries for the given locale, grouped by category
+     */
+    public function findByLocaleGroupedByCategory(string $locale): array
+    {
+        $entries = $this->createQueryBuilder('f')
+            ->andWhere('f.locale = :locale')
+            ->setParameter('locale', $locale)
+            ->orderBy('f.id', 'ASC')
+            ->getQuery()
+            ->getResult();
 
-    //    public function findOneBySomeField($value): ?FaqEntry
-    //    {
-    //        return $this->createQueryBuilder('f')
-    //            ->andWhere('f.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        $grouped = [];
+        foreach ($entries as $entry) {
+            $grouped[$entry->getCategory()][] = $entry;
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * @return array<string, array<string, FaqEntry>> All entries grouped by group key, then keyed by locale
+     */
+    public function findAllGroupedByGroupKey(): array
+    {
+        $entries = $this->createQueryBuilder('f')
+            ->orderBy('f.groupKey', 'ASC')
+            ->addOrderBy('f.locale', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $grouped = [];
+        foreach ($entries as $entry) {
+            $grouped[$entry->getGroupKey()][$entry->getLocale()] = $entry;
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * @return array{fr: ?FaqEntry, en: ?FaqEntry}
+     */
+    public function findByGroupKey(string $groupKey): array
+    {
+        $result = ['fr' => null, 'en' => null];
+        foreach ($this->findBy(['groupKey' => $groupKey]) as $entry) {
+            $result[$entry->getLocale()] = $entry;
+        }
+
+        return $result;
+    }
 }

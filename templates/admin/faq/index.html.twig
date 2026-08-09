@@ -1,0 +1,79 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.faq.index.title'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.faq.index.title'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.faq.index.breadcrumb'|trans }}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+        <h2 style="margin: 0; font-size: 20px;">{{ 'admin.faq.index.title'|trans }}</h2>
+        <p style="margin: 5px 0 0 0; color: #64748b;">{{ 'admin.faq.index.count'|trans({'%count%': pairs|length}) }}</p>
+    </div>
+    <a href="{{ path('admin_faq_new') }}" class="btn-action-primary">
+        <i class="bi bi-plus-lg"></i> {{ 'admin.faq.index.create_entry'|trans }}
+    </a>
+</div>
+
+{% if pairs %}
+<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div class="admin-table-wrap">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+            <tr>
+                <th style="padding: 16px; text-align: left; font-weight: 600; color: #334155; font-size: 14px;">{{ 'admin.faq.index.col_category'|trans }}</th>
+                <th style="padding: 16px; text-align: left; font-weight: 600; color: #334155; font-size: 14px;">{{ 'admin.faq.index.col_question_fr'|trans }}</th>
+                <th style="padding: 16px; text-align: left; font-weight: 600; color: #334155; font-size: 14px;">{{ 'admin.faq.index.col_question_en'|trans }}</th>
+                <th style="padding: 16px; text-align: right; font-weight: 600; color: #334155; font-size: 14px;">{{ 'common.actions'|trans }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for groupKey, entries in pairs %}
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 16px; color: #64748b; font-size: 14px;">
+                    {{ (entries.fr ?? entries.en).category }}
+                </td>
+                <td style="padding: 16px; color: #0f172a;">
+                    {% if entries.fr %}
+                        {{ entries.fr.question|slice(0, 60) }}{{ entries.fr.question|length > 60 ? '…' : '' }}
+                    {% else %}
+                        <span style="color: #cbd5e1; font-style: italic;">{{ 'admin.faq.index.missing_translation'|trans }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 16px; color: #0f172a;">
+                    {% if entries.en %}
+                        {{ entries.en.question|slice(0, 60) }}{{ entries.en.question|length > 60 ? '…' : '' }}
+                    {% else %}
+                        <span style="color: #cbd5e1; font-style: italic;">{{ 'admin.faq.index.missing_translation'|trans }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 16px; text-align: right;">
+                    <a href="{{ path('admin_faq_edit', {groupKey: groupKey}) }}" style="color: #3b82f6; text-decoration: none; margin-right: 12px;">
+                        <i class="bi bi-pencil"></i> {{ 'common.edit'|trans }}
+                    </a>
+                    <form action="{{ path('admin_faq_delete', {groupKey: groupKey}) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ 'admin.faq.index.confirm_delete'|trans|e('js') }}');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ groupKey) }}">
+                        <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                            <i class="bi bi-trash"></i> {{ 'common.delete'|trans }}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% else %}
+<div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
+    <i class="bi bi-question-circle" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px; display: block;"></i>
+    <h3 style="margin: 0 0 10px 0; color: #334155;">{{ 'admin.faq.index.no_entries'|trans }}</h3>
+    <a href="{{ path('admin_faq_new') }}" class="btn-action-primary" style="margin-top: 16px; display: inline-flex;">
+        {{ 'admin.faq.index.create_entry'|trans }}
+    </a>
+</div>
+{% endif %}
+{% endblock %}

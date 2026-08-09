@@ -123,6 +123,7 @@ footer:
   support: Support
   privacy: Confidentialité
   terms: Conditions
+  faq: FAQ
 
 # Dates et temps
 date:
@@ -365,6 +366,7 @@ admin:
     orders: Commandes
     categories: Catégories
     promotions: Promotions
+    faq: FAQ
     settings: Paramètres
     back_to_store: Retour à la boutique
   dashboard:
@@ -695,6 +697,32 @@ admin:
       articles_selected_count: "%count% sélectionné(s)"
       articles_select_all: Tout sélectionner
       articles_clear_all: Tout désélectionner
+  faq:
+    created: Question créée avec succès
+    updated: Question mise à jour avec succès
+    deleted: Question supprimée avec succès
+    index:
+      breadcrumb: FAQ
+      title: Gestion de la FAQ
+      count: "%count% questions"
+      create_entry: Créer une question
+      col_category: Catégorie
+      col_question_fr: Question (FR)
+      col_question_en: Question (EN)
+      missing_translation: Traduction manquante
+      no_entries: Aucune question pour le moment
+      confirm_delete: Êtes-vous sûr de vouloir supprimer cette question ?
+    form:
+      new_entry: Nouvelle question
+      create_btn: Créer la question
+      panel_fr: Contenu en français
+      panel_en: Contenu en anglais
+      category_label: Catégorie
+      category_placeholder: "ex. livraison, retours, paiement..."
+      question_label: Question
+      question_placeholder: Entrez la question...
+      answer_label: Réponse
+      answer_placeholder: Entrez la réponse...
 
 profile:
   updated: "Profil mis à jour avec succès."
@@ -943,3 +971,12 @@ search:
   view_article: "Voir l'article"
   view_all: "Voir tous les résultats"
   no_results: "Aucun résultat pour cette recherche."
+
+faq:
+  title: Foire aux questions
+  subtitle: Retrouvez les réponses aux questions les plus fréquentes.
+  no_entries: Aucune question disponible pour le moment.
+  search_placeholder: Rechercher une question...
+  no_results: Aucune question ne correspond à votre recherche.
+  question: question
+  questions: questions

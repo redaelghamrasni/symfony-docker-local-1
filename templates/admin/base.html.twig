@@ -55,6 +55,10 @@
                         <i class="bi bi-percent"></i>
                         {{ 'admin.nav.promotions'|trans }}
                     </a>
+                    <a href="{{ path('admin_faq_index') }}" class="admin-nav-item {% if 'admin_faq_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-question-circle"></i>
+                        {{ 'admin.nav.faq'|trans }}
+                    </a>
                     <a href="{{ path('admin_settings_index') }}" class="admin-nav-item {% if 'admin_settings_' in app.request.attributes.get('_route') %}active{% endif %}">
                         <i class="bi bi-gear"></i>
                         {{ 'admin.nav.settings'|trans }}

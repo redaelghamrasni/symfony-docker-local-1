@@ -1,0 +1,218 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'faq.title'|trans }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ── Hero ───────────────────────────────────────────── */
+        .faq-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4.5rem 2rem 5.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .faq-hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        }
+        .faq-hero-content { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+        .faq-hero-icon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin: 0 auto 1.25rem;
+        }
+        .faq-hero-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.75rem; line-height: 1.15; }
+        .faq-hero-subtitle { font-size: 1.1rem; opacity: 0.9; line-height: 1.6; }
+
+        /* ── Search ─────────────────────────────────────────── */
+        .faq-search-wrap {
+            max-width: 560px; margin: 0 auto; padding: 0 1.5rem;
+            position: relative; top: -1.75rem;
+        }
+        .faq-search-box {
+            position: relative;
+            background: white; border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(31,41,55,0.14);
+        }
+        .faq-search-box i {
+            position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+            color: #9ca3af; font-size: 1rem; pointer-events: none;
+        }
+        .faq-search-input {
+            width: 100%; box-sizing: border-box;
+            padding: 15px 18px 15px 46px;
+            border: none; border-radius: 14px;
+            font-size: 0.95rem; color: #1f2937;
+            background: transparent;
+        }
+        .faq-search-input:focus { outline: 2px solid #a5b4fc; outline-offset: -2px; }
+
+        /* ── Content ────────────────────────────────────────── */
+        .faq-content { max-width: 760px; margin: 0 auto; padding: 1rem 1.5rem 5rem; }
+
+        .faq-category { margin-top: 2.5rem; }
+        .faq-category-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+        .faq-category-icon {
+            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .faq-category-title { font-size: 1.15rem; font-weight: 700; color: #1f2937; }
+        .faq-category-count { font-size: 0.8rem; color: #9ca3af; font-weight: 500; }
+
+        .faq-list {
+            background: white; border: 1px solid #e5e7eb; border-radius: 14px;
+            overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .faq-item + .faq-item { border-top: 1px solid #e5e7eb; }
+
+        .faq-question {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 18px 22px; background: none; border: none; cursor: pointer;
+            text-align: left; font: inherit; color: #1f2937; font-weight: 600; font-size: 0.98rem;
+            transition: background 0.15s;
+        }
+        .faq-question:hover { background: #f9fafb; }
+        .faq-chevron { color: #9ca3af; font-size: 0.9rem; flex-shrink: 0; transition: transform 0.25s ease; }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); color: #667eea; }
+
+        .faq-answer-wrap { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .faq-answer {
+            padding: 0 22px 20px; color: #4b5563; line-height: 1.7; font-size: 0.94rem;
+        }
+
+        .faq-empty, .faq-no-results {
+            text-align: center; padding: 3.5rem 1.5rem; color: #6b7280;
+        }
+        .faq-empty i, .faq-no-results i { font-size: 3rem; color: #d1d5db; margin-bottom: 1rem; display: block; }
+        .faq-no-results { display: none; }
+
+        @media (max-width: 640px) {
+            .faq-hero { padding: 3.5rem 1.5rem 5rem; }
+            .faq-hero-title { font-size: 1.9rem; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+{% set categoryIcons = {
+    'livraison': 'bi-truck', 'shipping': 'bi-truck',
+    'retours': 'bi-arrow-return-left', 'returns': 'bi-arrow-return-left',
+    'paiement': 'bi-credit-card-2-front', 'payment': 'bi-credit-card-2-front',
+    'taxes': 'bi-receipt',
+    'compte': 'bi-person-circle', 'account': 'bi-person-circle',
+} %}
+
+<section class="faq-hero">
+    <div class="faq-hero-content">
+        <div class="faq-hero-icon"><i class="bi bi-question-lg"></i></div>
+        <h1 class="faq-hero-title">{{ 'faq.title'|trans }}</h1>
+        <p class="faq-hero-subtitle">{{ 'faq.subtitle'|trans }}</p>
+    </div>
+</section>
+
+{% if groupedEntries is not empty %}
+<div class="faq-search-wrap">
+    <div class="faq-search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="faq-search" class="faq-search-input" autocomplete="off" spellcheck="false" placeholder="{{ 'faq.search_placeholder'|trans }}">
+    </div>
+</div>
+{% endif %}
+
+<div class="faq-content">
+    {% if groupedEntries is empty %}
+        <div class="faq-empty">
+            <i class="bi bi-question-circle"></i>
+            <p>{{ 'faq.no_entries'|trans }}</p>
+        </div>
+    {% else %}
+        {% for category, entries in groupedEntries %}
+            <div class="faq-category">
+                <div class="faq-category-header">
+                    <div class="faq-category-icon"><i class="bi {{ categoryIcons[category] ?? 'bi-question-circle' }}"></i></div>
+                    <div>
+                        <div class="faq-category-title">{{ category|replace({'-': ' ', '_': ' '})|capitalize }}</div>
+                        <div class="faq-category-count">{{ entries|length }} {{ entries|length > 1 ? 'faq.questions'|trans : 'faq.question'|trans }}</div>
+                    </div>
+                </div>
+                <div class="faq-list">
+                    {% for entry in entries %}
+                        <div class="faq-item">
+                            <button type="button" class="faq-question">
+                                <span data-faq-question>{{ entry.question }}</span>
+                                <i class="bi bi-chevron-down faq-chevron"></i>
+                            </button>
+                            <div class="faq-answer-wrap">
+                                <div class="faq-answer" data-faq-answer>{{ entry.answer }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+
+        <div class="faq-no-results" id="faq-no-results">
+            <i class="bi bi-search"></i>
+            <p>{{ 'faq.no_results'|trans }}</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        (function () {
+            document.querySelectorAll('.faq-question').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var item = btn.closest('.faq-item');
+                    var wrap = item.querySelector('.faq-answer-wrap');
+                    var isOpen = item.classList.contains('open');
+
+                    if (isOpen) {
+                        item.classList.remove('open');
+                        wrap.style.maxHeight = null;
+                    } else {
+                        item.classList.add('open');
+                        wrap.style.maxHeight = wrap.scrollHeight + 'px';
+                    }
+                });
+            });
+
+            var searchInput = document.getElementById('faq-search');
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', function () {
+                var query = searchInput.value.trim().toLowerCase();
+                var anyVisible = false;
+
+                document.querySelectorAll('.faq-category').forEach(function (section) {
+                    var sectionHasMatch = false;
+
+                    section.querySelectorAll('.faq-item').forEach(function (item) {
+                        var question = item.querySelector('[data-faq-question]').textContent.toLowerCase();
+                        var answer = item.querySelector('[data-faq-answer]').textContent.toLowerCase();
+                        var matches = !query || question.includes(query) || answer.includes(query);
+
+                        item.style.display = matches ? '' : 'none';
+                        if (matches) sectionHasMatch = true;
+                    });
+
+                    section.style.display = sectionHasMatch ? '' : 'none';
+                    if (sectionHasMatch) anyVisible = true;
+                });
+
+                document.getElementById('faq-no-results').style.display = anyVisible ? 'none' : 'block';
+            });
+        })();
+    </script>
+{% endblock %}
