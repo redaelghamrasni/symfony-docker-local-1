@@ -7,6 +7,7 @@ use App\Service\CartService;
 use App\Service\PayPalService;
 use App\Service\SettingService;
 use App\Service\TaxService;
+use App\Service\StripeCustomerService;
 use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
@@ -55,6 +56,7 @@ class CheckoutController extends AbstractController
         private EntityManagerInterface $entityManager,
         private ShippingService $shippingService,
         private SettingService $settingService,
+        private StripeCustomerService $stripeCustomerService,
         private AddressRepository $addressRepository,
         private OrderRepository $orderRepository,
         private LocaleSwitcher $localeSwitcher,
@@ -126,24 +128,49 @@ class CheckoutController extends AbstractController
             }
         }
 
+        $phone            = trim($data['customer_phone'] ?? '');
+        $shippingAddress  = trim($data['checkout_shipping_address'] ?? '');
+        $shippingCity     = trim($data['checkout_shipping_city'] ?? '');
+        $shippingPostal   = trim($data['checkout_shipping_postal'] ?? '');
+        $shippingProvince = trim($data['checkout_shipping_province'] ?? '');
+
         $session = $request->getSession();
         $session->set('checkout_email', $email);
         $session->set('checkout_name', $name !== '' ? $name : 'Client');
-        $session->set('checkout_phone', trim($data['customer_phone'] ?? ''));
-        $session->set('checkout_shipping_address',  trim($data['checkout_shipping_address'] ?? ''));
-        $session->set('checkout_shipping_city',     trim($data['checkout_shipping_city'] ?? ''));
-        $session->set('checkout_shipping_postal',   trim($data['checkout_shipping_postal'] ?? ''));
-        $session->set('checkout_shipping_province', trim($data['checkout_shipping_province'] ?? ''));
+        $session->set('checkout_phone', $phone);
+        $session->set('checkout_shipping_address',  $shippingAddress);
+        $session->set('checkout_shipping_city',     $shippingCity);
+        $session->set('checkout_shipping_postal',   $shippingPostal);
+        $session->set('checkout_shipping_province', $shippingProvince);
         $session->set('checkout_billing_same',    (bool)($data['checkout_billing_same'] ?? true));
         $session->set('checkout_billing_address',   trim($data['checkout_billing_address'] ?? ''));
         $session->set('checkout_billing_city',      trim($data['checkout_billing_city'] ?? ''));
         $session->set('checkout_billing_postal',    trim($data['checkout_billing_postal'] ?? ''));
         $session->set('checkout_billing_province',  trim($data['checkout_billing_province'] ?? ''));
 
-        // Sync customer info to the already-created Stripe PaymentIntent metadata
+        // Sync customer info (incluant Customer Stripe) to the already-created PaymentIntent
         $piId = $session->get('checkout_pi_id');
         if ($piId) {
             try {
+                $pi = $this->stripeClient->paymentIntents->retrieve($piId);
+
+                if ($pi->customer) {
+                    $addressPayload = $shippingAddress !== '' ? [
+                        'line1'       => $shippingAddress,
+                        'city'        => $shippingCity,
+                        'postal_code' => $shippingPostal,
+                        'state'       => $shippingProvince,
+                        'country'     => 'CA',
+                    ] : null;
+
+                    $this->stripeClient->customers->update($pi->customer, [
+                        'email'   => $email,
+                        'name'    => $name !== '' ? $name : 'Client',
+                        'phone'   => $phone ?: null,
+                        'address' => $addressPayload,
+                    ]);
+                }
+
                 $this->stripeClient->paymentIntents->update($piId, [
                     'metadata' => [
                         'customer_email' => $email,
@@ -151,7 +178,7 @@ class CheckoutController extends AbstractController
                     ],
                 ]);
             } catch (\Throwable) {
-                // Non-fatal; metadata is a convenience field, not required for payment to succeed
+                // Non-fatal; metadata/customer sync is a convenience, not required for payment to succeed
             }
         }
 
@@ -169,6 +196,20 @@ class CheckoutController extends AbstractController
         $data  = json_decode($request->getContent(), true) ?: [];
         $email = filter_var(trim($data['customer_email'] ?? ''), FILTER_VALIDATE_EMAIL);
         $name  = trim($data['customer_name'] ?? '');
+        $phone = trim($data['customer_phone'] ?? '');
+
+        /** @var User|null $user */
+        $user = $this->getUser();
+        $savedAddr = null;
+
+        if ($user) {
+            $email = $email ?: $user->getEmail();
+            $name  = $name !== '' ? $name : trim($user->getFirstName() . ' ' . $user->getLastName());
+            $savedAddr = $this->addressRepository->findDefaultShippingByUser($user->getId());
+            if ($phone === '') {
+                $phone = $savedAddr?->getPhone() ?? '';
+            }
+        }
 
         if ($email) {
             $session = $request->getSession();
@@ -183,9 +224,35 @@ class CheckoutController extends AbstractController
         }
 
         try {
+            if ($user) {
+                // Utilisateur connecté : Customer Stripe persistant, réutilisé d'une commande à l'autre
+                $customerId = $this->stripeCustomerService->getOrCreateCustomer($user, $phone ?: null, $savedAddr);
+            } else {
+                // Invité : Customer Stripe créé à la volée (non persisté côté app)
+                $guestAddress = null;
+                if (!empty($data['checkout_shipping_address'])) {
+                    $guestAddress = [
+                        'line1'       => trim($data['checkout_shipping_address']),
+                        'city'        => trim($data['checkout_shipping_city'] ?? ''),
+                        'postal_code' => trim($data['checkout_shipping_postal'] ?? ''),
+                        'state'       => trim($data['checkout_shipping_province'] ?? ''),
+                        'country'     => 'CA',
+                    ];
+                }
+
+                $customer = $this->stripeClient->customers->create([
+                    'email'   => $email ?: null,
+                    'name'    => $name ?: null,
+                    'phone'   => $phone ?: null,
+                    'address' => $guestAddress,
+                ]);
+                $customerId = $customer->id;
+            }
+
             $paymentIntent = $this->stripeClient->paymentIntents->create([
-                'amount'                  => $amount,
-                'currency'                => 'cad',
+                'amount'                    => $amount,
+                'currency'                  => 'cad',
+                'customer'                  => $customerId,
                 'automatic_payment_methods' => ['enabled' => true],
                 'metadata' => [
                     'cart_id'        => $cart->getId(),

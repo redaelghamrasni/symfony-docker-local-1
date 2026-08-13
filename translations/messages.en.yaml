@@ -121,6 +121,7 @@ footer:
   support: Support
   privacy: Privacy
   terms: Terms
+  faq: FAQ
 
 # Dates and time
 date:
@@ -362,6 +363,7 @@ admin:
     orders: Orders
     categories: Categories
     promotions: Promotions
+    faq: FAQ
     settings: Settings
     back_to_store: Back to Store
   settings:
@@ -692,6 +694,32 @@ admin:
       articles_selected_count: "%count% selected"
       articles_select_all: Select all
       articles_clear_all: Clear all
+  faq:
+    created: Question created successfully
+    updated: Question updated successfully
+    deleted: Question deleted successfully
+    index:
+      breadcrumb: FAQ
+      title: FAQ Management
+      count: "%count% questions"
+      create_entry: Create Question
+      col_category: Category
+      col_question_fr: Question (FR)
+      col_question_en: Question (EN)
+      missing_translation: Missing translation
+      no_entries: No questions yet
+      confirm_delete: Are you sure you want to delete this question?
+    form:
+      new_entry: New Question
+      create_btn: Create Question
+      panel_fr: French content
+      panel_en: English content
+      category_label: Category
+      category_placeholder: "e.g. shipping, returns, payment..."
+      question_label: Question
+      question_placeholder: Enter the question...
+      answer_label: Answer
+      answer_placeholder: Enter the answer...
 
 
 # Profile Orders
@@ -948,3 +976,12 @@ search:
   view_article: View article
   view_all: See all results
   no_results: "No results found for this search."
+
+faq:
+  title: Frequently Asked Questions
+  subtitle: Find answers to the most common questions.
+  no_entries: No questions available yet.
+  search_placeholder: Search a question...
+  no_results: No questions match your search.
+  question: question
+  questions: questions
