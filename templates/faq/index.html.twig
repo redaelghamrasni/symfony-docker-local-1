@@ -118,101 +118,54 @@
     </div>
 </section>
 
-{% if groupedEntries is not empty %}
-<div class="faq-search-wrap">
-    <div class="faq-search-box">
-        <i class="bi bi-search"></i>
-        <input type="text" id="faq-search" class="faq-search-input" autocomplete="off" spellcheck="false" placeholder="{{ 'faq.search_placeholder'|trans }}">
-    </div>
-</div>
-{% endif %}
-
-<div class="faq-content">
-    {% if groupedEntries is empty %}
-        <div class="faq-empty">
-            <i class="bi bi-question-circle"></i>
-            <p>{{ 'faq.no_entries'|trans }}</p>
+<div data-controller="faq">
+    {% if groupedEntries is not empty %}
+    <div class="faq-search-wrap">
+        <div class="faq-search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" class="faq-search-input" autocomplete="off" spellcheck="false" placeholder="{{ 'faq.search_placeholder'|trans }}" data-action="input->faq#search">
         </div>
-    {% else %}
-        {% for category, entries in groupedEntries %}
-            <div class="faq-category">
-                <div class="faq-category-header">
-                    <div class="faq-category-icon"><i class="bi {{ categoryIcons[category] ?? 'bi-question-circle' }}"></i></div>
-                    <div>
-                        <div class="faq-category-title">{{ category|replace({'-': ' ', '_': ' '})|capitalize }}</div>
-                        <div class="faq-category-count">{{ entries|length }} {{ entries|length > 1 ? 'faq.questions'|trans : 'faq.question'|trans }}</div>
+    </div>
+    {% endif %}
+
+    <div class="faq-content">
+        {% if groupedEntries is empty %}
+            <div class="faq-empty">
+                <i class="bi bi-question-circle"></i>
+                <p>{{ 'faq.no_entries'|trans }}</p>
+            </div>
+        {% else %}
+            {% for category, entries in groupedEntries %}
+                <div class="faq-category" data-faq-target="category">
+                    <div class="faq-category-header">
+                        <div class="faq-category-icon"><i class="bi {{ categoryIcons[category] ?? 'bi-question-circle' }}"></i></div>
+                        <div>
+                            <div class="faq-category-title">{{ category|replace({'-': ' ', '_': ' '})|capitalize }}</div>
+                            <div class="faq-category-count">{{ entries|length }} {{ entries|length > 1 ? 'faq.questions'|trans : 'faq.question'|trans }}</div>
+                        </div>
+                    </div>
+                    <div class="faq-list">
+                        {% for entry in entries %}
+                            <div class="faq-item">
+                                <button type="button" class="faq-question" data-action="click->faq#toggle">
+                                    <span data-faq-question>{{ entry.question }}</span>
+                                    <i class="bi bi-chevron-down faq-chevron"></i>
+                                </button>
+                                <div class="faq-answer-wrap">
+                                    <div class="faq-answer" data-faq-answer>{{ entry.answer }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
                 </div>
-                <div class="faq-list">
-                    {% for entry in entries %}
-                        <div class="faq-item">
-                            <button type="button" class="faq-question">
-                                <span data-faq-question>{{ entry.question }}</span>
-                                <i class="bi bi-chevron-down faq-chevron"></i>
-                            </button>
-                            <div class="faq-answer-wrap">
-                                <div class="faq-answer" data-faq-answer>{{ entry.answer }}</div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
 
-        <div class="faq-no-results" id="faq-no-results">
-            <i class="bi bi-search"></i>
-            <p>{{ 'faq.no_results'|trans }}</p>
-        </div>
-    {% endif %}
+            <div class="faq-no-results" data-faq-target="noResults">
+                <i class="bi bi-search"></i>
+                <p>{{ 'faq.no_results'|trans }}</p>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
-{% endblock %}
-
-{% block javascripts %}
-    {{ parent() }}
-    <script>
-        (function () {
-            document.querySelectorAll('.faq-question').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var item = btn.closest('.faq-item');
-                    var wrap = item.querySelector('.faq-answer-wrap');
-                    var isOpen = item.classList.contains('open');
-
-                    if (isOpen) {
-                        item.classList.remove('open');
-                        wrap.style.maxHeight = null;
-                    } else {
-                        item.classList.add('open');
-                        wrap.style.maxHeight = wrap.scrollHeight + 'px';
-                    }
-                });
-            });
-
-            var searchInput = document.getElementById('faq-search');
-            if (!searchInput) return;
-
-            searchInput.addEventListener('input', function () {
-                var query = searchInput.value.trim().toLowerCase();
-                var anyVisible = false;
-
-                document.querySelectorAll('.faq-category').forEach(function (section) {
-                    var sectionHasMatch = false;
-
-                    section.querySelectorAll('.faq-item').forEach(function (item) {
-                        var question = item.querySelector('[data-faq-question]').textContent.toLowerCase();
-                        var answer = item.querySelector('[data-faq-answer]').textContent.toLowerCase();
-                        var matches = !query || question.includes(query) || answer.includes(query);
-
-                        item.style.display = matches ? '' : 'none';
-                        if (matches) sectionHasMatch = true;
-                    });
-
-                    section.style.display = sectionHasMatch ? '' : 'none';
-                    if (sectionHasMatch) anyVisible = true;
-                });
-
-                document.getElementById('faq-no-results').style.display = anyVisible ? 'none' : 'block';
-            });
-        })();
-    </script>
 {% endblock %}
