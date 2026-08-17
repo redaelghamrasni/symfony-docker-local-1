@@ -11,9 +11,11 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     libzip-dev \
+    postgresql-dev \
     && docker-php-ext-install \
         pdo \
         pdo_mysql \
+        pdo_pgsql \
         intl \
         zip \
         opcache \

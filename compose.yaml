@@ -48,6 +48,19 @@ services:
       - meili_data:/meili_data
 ###< meilisearch ###
 
+###> pgvector ###
+  faq_database:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: faq_search
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5433:5432"
+    volumes:
+      - faq_database_data:/var/lib/postgresql/data
+###< pgvector ###
+
 volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:
@@ -60,3 +73,7 @@ volumes:
 ###> meilisearch ###
   meili_data:
 ###< meilisearch ###
+
+###> pgvector ###
+  faq_database_data:
+###< pgvector ###
