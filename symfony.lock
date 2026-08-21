@@ -162,6 +162,42 @@
             "src/Entity/.gitignore"
         ]
     },
+    "symfony/ai-bundle": {
+        "version": "0.12",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "2be6ccd77335c2631fdf12d1680649b072efb8ad"
+        },
+        "files": [
+            "config/packages/ai.yaml"
+        ]
+    },
+    "symfony/ai-gemini-platform": {
+        "version": "0.12",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "a6953d134a46a78354003b4dddf682f03ef886b2"
+        },
+        "files": [
+            "config/packages/ai_gemini_platform.yaml"
+        ]
+    },
+    "symfony/ai-postgres-store": {
+        "version": "0.12",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "2dc03e717a268169c6cb88e260a4cc860ade3c94"
+        },
+        "files": [
+            "config/packages/ai_postgres_store.yaml"
+        ]
+    },
     "symfony/asset-mapper": {
         "version": "7.4",
         "recipe": {
@@ -381,6 +417,15 @@
             "config/packages/twig.yaml",
             "templates/base.html.twig"
         ]
+    },
+    "symfony/uid": {
+        "version": "7.4",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "7.0",
+            "ref": "0df5844274d871b37fc3816c57a768ffc60a43a5"
+        }
     },
     "symfony/ux-turbo": {
         "version": "2.31",
