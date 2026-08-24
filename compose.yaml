@@ -61,6 +61,17 @@ services:
       - faq_database_data:/var/lib/postgresql/data
 ###< pgvector ###
 
+  ###> rabbitmq ###
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # port AMQP (utilisé par l'app)
+      - "15672:15672" # interface web de gestion
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+  ###< rabbitmq ###
+
 volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:

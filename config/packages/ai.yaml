@@ -2,35 +2,44 @@ ai:
     platform:
         gemini:
             api_key: '%env(GEMINI_API_KEY)%'
-        # Inference Platform configuration
-        # see https://github.com/symfony/ai/tree/main/src/platform#platform-bridges
-
-        # openai:
-        #    api_key: '%env(OPENAI_API_KEY)%'
+        ollama:
+            endpoint: '%env(OLLAMA_HOST_URL)%'
 
     agent:
         # Agent configuration
         # see https://symfony.com/doc/current/ai/bundles/ai-bundle.html
 
         # default:
-        #    platform: 'ai.platform.openai'
-        #    model: 'gpt-5-mini'
+        #    platform: 'ai.platform.gemini'
+        #    model: 'gemini-2.0-flash'
         #    prompt: |
         #        You are a pirate and you write funny.
         #    tools:
         #        - 'Symfony\AI\Agent\Bridge\Clock\Clock'
 
     vectorizer:
-        faq_embeddings:
+        faq_gemini:
             platform: 'ai.platform.gemini'
             model:
                 name: 'gemini-embedding-001'
                 options:
                     dimensions: 768
-    
+        faq_bgem3:
+            platform: 'ai.platform.ollama'
+            model:
+                name: 'bge-m3'
+
     store:
         postgres:
-            faq:
+            faq_gemini:
                 dbal_connection: 'doctrine.dbal.faq_connection'
                 table_name: 'faq_embeddings'
                 vector_field: 'embedding'
+                setup_options:
+                    vector_size: 768
+            faq_bgem3:
+                dbal_connection: 'doctrine.dbal.faq_connection'
+                table_name: 'faq_embeddings_bgem3'
+                vector_field: 'embedding'
+                setup_options:
+                    vector_size: 1024
