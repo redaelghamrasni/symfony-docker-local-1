@@ -72,7 +72,7 @@ final class IndexFaqCommand extends Command
             );
         }
 
-        // Un indexer par modèle, chacun avec son processor (vectorizer + store)
+        // One indexer per model, but same documents for both
         $targets = [
             'Gemini' => new DocumentIndexer(
                 new DocumentProcessor($this->geminiVectorizer, $this->geminiStore)
@@ -85,7 +85,7 @@ final class IndexFaqCommand extends Command
         foreach ($targets as $label => $indexer) {
             $io->section(sprintf('Indexation with %s', $label));
 
-            // Repartir propre : vider le store avant de réindexer
+            // Cleanup store before indexing
             match ($label) {
                 'Gemini' => $this->geminiStore->clear(),
                 'bge-m3' => $this->bgem3Store->clear(),
