@@ -3,7 +3,6 @@
 namespace App\Command;
 
 use Symfony\AI\Store\Document\VectorizerInterface;
-use Symfony\AI\Store\Document\TextDocument;
 use Symfony\AI\Store\Query\VectorQuery;
 use Symfony\AI\Store\StoreInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
