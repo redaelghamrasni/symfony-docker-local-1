@@ -1,74 +1,86 @@
 # CLAUDE.md
 
-Voir [ARCHITECTURE.md](ARCHITECTURE.md) pour le détail complet (décisions de design, dette technique).
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full details (design decisions, technical debt).
 
-## Objectif du projet
+## Project goal
 
-E-commerce fullstack ciblant le marché canadien : catalogue multilingue (FR/EN), panier, checkout avec taxes provinciales (GST/PST/HST) et expédition (Shippo), paiement Stripe/PayPal, back-office admin, API REST, plus un SPA React embarqué.
+Fullstack e-commerce targeting the Canadian market: multilingual catalog (FR/EN), cart, checkout with provincial taxes (GST/PST/HST) and shipping (Shippo), Stripe/PayPal payment, admin back-office, REST API, plus an embedded React SPA.
 
 ## Stack
 
-- **Backend** : PHP 8.2+, Symfony 7.4, API Platform 4, Doctrine ORM 3, JWT (lexik) pour l'API, sessions pour le site web.
-- **Frontend web** : Twig + Stimulus/Turbo (AssetMapper), Tailwind.
-- **SPA React** (`/react`) : React 19 + TypeScript + Vite + React Query + axios, bundle séparé dans `public/build/`.
-- **Infra** (`compose.yaml`) : MySQL 8, Redis 7, Meilisearch, Mailpit.
-- **Tests** : PHPUnit 13 (`tests/Unit`, `tests/Functional`).
+- **Backend**: PHP 8.2+, Symfony 7.4, API Platform 4, Doctrine ORM 3, JWT (lexik) for the API, sessions for the website.
+- **Web frontend**: Twig + Stimulus/Turbo (AssetMapper), Tailwind.
+- **React SPA** (`/react`): React 19 + TypeScript + Vite + React Query + axios, separate bundle in `public/build/`.
+- **Infra** (`compose.yaml`): MySQL 8, Redis 7, Meilisearch, Mailpit, Postgres+pgvector (FAQ), RabbitMQ. Ollama runs outside Docker on the host (`OLLAMA_HOST_URL`).
+- **AI / FAQ semantic search** (`config/packages/ai.yaml`, Symfony AI Bundle): two vectorizer/store pairs running in parallel to compare results — Gemini (`gemini-embedding-001`) and Ollama (local `bge-m3`) — stored in two separate pgvector tables on a dedicated Postgres Doctrine connection (`faq`). In preparation for a future chatbot (`symfony/ai-agent` installed, agent not configured yet). See ARCHITECTURE.md §5 "FAQ semantic search".
+- **Tests**: PHPUnit 13 (`tests/Unit`, `tests/Functional`).
 
-## Conventions de code
+## Coding conventions
 
-- Indentation 4 espaces, LF, UTF-8 (`.editorconfig`), 2 espaces dans les fichiers `compose*.yaml`.
-- PSR-4 : `App\` → `src/`, `App\Tests\` → `tests/`.
-- Entités Doctrine par attributs PHP (pas d'annotations/XML/YAML).
-- Toute date persistée utilise explicitement le fuseau `America/Toronto` (pas UTC serveur) — voir les callbacks `PrePersist`/`PreUpdate`.
-- Traductions de contenu métier (articles, catégories) via entités pivot (`ArticleTranslation`, `CategoryTranslation`), **pas** le composant Symfony Translation (réservé aux libellés d'UI statiques).
-- Pas de PHPStan/PHP-CS-Fixer configuré dans le repo — rester cohérent avec le style existant.
-- Reprise du flow après login : `?redirect=<url>` sur `/login` (lu par `AuthController::login`, `src/Controller/AuthController.php:25-34`) renvoie l'utilisateur où il était (utilisé par la modale checkout invité). Pour `/admin`, ce même comportement est natif à Symfony (`access_control` + `form_login`), aucun code dédié à toucher.
-- **Recherche back-office** (articles/utilisateurs/commandes/catégories) : un seul mécanisme générique, voir ARCHITECTURE.md §5 « Recherche admin ». Pour ajouter une recherche sur une nouvelle entité admin, reproduire le contrat `data-admin-search-*` d'une page existante (`templates/admin/articles/index.html.twig` est la plus complète, avec pagination) — ne pas écrire de nouveau JS, `assets/admin_list_search.js` est déjà générique.
-- **Création d'entités admin (bouton « Créer » + formulaire)** : suivre le pattern `admin/categories` (bouton à côté de la barre de recherche sur `index.html.twig`, route `/new` déclarée **avant** la route `/{id}` dans le contrôleur pour éviter que `{id}` n'avale `new`). Pour `AdminUserType` (`src/Form/Admin/AdminUserType.php`), le champ `plainPassword` est rendu obligatoire à la création via l'option de formulaire `is_new` (facultative en édition, où laisser vide conserve le mot de passe actuel).
-- **Galerie d'images d'articles** (`Article::images` / `ArticleImage`, admin `/admin/articles/{id}/images/*`) : voir ARCHITECTURE.md §3 et §5 « Galerie d'images d'articles ». Deux pièges à ne pas réintroduire : (1) toute nouvelle entité avec un callback `#[ORM\PrePersist]`/`#[ORM\PreUpdate]` doit porter `#[ORM\HasLifecycleCallbacks]` sur la classe, sinon le callback n'est jamais invoqué (bug rencontré et corrigé sur `ArticleImage` — flush en 500, `created_at` NULL) ; (2) les formulaires d'upload/suppression/réordonnancement de la galerie sont rendus **après** `form_end()` du formulaire principal d'`ArticleType`, jamais imbriqués dedans (formulaires HTML imbriqués invalides).
+- **Documentation language**: English is the default for this repository — `CLAUDE.md`, `ARCHITECTURE.md`, commit messages, code comments, and any new project documentation should be written in English going forward. This doesn't apply to genuinely bilingual business content (FR/EN catalog/FAQ translations, UI labels under `translations/`), which stays multilingual by design.
+- 4-space indentation, LF, UTF-8 (`.editorconfig`), 2 spaces in `compose*.yaml` files.
+- PSR-4: `App\` → `src/`, `App\Tests\` → `tests/`.
+- Doctrine entities via PHP attributes (no annotations/XML/YAML).
+- Every persisted date explicitly uses the `America/Toronto` timezone (not the server's UTC) — see the `PrePersist`/`PreUpdate` callbacks.
+- Business-content translations (articles, categories) via pivot entities (`ArticleTranslation`, `CategoryTranslation`), **not** the Symfony Translation component (reserved for static UI labels).
+- No PHPStan/PHP-CS-Fixer configured in the repo — stay consistent with the existing style.
+- Resuming the flow after login: `?redirect=<url>` on `/login` (read by `AuthController::login`, `src/Controller/AuthController.php:25-34`) sends the user back where they were (used by the guest checkout modal). For `/admin`, this same behavior is native to Symfony (`access_control` + `form_login`), no dedicated code to touch.
+- **Back-office search** (articles/users/orders/categories): a single generic mechanism, see ARCHITECTURE.md §5 "Admin search". To add search on a new admin entity, reproduce the `data-admin-search-*` contract of an existing page (`templates/admin/articles/index.html.twig` is the most complete, with pagination) — don't write new JS, `assets/admin_list_search.js` is already generic.
+- **Creating admin entities ("Create" button + form)**: follow the `admin/categories` pattern (button next to the search bar on `index.html.twig`, `/new` route declared **before** the `/{id}` route in the controller so `{id}` doesn't swallow `new`). For `AdminUserType` (`src/Form/Admin/AdminUserType.php`), the `plainPassword` field is made required on creation via the `is_new` form option (optional on edit, where leaving it blank keeps the current password).
+- **Article image gallery** (`Article::images` / `ArticleImage`, admin `/admin/articles/{id}/images/*`): see ARCHITECTURE.md §3 and §5 "Article image gallery". Two pitfalls not to reintroduce: (1) any new entity with a `#[ORM\PrePersist]`/`#[ORM\PreUpdate]` callback must carry `#[ORM\HasLifecycleCallbacks]` on the class, otherwise Doctrine never invokes the callback (bug hit and fixed on `ArticleImage` — flush failed with 500, `created_at` NULL); (2) the gallery's upload/delete/reorder forms are rendered **after** the main `ArticleType` form's `form_end()`, never nested inside it (nested HTML forms are invalid).
+- **FAQ** (`FaqEntry`, public `/faq`, admin `/admin/faq`): translated via a **pair of FR/EN entries linked by `groupKey`**, not via a pivot entity — deliberately different from the `ArticleTranslation`/`CategoryTranslation` pattern above (see ARCHITECTURE.md §5 "FAQ translation via entry pairs"). Always create/edit both locales together via `Admin/FaqController::new`/`edit`, never insert a standalone `FaqEntry` without a `groupKey` matching its counterpart in the other language.
 
-## Commandes courantes
+## Common commands
 
 ```bash
-# Docker (MySQL, Redis, Meilisearch, Mailpit)
+# Docker (MySQL, Redis, Meilisearch, Mailpit, Postgres/pgvector, RabbitMQ)
 docker compose up -d
+# Ollama runs separately on the host (not in compose.yaml), required for the bge-m3 vectorizer:
+# ollama serve   (then make sure the bge-m3 model is available: ollama pull bge-m3)
 
-# Dépendances
+# Dependencies
 composer install
 npm install
 
-# Migrations
+# Migrations (MySQL `default` connection only — pgvector tables are not migrated, see ARCHITECTURE.md §3)
 php bin/console doctrine:migrations:migrate
 
-# Tests (toute la suite, ou une suite précise)
+# FAQ vector indexing / search (needs FAQ_DATABASE_URL — see .env.local — and Ollama running
+# if you want to test the bge-m3 store; see ARCHITECTURE.md §5 "FAQ semantic search")
+php bin/console app:index-faq
+php bin/console app:search-faq "test question"
+
+# Tests (full suite, or a specific suite)
 php bin/phpunit
 php bin/phpunit --testsuite Unit
 php bin/phpunit --testsuite Functional
-# ⚠️ état connu : sur certains environnements locaux, les tests Functional échouent avec
-# "Access denied ... database 'symfony_database_test_test'" — problème de provisioning de
-# la base de test locale (nom/port/droits), pas une régression applicative. Le bug
-# JWT_PASSPHRASE historique (voir git log 1370284) est corrigé, ce n'est plus la cause.
+# ⚠️ known state: on some local environments, Functional tests fail with
+# "Access denied ... database 'symfony_database_test_test'" — a local test database
+# provisioning issue (name/port/permissions), not an application regression. The historic
+# JWT_PASSPHRASE bug (see git log 1370284) is fixed, it's no longer the cause.
 
-# Réindexation Meilisearch (4 index : articles, categories, users, orders — alimente aussi
-# la recherche back-office, voir "Recherche back-office" ci-dessous et ARCHITECTURE.md §5).
-# À relancer après toute modification en base : aucun index n'est resynchronisé automatiquement.
+# Meilisearch reindexing (4 indexes: articles, categories, users, orders — also feeds the
+# back-office search, see "Back-office search" above and ARCHITECTURE.md §5).
+# Must be rerun after any database change: no index is resynced automatically.
 php bin/console app:meilisearch:reindex
 
-# Serveur web Symfony
-symfony server:start   # ou: php -S localhost:8000 -t public
+# Symfony web server
+symfony server:start   # or: php -S localhost:8000 -t public
 
-# SPA React (dev server Vite, port 5173, séparé du serveur Symfony)
+# React SPA (Vite dev server, port 5173, separate from the Symfony server)
 npm run dev
 npm run build           # tsc + vite build
 npm run type-check
 ```
 
-## Zones sensibles — ne pas modifier sans prévenir
+## Sensitive areas — don't modify without a heads-up
 
-- **`config/routes.yaml`** : applique `/{_locale}` (fr|en) à **tous** les contrôleurs sous `src/Controller/`, y compris `src/Controller/Api/`. C'est déjà la source d'un bug connu (routes API hors du firewall JWT — voir ARCHITECTURE.md §7) ; ne pas ajouter de contrôleur API sous `src/Controller/` sans vérifier son chemin réel via `bin/console debug:router`.
-- **`config/packages/security.yaml`** : 3 firewalls (`api_login`, `api` stateless JWT, `main` à session). Toute route censée être protégée par JWT doit répondre sous `/api/*` **exact**, sinon elle retombe sur le firewall session. La règle `access_control` du back-office est `- { path: ^/(fr|en)/admin, roles: ROLE_ADMIN }` (corrigée cette session — voir ARCHITECTURE.md §7 « `access_control` pour `/admin` neutralisé... ») : ne **jamais** la repasser à `^/admin` seul, ce pattern ne matche pas l'URL réelle préfixée `/{_locale}` et rend tout le back-office accessible sans authentification (vérifié en pratique : c'était le cas avant ce correctif).
-- **`src/Entity/Order.php` / `OrderItem.php`** : les adresses et prix sont dénormalisés (snapshot au moment de la commande) volontairement — ne pas les remplacer par des FK vers `User`/`Address`/`Article` sans casser l'historique des commandes passées.
-- **Cache Redis à tags** (`ArticleController::list`) : les tags `articles`/`categories` sont posés mais jamais invalidés. Si vous ajoutez une invalidation, le faire dans les contrôleurs admin (create/edit/delete article et catégorie).
-- **`config/packages/lexik_jwt_authentication.yaml`** : corrigé (commit `1370284`) — `pass_phrase: '%env(JWT_PASSPHRASE)%'`. Le bug historique (`%env(02068707)%`, variable d'environnement inexistante) qui cassait toute requête `/api/*` en 500 n'existe plus ; ne pas réintroduire une valeur en dur à la place du nom de variable.
-- **Migrations** (`migrations/`) : ne jamais éditer une migration déjà appliquée ; en créer une nouvelle.
-- **`src/Service/MeilisearchService.php`** : wrapper générique par nom d'index (pas de méthode spécifique à `Article`), utilisé uniquement par `MeilisearchReindexCommand`. La recherche admin, elle, interroge Meilisearch **directement depuis le navigateur** (même clé master hardcodée que `assets/autocomplete.js`) — voir ARCHITECTURE.md §5/§7 : les index `users`/`orders` exposent des données personnelles (nom, email) via cette clé côté client, pas seulement du contenu catalogue public.
+- **`config/routes.yaml`**: applies `/{_locale}` (fr|en) to **all** controllers under `src/Controller/`, including `src/Controller/Api/`. This is already the source of a known bug (API routes outside the JWT firewall — see ARCHITECTURE.md §7); don't add an API controller under `src/Controller/` without checking its real path via `bin/console debug:router`.
+- **`config/packages/security.yaml`**: 3 firewalls (`api_login`, `api` stateless JWT, `main` with sessions). Any route meant to be protected by JWT must respond under `/api/*` **exactly**, otherwise it falls back to the session firewall. The back-office `access_control` rule is `- { path: ^/(fr|en)/admin, roles: ROLE_ADMIN }` (fixed this session — see ARCHITECTURE.md §7 "`access_control` for `/admin` neutralized..."): **never** revert it to `^/admin` alone, that pattern doesn't match the real `/{_locale}`-prefixed URL and makes the whole back-office accessible without authentication (verified in practice: that was the case before this fix).
+- **`src/Entity/Order.php` / `OrderItem.php`**: addresses and prices are deliberately denormalized (snapshot at order time) — don't replace them with FKs to `User`/`Address`/`Article` without breaking the history of past orders.
+- **Tagged Redis cache** (`ArticleController::list`): the `articles`/`categories` tags are set but never invalidated. If you add invalidation, do it in the admin controllers (create/edit/delete article and category).
+- **`config/packages/lexik_jwt_authentication.yaml`**: fixed (commit `1370284`) — `pass_phrase: '%env(JWT_PASSPHRASE)%'`. The historic bug (`%env(02068707)%`, a nonexistent environment variable) that broke every `/api/*` request with a 500 no longer exists; don't reintroduce a hardcoded value in place of the variable name.
+- **Migrations** (`migrations/`): never edit a migration that has already been applied; create a new one.
+- **`src/Service/MeilisearchService.php`**: a generic wrapper by index name (no `Article`-specific method), used only by `MeilisearchReindexCommand`. Admin search itself queries Meilisearch **directly from the browser** (same hardcoded master key as `assets/autocomplete.js`) — see ARCHITECTURE.md §5/§7: the `users`/`orders` indexes now expose personal data (name, email) via this same client-side key, not just public catalog content.
+- **`config/packages/doctrine.yaml`**: two connections/entity managers (`default` → MySQL, `faq` → Postgres). Don't confuse them: `src/Entity/Faq/` (the `faq` entity manager's mapping directory) is **empty** today — `FaqEntry` actually lives in `src/Entity/` on the `default`/MySQL connection, not on Postgres. The `faq` connection is only used "raw" by the AI bundle via the `doctrine.dbal.faq_connection` service id (see `config/packages/ai.yaml`, `dbal_connection` key) — if you rename this Doctrine connection, update `ai.yaml` accordingly (the service id follows the connection name).
+- **`FAQ_DATABASE_URL`**: defined only in `.env.local` (absent from `.env`/`.env.dev`, unlike other environment variables in the project). An environment recreated without `.env.local` will fail any command touching the Postgres `faq` connection (`app:index-faq`, `app:search-faq`) — see ARCHITECTURE.md §7.
