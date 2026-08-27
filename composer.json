@@ -24,6 +24,7 @@
         "shippo/shippo-php": "^2.0",
         "stripe/stripe-php": "^20.0",
         "sylius/resource-bundle": "^1.14",
+        "symfony/ai-agent": "^0.12.0",
         "symfony/ai-bundle": "^0.12.0",
         "symfony/ai-gemini-platform": "*",
         "symfony/ai-ollama-platform": "^0.12.0",
