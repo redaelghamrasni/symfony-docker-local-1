@@ -47,7 +47,7 @@ final class IndexFaqCommand extends Command
             return Command::SUCCESS;
         }
 
-        // Construire les documents une seule fois (mêmes textes pour les deux modèles)
+        // Build documents (same text for both vectorizers)
         $documents = [];
         foreach ($entries as $entry) {
             $content = sprintf(
