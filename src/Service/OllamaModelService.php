@@ -63,6 +63,20 @@ class OllamaModelService
         $response->getContent();
     }
 
+    /**
+     * Removes a model's downloaded files from the Ollama host to free up disk space.
+     * The model can still be picked again later, which pulls it back down.
+     */
+    public function deleteModel(string $model): void
+    {
+        $response = $this->httpClient->request('DELETE', rtrim($this->ollamaHost, '/').'/api/delete', [
+            'json' => ['model' => $model],
+            'timeout' => 10,
+        ]);
+
+        $response->getContent();
+    }
+
     private function baseName(string $model): string
     {
         return strtolower(strstr($model.':', ':', true));

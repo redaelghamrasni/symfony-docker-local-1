@@ -660,6 +660,11 @@ admin:
     chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
     chatbot_model_ready: "Téléchargé et prêt."
     chatbot_model_not_ready: "Pas encore téléchargé — sera téléchargé en arrière-plan."
+    chatbot_model_storage_section: Stockage du modèle du chatbot
+    chatbot_model_free_space_hint: "Supprimer les fichiers locaux de « %model% » pour libérer de l'espace disque. Il reste disponible dans la liste ci-dessus — le resélectionner relancera son téléchargement."
+    chatbot_model_free_space: Libérer l'espace
+    chatbot_model_freed: "Stockage du modèle libéré. Il sera retéléchargé lors de sa prochaine sélection."
+    chatbot_model_free_error: "Impossible de supprimer les fichiers locaux du modèle. Ollama est-il en cours d'exécution ?"
     no_settings: Aucun paramètre disponible.
     save: Enregistrer les paramètres
   promotions:

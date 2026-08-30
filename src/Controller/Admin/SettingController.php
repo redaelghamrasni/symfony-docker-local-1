@@ -72,4 +72,25 @@ class SettingController extends AbstractController
             'chatbotModelReady' => $this->ollamaModelService->isModelAvailable($chatbotModel),
         ]);
     }
+
+    #[Route('/chatbot-model/free-space', name: 'chatbot_model_free_space', methods: ['POST'])]
+    public function freeChatbotModelSpace(Request $request): Response
+    {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('admin_settings_free_space', $token)) {
+            $this->addFlash('error', 'admin.settings.csrf_error');
+            return $this->redirectToRoute('admin_settings_index');
+        }
+
+        $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
+
+        try {
+            $this->ollamaModelService->deleteModel($chatbotModel);
+            $this->addFlash('success', 'admin.settings.chatbot_model_freed');
+        } catch (\Throwable) {
+            $this->addFlash('error', 'admin.settings.chatbot_model_free_error');
+        }
+
+        return $this->redirectToRoute('admin_settings_index');
+    }
 }

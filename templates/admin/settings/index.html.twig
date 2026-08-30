@@ -77,5 +77,30 @@
             {{ 'admin.settings.save'|trans }}
         </button>
     </form>
+
+    {% if chatbotModelReady %}
+        <div style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.chatbot_model_storage_section'|trans }}</h2>
+            </div>
+            <div style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <p style="margin: 0; font-size: 0.875rem; color: #374151;">
+                    {{ 'admin.settings.chatbot_model_free_space_hint'|trans({'%model%': chatbotModel}) }}
+                </p>
+                <form method="POST" action="{{ path('admin_settings_chatbot_model_free_space') }}" style="margin: 0;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin_settings_free_space') }}">
+                    <button type="submit" style="
+                        display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+                        padding: 9px 18px; background: #fff; color: #b91c1c;
+                        border: 1px solid #fecaca; border-radius: 8px; font-size: 0.8125rem; font-weight: 600;
+                        cursor: pointer;
+                    ">
+                        <i class="bi bi-trash"></i>
+                        {{ 'admin.settings.chatbot_model_free_space'|trans }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
