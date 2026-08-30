@@ -660,6 +660,7 @@ admin:
     chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
     chatbot_model_ready: "Téléchargé et prêt."
     chatbot_model_not_ready: "Pas encore téléchargé — sera téléchargé en arrière-plan."
+    chatbot_model_unsaved_hint: "Se met à jour selon la sélection ci-dessus, même avant l'enregistrement."
     chatbot_model_storage_section: Stockage du modèle du chatbot
     chatbot_model_free_space_hint: "Supprimer les fichiers locaux de « %model% » pour libérer de l'espace disque. Il reste disponible dans la liste ci-dessus — le resélectionner relancera son téléchargement."
     chatbot_model_free_space: Libérer l'espace

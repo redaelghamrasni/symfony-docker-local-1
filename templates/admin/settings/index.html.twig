@@ -29,6 +29,7 @@
                         {% elseif setting.type == 'select' %}
                             <select id="setting_{{ setting.key }}"
                                     name="settings[{{ setting.key }}]"
+                                    {% if setting.key == 'chatbot.model' %}data-chatbot-model-select{% endif %}
                                     style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
                                 {% for option in selectOptions[setting.key] ?? [] %}
                                     <option value="{{ option }}" {% if option == setting.value %}selected{% endif %}>{{ option }}</option>
@@ -36,12 +37,32 @@
                             </select>
                             {% if setting.key == 'chatbot.model' %}
                                 <p style="margin: 6px 0 0; font-size: 0.8rem;">
-                                    {% if chatbotModelReady %}
-                                        <span style="color: #16a34a;">&#9679;</span> {{ 'admin.settings.chatbot_model_ready'|trans }}
-                                    {% else %}
-                                        <span style="color: #d97706;">&#9679;</span> {{ 'admin.settings.chatbot_model_not_ready'|trans }}
-                                    {% endif %}
+                                    <span data-chatbot-model-dot style="color: {{ chatbotModelReady ? '#16a34a' : '#d97706' }};">&#9679;</span>
+                                    <span data-chatbot-model-text>{{ chatbotModelReady ? 'admin.settings.chatbot_model_ready'|trans : 'admin.settings.chatbot_model_not_ready'|trans }}</span>
                                 </p>
+                                <p style="margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8;">
+                                    {{ 'admin.settings.chatbot_model_unsaved_hint'|trans }}
+                                </p>
+                                <script type="application/json" data-chatbot-model-availability>{{ chatbotModelAvailability|json_encode|raw }}</script>
+                                <script>
+                                    (function () {
+                                        var select = document.querySelector('[data-chatbot-model-select]');
+                                        var dot = document.querySelector('[data-chatbot-model-dot]');
+                                        var text = document.querySelector('[data-chatbot-model-text]');
+                                        var dataEl = document.querySelector('[data-chatbot-model-availability]');
+                                        if (!select || !dot || !text || !dataEl) { return; }
+
+                                        var availability = JSON.parse(dataEl.textContent);
+                                        var readyLabel = {{ 'admin.settings.chatbot_model_ready'|trans|json_encode|raw }};
+                                        var notReadyLabel = {{ 'admin.settings.chatbot_model_not_ready'|trans|json_encode|raw }};
+
+                                        select.addEventListener('change', function () {
+                                            var ready = !!availability[select.value];
+                                            dot.style.color = ready ? '#16a34a' : '#d97706';
+                                            text.textContent = ready ? readyLabel : notReadyLabel;
+                                        });
+                                    })();
+                                </script>
                             {% endif %}
                         {% elseif setting.type == 'textarea' %}
                             <textarea id="setting_{{ setting.key }}"

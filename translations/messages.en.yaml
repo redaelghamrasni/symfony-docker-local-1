@@ -376,6 +376,7 @@ admin:
     chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
     chatbot_model_ready: "Downloaded and ready."
     chatbot_model_not_ready: "Not downloaded yet — will be pulled in the background."
+    chatbot_model_unsaved_hint: "Updates as you change the selection above, even before saving."
     chatbot_model_storage_section: Chatbot model storage
     chatbot_model_free_space_hint: "Remove the local files for \"%model%\" to free up disk space. It stays available in the list above — selecting it again will re-download it."
     chatbot_model_free_space: Free up space

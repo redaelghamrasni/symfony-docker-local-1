@@ -62,6 +62,7 @@ class SettingController extends AbstractController
         }
 
         $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
+        $modelAvailability = $this->ollamaModelService->checkAvailability($this->chatbotAvailableModels);
 
         return $this->render('admin/settings/index.html.twig', [
             'settings' => $this->settingService->all(),
@@ -69,7 +70,8 @@ class SettingController extends AbstractController
                 'chatbot.model' => $this->chatbotAvailableModels,
             ],
             'chatbotModel' => $chatbotModel,
-            'chatbotModelReady' => $this->ollamaModelService->isModelAvailable($chatbotModel),
+            'chatbotModelReady' => $modelAvailability[$chatbotModel] ?? false,
+            'chatbotModelAvailability' => $modelAvailability,
         ]);
     }
 

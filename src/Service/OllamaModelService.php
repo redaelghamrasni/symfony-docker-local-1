@@ -36,15 +36,23 @@ class OllamaModelService
 
     public function isModelAvailable(string $model): bool
     {
-        $wanted = $this->baseName($model);
+        return $this->checkAvailability([$model])[$model] ?? false;
+    }
 
-        foreach ($this->listLocalModels() as $localModel) {
-            if ($this->baseName($localModel) === $wanted) {
-                return true;
-            }
-        }
+    /**
+     * Checks several models against the local model list in a single Ollama request.
+     *
+     * @param string[] $models
+     * @return array<string, bool> availability keyed by the given model names
+     */
+    public function checkAvailability(array $models): array
+    {
+        $local = array_map($this->baseName(...), $this->listLocalModels());
 
-        return false;
+        return array_combine($models, array_map(
+            fn (string $model) => in_array($this->baseName($model), $local, true),
+            $models,
+        ));
     }
 
     /**
