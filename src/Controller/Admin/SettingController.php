@@ -72,6 +72,7 @@ class SettingController extends AbstractController
             'chatbotModel' => $chatbotModel,
             'chatbotModelReady' => $modelAvailability[$chatbotModel] ?? false,
             'chatbotModelAvailability' => $modelAvailability,
+            'chatbotDownloadedModels' => array_keys(array_filter($modelAvailability)),
         ]);
     }
 
@@ -84,13 +85,46 @@ class SettingController extends AbstractController
             return $this->redirectToRoute('admin_settings_index');
         }
 
-        $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
+        $model = $request->request->get('model');
+        if (!in_array($model, $this->chatbotAvailableModels, true)) {
+            $this->addFlash('error', 'admin.settings.chatbot_model_free_error');
+            return $this->redirectToRoute('admin_settings_index');
+        }
 
         try {
-            $this->ollamaModelService->deleteModel($chatbotModel);
+            $this->ollamaModelService->deleteModel($model);
             $this->addFlash('success', 'admin.settings.chatbot_model_freed');
         } catch (\Throwable) {
             $this->addFlash('error', 'admin.settings.chatbot_model_free_error');
+        }
+
+        return $this->redirectToRoute('admin_settings_index');
+    }
+
+    #[Route('/chatbot-model/free-all-space', name: 'chatbot_model_free_all_space', methods: ['POST'])]
+    public function freeAllChatbotModelSpace(Request $request): Response
+    {
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('admin_settings_free_all_space', $token)) {
+            $this->addFlash('error', 'admin.settings.csrf_error');
+            return $this->redirectToRoute('admin_settings_index');
+        }
+
+        $availability = $this->ollamaModelService->checkAvailability($this->chatbotAvailableModels);
+        $failures = 0;
+
+        foreach (array_keys(array_filter($availability)) as $model) {
+            try {
+                $this->ollamaModelService->deleteModel($model);
+            } catch (\Throwable) {
+                $failures++;
+            }
+        }
+
+        if ($failures > 0) {
+            $this->addFlash('error', 'admin.settings.chatbot_model_free_all_error');
+        } else {
+            $this->addFlash('success', 'admin.settings.chatbot_model_freed_all');
         }
 
         return $this->redirectToRoute('admin_settings_index');

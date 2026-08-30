@@ -99,27 +99,59 @@
         </button>
     </form>
 
-    {% if chatbotModelReady %}
+    {% if chatbotDownloadedModels is not empty %}
         <div style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
             <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
                 <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.chatbot_model_storage_section'|trans }}</h2>
             </div>
-            <div style="padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-                <p style="margin: 0; font-size: 0.875rem; color: #374151;">
-                    {{ 'admin.settings.chatbot_model_free_space_hint'|trans({'%model%': chatbotModel}) }}
+            <div style="padding: 24px;">
+                <p style="margin: 0 0 16px; font-size: 0.8125rem; color: #64748b;">
+                    {{ 'admin.settings.chatbot_model_storage_hint'|trans }}
                 </p>
-                <form method="POST" action="{{ path('admin_settings_chatbot_model_free_space') }}" style="margin: 0;">
-                    <input type="hidden" name="_token" value="{{ csrf_token('admin_settings_free_space') }}">
-                    <button type="submit" style="
-                        display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-                        padding: 9px 18px; background: #fff; color: #b91c1c;
-                        border: 1px solid #fecaca; border-radius: 8px; font-size: 0.8125rem; font-weight: 600;
-                        cursor: pointer;
-                    ">
-                        <i class="bi bi-trash"></i>
-                        {{ 'admin.settings.chatbot_model_free_space'|trans }}
-                    </button>
-                </form>
+
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tbody>
+                        {% for model in chatbotDownloadedModels %}
+                            <tr style="border-top: 1px solid #e2e8f0;">
+                                <td style="padding: 10px 0; font-size: 0.875rem; color: #0f172a; font-family: monospace;">{{ model }}</td>
+                                <td style="padding: 10px 0; text-align: right;">
+                                    <form method="POST" action="{{ path('admin_settings_chatbot_model_free_space') }}" style="margin: 0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('admin_settings_free_space') }}">
+                                        <input type="hidden" name="model" value="{{ model }}">
+                                        <button type="submit" title="{{ 'admin.settings.chatbot_model_free_space'|trans }}" style="
+                                            display: inline-flex; align-items: center; justify-content: center;
+                                            width: 32px; height: 32px; background: #fff; color: #b91c1c;
+                                            border: 1px solid #fecaca; border-radius: 8px; cursor: pointer;
+                                        ">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if chatbotDownloadedModels|length > 1 %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                        <p style="margin: 0; font-size: 0.875rem; color: #374151;">
+                            {{ 'admin.settings.chatbot_model_free_all_hint'|trans }}
+                        </p>
+                        <form method="POST" action="{{ path('admin_settings_chatbot_model_free_all_space') }}" style="margin: 0;"
+                              onsubmit="return confirm({{ 'admin.settings.chatbot_model_free_all_confirm'|trans|json_encode|raw }});">
+                            <input type="hidden" name="_token" value="{{ csrf_token('admin_settings_free_all_space') }}">
+                            <button type="submit" style="
+                                display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+                                padding: 9px 18px; background: #b91c1c; color: #fff;
+                                border: 1px solid #b91c1c; border-radius: 8px; font-size: 0.8125rem; font-weight: 600;
+                                cursor: pointer;
+                            ">
+                                <i class="bi bi-trash3"></i>
+                                {{ 'admin.settings.chatbot_model_free_all'|trans }}
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
             </div>
         </div>
     {% endif %}
