@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine AS base
+FROM php:8.4-fpm-alpine AS base
 
 # Extensions système nécessaires
 RUN apk add --no-cache \
@@ -19,7 +19,8 @@ RUN apk add --no-cache \
         intl \
         zip \
         opcache \
-        mbstring
+        mbstring \
+        sockets
 
 # Extension Redis
 RUN apk add --no-cache $PHPIZE_DEPS \
