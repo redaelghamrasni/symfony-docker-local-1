@@ -3,11 +3,15 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Setting;
+use App\Message\PullOllamaModelMessage;
+use App\Service\OllamaModelService;
 use App\Service\SettingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -17,7 +21,11 @@ class SettingController extends AbstractController
 {
     public function __construct(
         private SettingService $settingService,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private OllamaModelService $ollamaModelService,
+        private MessageBusInterface $messageBus,
+        #[Autowire(param: 'app.chatbot.available_models')]
+        private array $chatbotAvailableModels,
     ) {}
 
     #[Route('', name: 'index', methods: ['GET', 'POST'])]
@@ -33,9 +41,19 @@ class SettingController extends AbstractController
             $settings = $request->request->all('settings');
             foreach ($settings as $key => $value) {
                 $existing = $this->em->getRepository(Setting::class)->find($key);
-                if ($existing) {
-                    $existing->setValue($value !== '' ? $value : null);
-                    $this->em->flush();
+                if (!$existing) {
+                    continue;
+                }
+
+                $previousValue = $existing->getValue();
+                $existing->setValue($value !== '' ? $value : null);
+                $this->em->flush();
+
+                if ('chatbot.model' === $key && $value !== '' && $value !== $previousValue
+                    && !$this->ollamaModelService->isModelAvailable($value)
+                ) {
+                    $this->messageBus->dispatch(new PullOllamaModelMessage($value));
+                    $this->addFlash('success', 'admin.settings.chatbot_model_pulling');
                 }
             }
 
@@ -43,8 +61,15 @@ class SettingController extends AbstractController
             return $this->redirectToRoute('admin_settings_index');
         }
 
+        $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
+
         return $this->render('admin/settings/index.html.twig', [
             'settings' => $this->settingService->all(),
+            'selectOptions' => [
+                'chatbot.model' => $this->chatbotAvailableModels,
+            ],
+            'chatbotModel' => $chatbotModel,
+            'chatbotModelReady' => $this->ollamaModelService->isModelAvailable($chatbotModel),
         ]);
     }
 }

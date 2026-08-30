@@ -26,6 +26,7 @@ framework:
             Symfony\Component\Mailer\Messenger\SendEmailMessage: sync
             Symfony\Component\Notifier\Message\ChatMessage: async
             Symfony\Component\Notifier\Message\SmsMessage: async
+            App\Message\PullOllamaModelMessage: async
 
             # Route your messages to the transports
             # 'App\Message\YourMessage': async

@@ -10,11 +10,10 @@ ai:
             platform: 'ai.platform.ollama'
             model: 'qwen2.5'
             prompt:
-                text: |
-                    You are a customer support assistant for an online store.
-
-                    Respond in either French or English depending on the language used by the user, in a concise and polite manner.
-                    Use ONLY the information provided in the context to answer. If the context does not contain the answer, say so honestly without inventing.
+                # Kept in sync with app.chatbot.system_prompt (config/services.yaml), the single
+                # source of truth also used when the agent is rebuilt at runtime for a different
+                # model (see App\Command\AskFaqCommand and admin/settings "chatbot.model").
+                text: '%app.chatbot.system_prompt%'
 
     vectorizer:
         faq_gemini:

@@ -656,6 +656,10 @@ admin:
     csrf_error: Erreur de validation du jeton de sécurité.
     general_section: Paramètres généraux
     free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    chatbot_model_hint: "Modèle utilisé par le chatbot d'assistance (Ollama). Choisir un modèle non encore téléchargé lance un téléchargement en arrière-plan."
+    chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
+    chatbot_model_ready: "Téléchargé et prêt."
+    chatbot_model_not_ready: "Pas encore téléchargé — sera téléchargé en arrière-plan."
     no_settings: Aucun paramètre disponible.
     save: Enregistrer les paramètres
   promotions:

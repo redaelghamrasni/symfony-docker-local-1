@@ -26,6 +26,23 @@
                                    value="{{ setting.value ?? '' }}"
                                    placeholder="0.00"
                                    style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
+                        {% elseif setting.type == 'select' %}
+                            <select id="setting_{{ setting.key }}"
+                                    name="settings[{{ setting.key }}]"
+                                    style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
+                                {% for option in selectOptions[setting.key] ?? [] %}
+                                    <option value="{{ option }}" {% if option == setting.value %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if setting.key == 'chatbot.model' %}
+                                <p style="margin: 6px 0 0; font-size: 0.8rem;">
+                                    {% if chatbotModelReady %}
+                                        <span style="color: #16a34a;">&#9679;</span> {{ 'admin.settings.chatbot_model_ready'|trans }}
+                                    {% else %}
+                                        <span style="color: #d97706;">&#9679;</span> {{ 'admin.settings.chatbot_model_not_ready'|trans }}
+                                    {% endif %}
+                                </p>
+                            {% endif %}
                         {% elseif setting.type == 'textarea' %}
                             <textarea id="setting_{{ setting.key }}"
                                       name="settings[{{ setting.key }}]"
@@ -40,6 +57,8 @@
                         {% endif %}
                         {% if setting.key == 'shipping.free_threshold' %}
                             <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.free_threshold_hint'|trans }}</p>
+                        {% elseif setting.key == 'chatbot.model' %}
+                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.chatbot_model_hint'|trans }}</p>
                         {% endif %}
                     </div>
                 {% else %}

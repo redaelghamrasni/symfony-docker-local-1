@@ -8,6 +8,13 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
   locale: 'en'
+  # Chatbot: models the admin is allowed to pick from (must be pullable via Ollama)
+  app.chatbot.available_models: ['qwen2.5', 'qwen2.5:3b', 'qwen2.5:1.5b', 'llama3.1', 'mistral', 'phi3']
+  app.chatbot.system_prompt: |
+    You are a customer support assistant for an online store.
+
+    Respond in either French or English depending on the language used by the user, in a concise and polite manner.
+    Use ONLY the information provided in the context to answer. If the context does not contain the answer, say so honestly without inventing.
 
 services:
     # default configuration for services in *this* file
@@ -79,3 +86,7 @@ services:
         arguments:
             $meilisearchUrl: 'http://localhost:7700'
             $apiKey: 'changeme_master_key_dev'
+
+    App\Service\OllamaModelService:
+        arguments:
+            $ollamaHost: '%env(OLLAMA_HOST_URL)%'

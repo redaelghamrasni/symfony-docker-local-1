@@ -2,7 +2,10 @@
 
 namespace App\Command;
 
-use Symfony\AI\Agent\AgentInterface;
+use App\Service\SettingService;
+use Symfony\AI\Agent\Agent;
+use Symfony\AI\Agent\InputProcessor\SystemPromptInputProcessor;
+use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Store\Document\VectorizerInterface;
 use Symfony\AI\Store\Query\VectorQuery;
 use Symfony\AI\Store\StoreInterface;
@@ -25,8 +28,11 @@ final class AskFaqCommand extends Command
         private readonly VectorizerInterface $vectorizer,
         #[Autowire(service: 'ai.store.postgres.faq_bgem3')]
         private readonly StoreInterface $store,
-        #[Autowire(service: 'ai.agent.support')]
-        private readonly AgentInterface $agent,
+        #[Autowire(service: 'ai.platform.ollama')]
+        private readonly PlatformInterface $platform,
+        private readonly SettingService $settingService,
+        #[Autowire(param: 'app.chatbot.system_prompt')]
+        private readonly string $systemPrompt,
     ) {
         parent::__construct();
     }
@@ -78,7 +84,10 @@ final class AskFaqCommand extends Command
         $io->section('Question');
         $io->text($question);
 
-        $result = $this->agent->call($prompt);
+        $model = $this->settingService->get('chatbot.model', 'qwen2.5');
+        $agent = new Agent($this->platform, $model, [new SystemPromptInputProcessor($this->systemPrompt)]);
+
+        $result = $agent->call($prompt);
 
         $io->section('Generated Answer');
         $io->text($result->getContent());

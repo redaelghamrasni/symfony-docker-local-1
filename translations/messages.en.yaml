@@ -372,6 +372,10 @@ admin:
     csrf_error: Security token validation failed.
     general_section: General Settings
     free_threshold_hint: "Leave empty to disable automatic free shipping."
+    chatbot_model_hint: "Model used by the support chatbot (Ollama). Switching to a model not yet downloaded starts a background download."
+    chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
+    chatbot_model_ready: "Downloaded and ready."
+    chatbot_model_not_ready: "Not downloaded yet — will be pulled in the background."
     no_settings: No settings available.
     save: Save Settings
   dashboard:
