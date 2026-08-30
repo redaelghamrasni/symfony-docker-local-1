@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Order;
+use App\Message\ReindexEntityMessage;
 use App\Repository\OrderRepository;
 use App\Service\OrderNotificationMailer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -10,6 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/admin/orders', name: 'admin_orders_')]
@@ -19,6 +21,7 @@ class OrderController extends AbstractController
         private OrderRepository $orderRepository,
         private EntityManagerInterface $entityManager,
         private OrderNotificationMailer $orderNotificationMailer,
+        private MessageBusInterface $messageBus,
     ) {}
 
     #[Route('/', name: 'index')]
@@ -105,6 +108,7 @@ class OrderController extends AbstractController
         $order->setStatus($status);
         $order->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+        $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
         $this->orderNotificationMailer->notifyStatusChange($order, $previousStatus);
         $this->addFlash('success', 'admin.orders.status_updated');
 
@@ -170,6 +174,7 @@ class OrderController extends AbstractController
 
         $order->setUpdatedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+        $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
         $this->orderNotificationMailer->notifyStatusChange($order, $previousStatus);
         $this->addFlash('success', 'admin.orders.shipping_updated');
 

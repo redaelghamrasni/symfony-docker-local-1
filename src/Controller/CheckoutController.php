@@ -12,6 +12,7 @@ use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
 use App\Entity\User;
+use App\Message\ReindexEntityMessage;
 use App\Repository\AddressRepository;
 use App\Repository\OrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Mime\Address as EmailAddress;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\ShippingService;
@@ -60,7 +62,8 @@ class CheckoutController extends AbstractController
         private AddressRepository $addressRepository,
         private OrderRepository $orderRepository,
         private LocaleSwitcher $localeSwitcher,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
+        private MessageBusInterface $messageBus,
     ) {
     }
 
@@ -345,6 +348,7 @@ class CheckoutController extends AbstractController
                 $this->entityManager->persist($order);
                 $this->saveAddressFromOrder($order);
                 $this->entityManager->flush();
+                $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
                 $this->sendOrderConfirmationEmail($order);
             }
 
@@ -419,6 +423,7 @@ class CheckoutController extends AbstractController
             $this->entityManager->persist($order);
             $this->saveAddressFromOrder($order);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
 
             $this->sendOrderConfirmationEmail($order);
 
