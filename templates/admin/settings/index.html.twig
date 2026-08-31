@@ -95,10 +95,6 @@
                         <span data-chatbot-model-dot style="color: {{ chatbotModelReady ? '#16a34a' : '#d97706' }};">&#9679;</span>
                         <span data-chatbot-model-text>{{ chatbotModelReady ? 'admin.settings.chatbot_model_ready'|trans : 'admin.settings.chatbot_model_not_ready'|trans }}</span>
                     </p>
-                    <p style="margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8;">
-                        {{ 'admin.settings.chatbot_model_unsaved_hint'|trans }}
-                    </p>
-                    <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.chatbot_model_hint'|trans }}</p>
                     <script type="application/json" data-chatbot-model-availability>{{ chatbotModelAvailability|json_encode|raw }}</script>
                     <script>
                         (function () {
@@ -124,10 +120,6 @@
             {% endfor %}
 
             {% if chatbotDownloadedModels is not empty %}
-                <p style="margin: 0 0 16px; font-size: 0.8125rem; color: #64748b;">
-                    {{ 'admin.settings.chatbot_model_storage_hint'|trans }}
-                </p>
-
                 <table style="width: 100%; border-collapse: collapse;">
                     <tbody>
                         {% for model in chatbotDownloadedModels %}

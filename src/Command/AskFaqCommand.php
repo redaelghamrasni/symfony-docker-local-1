@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Service\ChatbotModelResolver;
 use App\Service\SettingService;
 use Symfony\AI\Agent\Agent;
 use Symfony\AI\Agent\InputProcessor\SystemPromptInputProcessor;
@@ -29,7 +30,10 @@ final class AskFaqCommand extends Command
         #[Autowire(service: 'ai.store.postgres.faq_bgem3')]
         private readonly StoreInterface $store,
         #[Autowire(service: 'ai.platform.ollama')]
-        private readonly PlatformInterface $platform,
+        private readonly PlatformInterface $ollamaPlatform,
+        #[Autowire(service: 'ai.platform.gemini')]
+        private readonly PlatformInterface $geminiPlatform,
+        private readonly ChatbotModelResolver $modelResolver,
         private readonly SettingService $settingService,
         #[Autowire(param: 'app.chatbot.system_prompt')]
         private readonly string $systemPrompt,
@@ -85,7 +89,8 @@ final class AskFaqCommand extends Command
         $io->text($question);
 
         $model = $this->settingService->get('chatbot.model', 'qwen2.5');
-        $agent = new Agent($this->platform, $model, [new SystemPromptInputProcessor($this->systemPrompt)]);
+        $platform = $this->modelResolver->isGeminiModel($model) ? $this->geminiPlatform : $this->ollamaPlatform;
+        $agent = new Agent($platform, $model, [new SystemPromptInputProcessor($this->systemPrompt)]);
 
         $result = $agent->call($prompt);
 

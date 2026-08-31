@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Setting;
 use App\Message\PullOllamaModelMessage;
+use App\Service\ChatbotModelResolver;
 use App\Service\OllamaModelService;
 use App\Service\SettingService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,6 +24,7 @@ class SettingController extends AbstractController
         private SettingService $settingService,
         private EntityManagerInterface $em,
         private OllamaModelService $ollamaModelService,
+        private ChatbotModelResolver $modelResolver,
         private MessageBusInterface $messageBus,
         #[Autowire(param: 'app.chatbot.available_models')]
         private array $chatbotAvailableModels,
@@ -50,6 +52,7 @@ class SettingController extends AbstractController
                 $this->em->flush();
 
                 if ('chatbot.model' === $key && $value !== '' && $value !== $previousValue
+                    && !$this->modelResolver->isGeminiModel($value)
                     && !$this->ollamaModelService->isModelAvailable($value)
                 ) {
                     $this->messageBus->dispatch(new PullOllamaModelMessage($value));
@@ -63,6 +66,14 @@ class SettingController extends AbstractController
 
         $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
         $modelAvailability = $this->ollamaModelService->checkAvailability($this->chatbotAvailableModels);
+        $chatbotDownloadedModels = array_keys(array_filter($modelAvailability));
+
+        // Gemini is a hosted API, not a local download — always "ready", never listed for storage cleanup.
+        foreach ($this->chatbotAvailableModels as $model) {
+            if ($this->modelResolver->isGeminiModel($model)) {
+                $modelAvailability[$model] = true;
+            }
+        }
 
         return $this->render('admin/settings/index.html.twig', [
             'settings' => $this->settingService->all(),
@@ -72,7 +83,7 @@ class SettingController extends AbstractController
             'chatbotModel' => $chatbotModel,
             'chatbotModelReady' => $modelAvailability[$chatbotModel] ?? false,
             'chatbotModelAvailability' => $modelAvailability,
-            'chatbotDownloadedModels' => array_keys(array_filter($modelAvailability)),
+            'chatbotDownloadedModels' => $chatbotDownloadedModels,
         ]);
     }
 
@@ -86,7 +97,7 @@ class SettingController extends AbstractController
         }
 
         $model = $request->request->get('model');
-        if (!in_array($model, $this->chatbotAvailableModels, true)) {
+        if (!in_array($model, $this->chatbotAvailableModels, true) || $this->modelResolver->isGeminiModel($model)) {
             $this->addFlash('error', 'admin.settings.chatbot_model_free_error');
             return $this->redirectToRoute('admin_settings_index');
         }
