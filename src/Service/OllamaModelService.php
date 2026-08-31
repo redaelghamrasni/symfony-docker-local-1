@@ -47,10 +47,10 @@ class OllamaModelService
      */
     public function checkAvailability(array $models): array
     {
-        $local = array_map($this->baseName(...), $this->listLocalModels());
+        $local = array_map($this->canonicalize(...), $this->listLocalModels());
 
         return array_combine($models, array_map(
-            fn (string $model) => in_array($this->baseName($model), $local, true),
+            fn (string $model) => in_array($this->canonicalize($model), $local, true),
             $models,
         ));
     }
@@ -85,8 +85,11 @@ class OllamaModelService
         $response->getContent();
     }
 
-    private function baseName(string $model): string
+    /** Normalizes a model name for comparison, defaulting an untagged name to its ":latest" tag. */
+    private function canonicalize(string $model): string
     {
-        return strtolower(strstr($model.':', ':', true));
+        $model = strtolower($model);
+
+        return str_contains($model, ':') ? $model : $model.':latest';
     }
 }
