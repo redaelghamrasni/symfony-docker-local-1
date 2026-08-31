@@ -4,73 +4,56 @@
 {% block page_title %}{{ 'admin.settings.title'|trans }}{% endblock %}
 
 {% block content %}
+<style>
+    .settings-card summary::-webkit-details-marker { display: none; }
+    .settings-card summary { list-style: none; }
+    .settings-card .settings-card-chevron { transition: transform 0.2s ease; color: #94a3b8; }
+    .settings-card[open] .settings-card-chevron { transform: rotate(180deg); }
+</style>
 <div style="max-width: 720px;">
-    <form method="POST" action="{{ path('admin_settings_index') }}">
+    <form id="settings-form" method="POST" action="{{ path('admin_settings_index') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('admin_settings') }}">
+    </form>
 
-        <div style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
-            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.general_section'|trans }}</h2>
-            </div>
+    <details class="settings-card" open style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
+        <summary style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
+            <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.general_section'|trans }}</h2>
+            <i class="bi bi-chevron-down settings-card-chevron"></i>
+        </summary>
 
-            <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-                {% for setting in settings %}
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+            {% for setting in settings %}
+                {% if setting.key != 'chatbot.model' %}
                     <div>
                         <label for="setting_{{ setting.key }}" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 6px;">
                             {{ setting.label }}
                         </label>
                         {% if setting.type == 'number' %}
                             <input type="number" step="0.01" min="0"
+                                   form="settings-form"
                                    id="setting_{{ setting.key }}"
                                    name="settings[{{ setting.key }}]"
                                    value="{{ setting.value ?? '' }}"
                                    placeholder="0.00"
                                    style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
                         {% elseif setting.type == 'select' %}
-                            <select id="setting_{{ setting.key }}"
+                            <select form="settings-form"
+                                    id="setting_{{ setting.key }}"
                                     name="settings[{{ setting.key }}]"
-                                    {% if setting.key == 'chatbot.model' %}data-chatbot-model-select{% endif %}
                                     style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
                                 {% for option in selectOptions[setting.key] ?? [] %}
                                     <option value="{{ option }}" {% if option == setting.value %}selected{% endif %}>{{ option }}</option>
                                 {% endfor %}
                             </select>
-                            {% if setting.key == 'chatbot.model' %}
-                                <p style="margin: 6px 0 0; font-size: 0.8rem;">
-                                    <span data-chatbot-model-dot style="color: {{ chatbotModelReady ? '#16a34a' : '#d97706' }};">&#9679;</span>
-                                    <span data-chatbot-model-text>{{ chatbotModelReady ? 'admin.settings.chatbot_model_ready'|trans : 'admin.settings.chatbot_model_not_ready'|trans }}</span>
-                                </p>
-                                <p style="margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8;">
-                                    {{ 'admin.settings.chatbot_model_unsaved_hint'|trans }}
-                                </p>
-                                <script type="application/json" data-chatbot-model-availability>{{ chatbotModelAvailability|json_encode|raw }}</script>
-                                <script>
-                                    (function () {
-                                        var select = document.querySelector('[data-chatbot-model-select]');
-                                        var dot = document.querySelector('[data-chatbot-model-dot]');
-                                        var text = document.querySelector('[data-chatbot-model-text]');
-                                        var dataEl = document.querySelector('[data-chatbot-model-availability]');
-                                        if (!select || !dot || !text || !dataEl) { return; }
-
-                                        var availability = JSON.parse(dataEl.textContent);
-                                        var readyLabel = {{ 'admin.settings.chatbot_model_ready'|trans|json_encode|raw }};
-                                        var notReadyLabel = {{ 'admin.settings.chatbot_model_not_ready'|trans|json_encode|raw }};
-
-                                        select.addEventListener('change', function () {
-                                            var ready = !!availability[select.value];
-                                            dot.style.color = ready ? '#16a34a' : '#d97706';
-                                            text.textContent = ready ? readyLabel : notReadyLabel;
-                                        });
-                                    })();
-                                </script>
-                            {% endif %}
                         {% elseif setting.type == 'textarea' %}
-                            <textarea id="setting_{{ setting.key }}"
+                            <textarea form="settings-form"
+                                      id="setting_{{ setting.key }}"
                                       name="settings[{{ setting.key }}]"
                                       rows="4"
                                       style="width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb; resize: vertical;">{{ setting.value ?? '' }}</textarea>
                         {% else %}
                             <input type="text"
+                                   form="settings-form"
                                    id="setting_{{ setting.key }}"
                                    name="settings[{{ setting.key }}]"
                                    value="{{ setting.value ?? '' }}"
@@ -78,33 +61,69 @@
                         {% endif %}
                         {% if setting.key == 'shipping.free_threshold' %}
                             <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.free_threshold_hint'|trans }}</p>
-                        {% elseif setting.key == 'chatbot.model' %}
-                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.chatbot_model_hint'|trans }}</p>
                         {% endif %}
                     </div>
-                {% else %}
-                    <p style="color: #94a3b8; font-size: 0.875rem;">{{ 'admin.settings.no_settings'|trans }}</p>
-                {% endfor %}
-            </div>
+                {% endif %}
+            {% else %}
+                <p style="color: #94a3b8; font-size: 0.875rem;">{{ 'admin.settings.no_settings'|trans }}</p>
+            {% endfor %}
         </div>
+    </details>
 
-        <button type="submit" style="
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 10px 24px; background: #0f172a; color: #fff;
-            border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600;
-            cursor: pointer; transition: background 0.15s;
-        " onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
-            <i class="bi bi-check-lg"></i>
-            {{ 'admin.settings.save'|trans }}
-        </button>
-    </form>
+    <details class="settings-card" style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
+        <summary style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
+            <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.chatbot_model_storage_section'|trans }}</h2>
+            <i class="bi bi-chevron-down settings-card-chevron"></i>
+        </summary>
+        <div style="padding: 24px;">
+            {% for setting in settings %}
+              {% if setting.key == 'chatbot.model' %}
+                <div style="margin-bottom: {{ chatbotDownloadedModels is not empty ? '24px' : '0' }};">
+                    <label for="setting_{{ setting.key }}" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 6px;">
+                        {{ setting.label }}
+                    </label>
+                    <select form="settings-form"
+                            id="setting_{{ setting.key }}"
+                            name="settings[{{ setting.key }}]"
+                            data-chatbot-model-select
+                            style="width: 100%; max-width: 240px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
+                        {% for option in selectOptions[setting.key] ?? [] %}
+                            <option value="{{ option }}" {% if option == setting.value %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <p style="margin: 6px 0 0; font-size: 0.8rem;">
+                        <span data-chatbot-model-dot style="color: {{ chatbotModelReady ? '#16a34a' : '#d97706' }};">&#9679;</span>
+                        <span data-chatbot-model-text>{{ chatbotModelReady ? 'admin.settings.chatbot_model_ready'|trans : 'admin.settings.chatbot_model_not_ready'|trans }}</span>
+                    </p>
+                    <p style="margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8;">
+                        {{ 'admin.settings.chatbot_model_unsaved_hint'|trans }}
+                    </p>
+                    <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.chatbot_model_hint'|trans }}</p>
+                    <script type="application/json" data-chatbot-model-availability>{{ chatbotModelAvailability|json_encode|raw }}</script>
+                    <script>
+                        (function () {
+                            var select = document.querySelector('[data-chatbot-model-select]');
+                            var dot = document.querySelector('[data-chatbot-model-dot]');
+                            var text = document.querySelector('[data-chatbot-model-text]');
+                            var dataEl = document.querySelector('[data-chatbot-model-availability]');
+                            if (!select || !dot || !text || !dataEl) { return; }
 
-    {% if chatbotDownloadedModels is not empty %}
-        <div style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 24px;">
-            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                <h2 style="margin: 0; font-size: 1rem; font-weight: 600; color: #0f172a;">{{ 'admin.settings.chatbot_model_storage_section'|trans }}</h2>
-            </div>
-            <div style="padding: 24px;">
+                            var availability = JSON.parse(dataEl.textContent);
+                            var readyLabel = {{ 'admin.settings.chatbot_model_ready'|trans|json_encode|raw }};
+                            var notReadyLabel = {{ 'admin.settings.chatbot_model_not_ready'|trans|json_encode|raw }};
+
+                            select.addEventListener('change', function () {
+                                var ready = !!availability[select.value];
+                                dot.style.color = ready ? '#16a34a' : '#d97706';
+                                text.textContent = ready ? readyLabel : notReadyLabel;
+                            });
+                        })();
+                    </script>
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            {% if chatbotDownloadedModels is not empty %}
                 <p style="margin: 0 0 16px; font-size: 0.8125rem; color: #64748b;">
                     {{ 'admin.settings.chatbot_model_storage_hint'|trans }}
                 </p>
@@ -152,8 +171,18 @@
                         </form>
                     </div>
                 {% endif %}
-            </div>
+            {% endif %}
         </div>
-    {% endif %}
+    </details>
+
+    <button type="submit" form="settings-form" style="
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 24px; background: #0f172a; color: #fff;
+        border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600;
+        cursor: pointer; transition: background 0.15s;
+    " onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#0f172a'">
+        <i class="bi bi-check-lg"></i>
+        {{ 'admin.settings.save'|trans }}
+    </button>
 </div>
 {% endblock %}
