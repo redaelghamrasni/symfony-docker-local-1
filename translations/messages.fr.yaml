@@ -656,6 +656,22 @@ admin:
     csrf_error: Erreur de validation du jeton de sécurité.
     general_section: Paramètres généraux
     free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    chatbot_model_hint: "Modèle utilisé par le chatbot d'assistance : un modèle Ollama (en choisir un non encore téléchargé lance un téléchargement en arrière-plan) ou un modèle Gemini hébergé (utilisé instantanément, sans téléchargement)."
+    chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
+    chatbot_model_ready: "Téléchargé et prêt."
+    chatbot_model_not_ready: "Pas encore téléchargé — sera téléchargé en arrière-plan."
+    chatbot_model_unsaved_hint: "Se met à jour selon la sélection ci-dessus, même avant l'enregistrement."
+    chatbot_model_storage_section: Chatbot
+    chatbot_model_storage_hint: "Supprimer les fichiers locaux d'un modèle pour libérer de l'espace disque. Il reste disponible dans la liste ci-dessus — le resélectionner relancera son téléchargement."
+    chatbot_model_free_space_hint: "Supprimer les fichiers locaux de « %model% » pour libérer de l'espace disque. Il reste disponible dans la liste ci-dessus — le resélectionner relancera son téléchargement."
+    chatbot_model_free_space: Libérer l'espace
+    chatbot_model_freed: "Stockage du modèle libéré. Il sera retéléchargé lors de sa prochaine sélection."
+    chatbot_model_free_error: "Impossible de supprimer les fichiers locaux du modèle. Ollama est-il en cours d'exécution ?"
+    chatbot_model_free_all: Tout effacer
+    chatbot_model_free_all_hint: "Supprimer tous les modèles téléchargés en une fois. Chacun reste disponible dans la liste ci-dessus et pourra être retéléchargé individuellement."
+    chatbot_model_free_all_confirm: "Supprimer les fichiers locaux de tous les modèles du chatbot téléchargés ? Cette action est irréversible, mais chaque modèle pourra être retéléchargé en le resélectionnant."
+    chatbot_model_freed_all: "Tous les modèles téléchargés ont été supprimés. Ils seront retéléchargés si nécessaire."
+    chatbot_model_free_all_error: "Certains modèles n'ont pas pu être supprimés. Ollama est-il en cours d'exécution ?"
     no_settings: Aucun paramètre disponible.
     save: Enregistrer les paramètres
   promotions:

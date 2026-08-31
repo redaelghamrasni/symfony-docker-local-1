@@ -4,12 +4,14 @@ namespace App\Controller\Admin;
 
 use App\Entity\User;
 use App\Form\Admin\AdminUserType;
+use App\Message\ReindexEntityMessage;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -19,7 +21,8 @@ class UserController extends AbstractController
     public function __construct(
         private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
-        private UserPasswordHasherInterface $passwordHasher
+        private UserPasswordHasherInterface $passwordHasher,
+        private MessageBusInterface $messageBus,
     ) {}
 
     #[Route('/', name: 'index')]
@@ -60,6 +63,7 @@ class UserController extends AbstractController
 
             $this->entityManager->persist($user);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('user', $user->getId()));
 
             $this->addFlash('success', 'admin.users.created');
             return $this->redirectToRoute('admin_users_index');
@@ -91,6 +95,7 @@ class UserController extends AbstractController
             }
 
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('user', $user->getId()));
 
             $this->addFlash('success', 'admin.users.updated');
             return $this->redirectToRoute('admin_users_index');
@@ -132,8 +137,10 @@ class UserController extends AbstractController
             return $this->redirectToRoute('admin_users_show', ['id' => $user->getId()]);
         }
 
+        $id = $user->getId();
         $this->entityManager->remove($user);
         $this->entityManager->flush();
+        $this->messageBus->dispatch(new ReindexEntityMessage('user', $id, remove: true));
 
         $this->addFlash('success', 'admin.users.deleted');
         return $this->redirectToRoute('admin_users_index');

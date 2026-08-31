@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\Order;
 use App\Entity\User;
 use App\Service\MeilisearchService;
+use App\Service\SearchIndexService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -20,6 +21,7 @@ class MeilisearchReindexCommand extends Command
     public function __construct(
         private EntityManagerInterface $em,
         private MeilisearchService $meilisearchService,
+        private SearchIndexService $searchIndexService,
     ) {
         parent::__construct();
     }
@@ -46,14 +48,10 @@ class MeilisearchReindexCommand extends Command
         ]);
 
         $articles = $this->em->getRepository(Article::class)->findAll();
-        $documents = array_map(static fn (Article $a) => [
-            'id'        => $a->getId(),
-            'title'     => $a->getTitle(),
-            'content'   => $a->getContent(),
-            'price'     => $a->getPrice(),
-            'imageUrl'  => $a->getImageUrl(),
-            'createdAt' => $a->getCreatedAt()?->getTimestamp(),
-        ], $articles);
+        $documents = array_map(
+            fn (Article $a) => $this->searchIndexService->toArticleDocument($a),
+            $articles,
+        );
 
         $this->meilisearchService->index('articles', $documents);
         $io->success(sprintf('%d article(s) réindexé(s).', count($documents)));
@@ -68,12 +66,10 @@ class MeilisearchReindexCommand extends Command
         ]);
 
         $categories = $this->em->getRepository(Category::class)->findAll();
-        $documents = array_map(static fn (Category $c) => [
-            'id'        => $c->getId(),
-            'name'      => $c->getName(),
-            'slug'      => $c->getSlug(),
-            'createdAt' => $c->getCreatedAt()?->getTimestamp(),
-        ], $categories);
+        $documents = array_map(
+            fn (Category $c) => $this->searchIndexService->toCategoryDocument($c),
+            $categories,
+        );
 
         $this->meilisearchService->index('categories', $documents);
         $io->success(sprintf('%d catégorie(s) réindexée(s).', count($documents)));
@@ -88,13 +84,10 @@ class MeilisearchReindexCommand extends Command
         ]);
 
         $users = $this->em->getRepository(User::class)->findAll();
-        $documents = array_map(static fn (User $u) => [
-            'id'        => $u->getId(),
-            'firstName' => $u->getFirstName(),
-            'lastName'  => $u->getLastName(),
-            'email'     => $u->getEmail(),
-            'createdAt' => $u->getCreatedAt()?->getTimestamp(),
-        ], $users);
+        $documents = array_map(
+            fn (User $u) => $this->searchIndexService->toUserDocument($u),
+            $users,
+        );
 
         $this->meilisearchService->index('users', $documents);
         $io->success(sprintf('%d utilisateur(s) réindexé(s).', count($documents)));
@@ -110,15 +103,10 @@ class MeilisearchReindexCommand extends Command
         ]);
 
         $orders = $this->em->getRepository(Order::class)->findAll();
-        $documents = array_map(static fn (Order $o) => [
-            'id'                => $o->getId(),
-            'customerFirstName' => $o->getCustomerFirstName(),
-            'customerLastName'  => $o->getCustomerLastName(),
-            'customerEmail'     => $o->getCustomerEmail(),
-            'status'            => $o->getStatus(),
-            'total'             => $o->getTotal(),
-            'createdAt'         => $o->getCreatedAt()?->getTimestamp(),
-        ], $orders);
+        $documents = array_map(
+            fn (Order $o) => $this->searchIndexService->toOrderDocument($o),
+            $orders,
+        );
 
         $this->meilisearchService->index('orders', $documents);
         $io->success(sprintf('%d commande(s) réindexée(s).', count($documents)));

@@ -4,12 +4,14 @@ namespace App\Controller\Admin;
 
 use App\Entity\Category;
 use App\Form\CategoryType;
+use App\Message\ReindexEntityMessage;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
@@ -20,6 +22,7 @@ class CategoryController extends AbstractController
         private CategoryRepository $categoryRepository,
         private EntityManagerInterface $entityManager,
         private SluggerInterface $slugger,
+        private MessageBusInterface $messageBus,
     ) {}
 
     #[Route('/', name: 'index')]
@@ -60,6 +63,7 @@ class CategoryController extends AbstractController
             );
             $this->entityManager->persist($category);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('category', $category->getId()));
 
             $this->addFlash('success', 'admin.categories.created');
             return $this->redirectToRoute('admin_categories_index');
@@ -83,6 +87,7 @@ class CategoryController extends AbstractController
                 strtolower($this->slugger->slug($category->getName())->toString())
             );
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('category', $category->getId()));
 
             $this->addFlash('success', 'admin.categories.updated');
             return $this->redirectToRoute('admin_categories_index');
@@ -99,8 +104,10 @@ class CategoryController extends AbstractController
     public function delete(Category $category, Request $request): Response
     {
         if ($this->isCsrfTokenValid('delete' . $category->getId(), $request->request->get('_token'))) {
+            $id = $category->getId();
             $this->entityManager->remove($category);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('category', $id, remove: true));
 
             $this->addFlash('success', 'admin.categories.deleted');
         }

@@ -1,6 +1,8 @@
 doctrine:
     dbal:
         default_connection: default
+        types:
+            vector: Pgvector\Doctrine\VectorType
         connections:
             default:
                 url: '%env(resolve:DATABASE_URL)%'
@@ -10,6 +12,8 @@ doctrine:
                 url: '%env(resolve:FAQ_DATABASE_URL)%'
                 profiling_collect_backtrace: '%kernel.debug%'
                 use_savepoints: true
+                mapping_types:
+                    vector: vector
 
     orm:
         default_entity_manager: default
@@ -33,17 +37,3 @@ doctrine:
                         dir: '%kernel.project_dir%/src/Entity'
                         prefix: 'App\Entity'
                         alias: App
-            faq:
-                connection: faq
-                report_fields_where_declared: true
-                validate_xml_mapping: true
-                naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
-                identity_generation_preferences:
-                    Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
-                mappings:
-                    Faq:
-                        type: attribute
-                        is_bundle: false
-                        dir: '%kernel.project_dir%/src/Entity/Faq'
-                        prefix: 'App\Entity\Faq'
-                        alias: Faq

@@ -372,6 +372,22 @@ admin:
     csrf_error: Security token validation failed.
     general_section: General Settings
     free_threshold_hint: "Leave empty to disable automatic free shipping."
+    chatbot_model_hint: "Model used by the support chatbot: an Ollama model (switching to one not yet downloaded starts a background download) or a hosted Gemini model (used instantly, no download needed)."
+    chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
+    chatbot_model_ready: "Downloaded and ready."
+    chatbot_model_not_ready: "Not downloaded yet — will be pulled in the background."
+    chatbot_model_unsaved_hint: "Updates as you change the selection above, even before saving."
+    chatbot_model_storage_section: Chatbot
+    chatbot_model_storage_hint: "Remove a model's local files to free up disk space. It stays available in the list above — selecting it again will re-download it."
+    chatbot_model_free_space_hint: "Remove the local files for \"%model%\" to free up disk space. It stays available in the list above — selecting it again will re-download it."
+    chatbot_model_free_space: Free up space
+    chatbot_model_freed: "Model storage freed. It will be re-downloaded next time it's selected."
+    chatbot_model_free_error: "Could not remove the model's local files. Is Ollama running?"
+    chatbot_model_free_all: Clear all downloaded models
+    chatbot_model_free_all_hint: "Remove every downloaded model at once. Each one stays available in the list above and can be re-downloaded individually later."
+    chatbot_model_free_all_confirm: "Remove the local files for all downloaded chatbot models? This cannot be undone, but any of them can be re-downloaded by selecting it again."
+    chatbot_model_freed_all: "All downloaded models removed. They will be re-downloaded as needed."
+    chatbot_model_free_all_error: "Some models could not be removed. Is Ollama running?"
     no_settings: No settings available.
     save: Save Settings
   dashboard:

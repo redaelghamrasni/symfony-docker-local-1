@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Article;
 use App\Entity\ArticleImage;
 use App\Form\ArticleType;
+use App\Message\ReindexEntityMessage;
 use App\Repository\ArticleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
@@ -27,6 +29,7 @@ class ArticleController extends AbstractController
         private ArticleRepository $articleRepository,
         private EntityManagerInterface $entityManager,
         private SluggerInterface $slugger,
+        private MessageBusInterface $messageBus,
         #[Autowire('%kernel.project_dir%')] private string $projectDir,
     ) {}
 
@@ -82,6 +85,7 @@ class ArticleController extends AbstractController
             $this->syncTitleFromTranslation($article);
             $this->entityManager->persist($article);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('article', $article->getId()));
 
             $this->addFlash('success', 'admin.articles.created');
             return $this->redirectToRoute('admin_articles_index');
@@ -107,6 +111,7 @@ class ArticleController extends AbstractController
             $this->syncTitleFromTranslation($article);
             $this->handleImageUpload($form, $article);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('article', $article->getId()));
 
             $this->addFlash('success', 'admin.articles.updated');
             return $this->redirectToRoute('admin_articles_index');
@@ -266,8 +271,10 @@ class ArticleController extends AbstractController
     public function delete(Article $article, Request $request): Response
     {
         if ($this->isCsrfTokenValid('delete' . $article->getId(), $request->request->get('_token'))) {
+            $id = $article->getId();
             $this->entityManager->remove($article);
             $this->entityManager->flush();
+            $this->messageBus->dispatch(new ReindexEntityMessage('article', $id, remove: true));
 
             $this->addFlash('success', 'admin.articles.deleted');
         }

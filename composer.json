@@ -107,7 +107,8 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
-        ]
+        ],
+        "worker": "@php bin/console messenger:consume async -vv"
     },
     "conflict": {
         "symfony/symfony": "*"
