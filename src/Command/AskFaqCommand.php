@@ -51,7 +51,7 @@ final class AskFaqCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $question = $input->getArgument('question');
 
-        // 1. RETRIEVAL : retrouver les passages pertinents
+        // 1. RETRIEVAL : find the most relevant passages in the FAQ
         $queryVector = $this->vectorizer->vectorize($question);
         $results = $this->store->query(
             new VectorQuery($queryVector),
@@ -63,7 +63,7 @@ final class AskFaqCommand extends Command
             return Command::SUCCESS;
         }
 
-        // 2. AUGMENTED : construire le contexte à partir des passages
+        // 2. AUGMENTED : construct the context from the passages
         $context = '';
         foreach ($results as $doc) {
             $meta = $doc->getMetadata()->getArrayCopy();
