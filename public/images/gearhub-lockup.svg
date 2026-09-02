@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180">
+  <g transform="translate(40,45) scale(0.45)">
+    <circle cx="100" cy="100" r="90" fill="#17191e" stroke="#CBA35C" stroke-width="4"/>
+    <g stroke="#F2EEE4" stroke-width="7">
+      <line x1="100" y1="100" x2="100" y2="46"/>
+      <line x1="100" y1="100" x2="147" y2="127"/>
+      <line x1="100" y1="100" x2="53" y2="127"/>
+    </g>
+    <circle cx="100" cy="100" r="15" fill="#F2EEE4"/>
+    <circle cx="100" cy="46" r="10" fill="#CBA35C"/>
+    <circle cx="147" cy="127" r="10" fill="#CBA35C"/>
+    <circle cx="53" cy="127" r="10" fill="#CBA35C"/>
+  </g>
+  <rect x="150" y="58" width="2" height="64" fill="#17191e" opacity="0.15"/>
+  <text x="180" y="98" text-anchor="start" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-weight="700" font-size="32" letter-spacing="2" fill="#17191e">GEARHUB</text>
+  <text x="180" y="120" text-anchor="start" font-family="Liberation Sans, Arial, Helvetica, sans-serif" font-weight="700" font-size="11" letter-spacing="3" fill="#CBA35C">TECH STORE</text>
+</svg>
