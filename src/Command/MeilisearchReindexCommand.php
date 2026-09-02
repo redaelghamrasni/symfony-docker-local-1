@@ -53,6 +53,7 @@ class MeilisearchReindexCommand extends Command
             $articles,
         );
 
+        $this->meilisearchService->clearIndex('articles');
         $this->meilisearchService->index('articles', $documents);
         $io->success(sprintf('%d article(s) réindexé(s).', count($documents)));
     }
@@ -71,6 +72,7 @@ class MeilisearchReindexCommand extends Command
             $categories,
         );
 
+        $this->meilisearchService->clearIndex('categories');
         $this->meilisearchService->index('categories', $documents);
         $io->success(sprintf('%d catégorie(s) réindexée(s).', count($documents)));
     }
@@ -89,6 +91,7 @@ class MeilisearchReindexCommand extends Command
             $users,
         );
 
+        $this->meilisearchService->clearIndex('users');
         $this->meilisearchService->index('users', $documents);
         $io->success(sprintf('%d utilisateur(s) réindexé(s).', count($documents)));
     }
@@ -108,6 +111,7 @@ class MeilisearchReindexCommand extends Command
             $orders,
         );
 
+        $this->meilisearchService->clearIndex('orders');
         $this->meilisearchService->index('orders', $documents);
         $io->success(sprintf('%d commande(s) réindexée(s).', count($documents)));
     }
