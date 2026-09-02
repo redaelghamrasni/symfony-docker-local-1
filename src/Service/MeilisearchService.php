@@ -28,6 +28,11 @@ class MeilisearchService
         $this->client->index($indexName)->addDocuments($documents);
     }
 
+    public function clearIndex(string $indexName): void
+    {
+        $this->client->index($indexName)->deleteAllDocuments();
+    }
+
     public function removeDocument(string $indexName, int|string $id): void
     {
         $this->client->index($indexName)->deleteDocument($id);
