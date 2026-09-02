@@ -4,8 +4,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}{{ 'base.app_name'|trans }}{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        
+        <link rel="icon" type="image/svg+xml" href="{{ asset('gearhub-icon.svg') }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32.png') }}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon-180.png') }}">
+
         {% block stylesheets %}
             <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
             <link rel="stylesheet" href="{{ asset('styles/custom.css') }}">
@@ -17,24 +20,20 @@
         {% endblock %}
     </head>
     <body class="h-full bg-zinc-50 antialiased">
-        {# Navigation minimaliste #}
-        <nav class="sticky top-0 z-50 bg-white border-b border-zinc-200 shadow-sm">
+        {# Navigation moderne #}
+        <nav class="sticky top-0 z-50 border-b border-zinc-200/70" style="background: rgba(255,255,255,0.8); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
             <div class="max-w-7xl mx-auto px-6">
-                <div class="flex justify-between items-center h-16">
+                <div class="flex justify-between items-center h-[100px]">
 
     {# Logo #}
-    <a href="{{ path('app_home') }}" 
-       style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: #18181b; text-decoration: none;">
-        <svg style="width: 1.5rem; height: 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        {{ 'nav.app_name'|trans }}
+    <a href="{{ path('app_home') }}" style="display: flex; align-items: center; flex-shrink: 0;">
+        <img src="{{ asset('images/gearhub-lockup.svg') }}" alt="{{ 'nav.app_name'|trans }}" style="height: 90px; width: auto;">
     </a>
 
     {# Autocomplete searchbar #}
-    <div id="nav-search-wrapper" style="flex: 1; max-width: 320px; position: relative;">
+    <div id="nav-search-wrapper" style="flex: 1; max-width: 340px; position: relative;">
         <div style="position: relative; display: flex; align-items: center;">
-            <i class="bi bi-search" style="position: absolute; left: 11px; color: #94a3b8; font-size: 0.8rem; pointer-events: none;"></i>
+            <i class="bi bi-search" style="position: absolute; left: 14px; color: #a1a1aa; font-size: 0.8rem; pointer-events: none;"></i>
             <input
                 id="nav-search-input"
                 type="text"
@@ -56,20 +55,19 @@
     <div style="display: flex; align-items: center; gap: 1.25rem;">
 
         {# Switch de langue #}
-        <div style="display: flex; align-items: center; gap: 0.1rem;">
+        <div style="display: flex; align-items: center; background: #f4f4f5; border-radius: 9999px; padding: 3px;">
             <a href="{{ path('app_switch_locale', {locale: 'fr'}) }}"
-               style="font-size: 0.75rem; font-weight: {{ app.request.locale == 'fr' ? '600' : '400' }}; color: {{ app.request.locale == 'fr' ? '#18181b' : '#a1a1aa' }}; text-decoration: none; padding: 0.2rem 0.4rem; letter-spacing: 0.03em;">
+               style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; text-decoration: none; padding: 0.3rem 0.65rem; border-radius: 9999px; transition: all .15s ease; background: {{ app.request.locale == 'fr' ? '#ffffff' : 'transparent' }}; color: {{ app.request.locale == 'fr' ? '#18181b' : '#a1a1aa' }}; box-shadow: {{ app.request.locale == 'fr' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }};">
                 FR
             </a>
-            <span style="color: #d4d4d8; font-size: 0.7rem;">|</span>
             <a href="{{ path('app_switch_locale', {locale: 'en'}) }}"
-               style="font-size: 0.75rem; font-weight: {{ app.request.locale == 'en' ? '600' : '400' }}; color: {{ app.request.locale == 'en' ? '#18181b' : '#a1a1aa' }}; text-decoration: none; padding: 0.2rem 0.4rem; letter-spacing: 0.03em;">
+               style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; text-decoration: none; padding: 0.3rem 0.65rem; border-radius: 9999px; transition: all .15s ease; background: {{ app.request.locale == 'en' ? '#ffffff' : 'transparent' }}; color: {{ app.request.locale == 'en' ? '#18181b' : '#a1a1aa' }}; box-shadow: {{ app.request.locale == 'en' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }};">
                 EN
             </a>
         </div>
 
         {# Panier #}
-        <a class="cart-nav-link" href="{{ path('app_cart_index') }}">
+        <a class="cart-nav-link" href="{{ path('app_cart_index') }}" style="width: 2.35rem; height: 2.35rem; border-radius: 9999px; transition: background .15s ease;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='transparent'">
             {% set itemCount = app.request.session.get('cart_id') ? cart_service.getItemCount() : 0 %}
             <span class="cart-icon-wrapper">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -87,7 +85,9 @@
         {% if app.user %}
             <div class="user-dropdown" id="userDropdown">
                 <button class="user-dropdown-trigger btn-action-secondary" onclick="toggleUserDropdown(event)">
-                    <i class="bi bi-person-circle"></i>
+                    <span style="display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 9999px; background: linear-gradient(135deg, #CBA35C, #b8924a); color: #17191e; font-size: 0.7rem; font-weight: 700; flex-shrink: 0;">
+                        {{ app.user.getFirstName()|slice(0, 1)|upper }}
+                    </span>
                     {{ 'nav.welcome'|trans({'%name%': app.user.getFirstName()}) }}
                     <i class="bi bi-chevron-down" style="font-size: 0.65rem;"></i>
                 </button>
@@ -115,10 +115,15 @@
                 </div>
             </div>
         {% else %}
-            <a href="{{ path('app_auth_login') }}" style="font-size: 0.875rem; color: #374151; text-decoration: none; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <a href="{{ path('app_auth_login') }}"
+               style="font-size: 0.85rem; font-weight: 500; color: #3f3f46; text-decoration: none; padding: 0.5rem 1rem; border-radius: 9999px; transition: background .15s ease;"
+               onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='transparent'">
                 {{ 'auth.login.submit' | trans }}
             </a>
-            <a href="{{ path('app_auth_register') }}" style="font-size: 0.875rem; color: #fff; text-decoration: none; padding: 0.4rem 0.75rem; border-radius: 6px; background: #0f172a; border: 1px solid #0f172a;">
+            <a href="{{ path('app_auth_register') }}"
+               style="font-size: 0.85rem; font-weight: 600; color: #fff; text-decoration: none; padding: 0.5rem 1.15rem; border-radius: 9999px; background: linear-gradient(135deg, #667eea, #764ba2); box-shadow: 0 4px 12px rgba(102,126,234,0.35); transition: transform .15s ease, box-shadow .15s ease; display: inline-block;"
+               onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(102,126,234,0.45)'"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.35)'">
                 {{ 'auth.register.submit' | trans }}
             </a>
         {% endif %}

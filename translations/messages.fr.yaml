@@ -3,7 +3,7 @@
 
 #base
 base:
-  app_name: MyApp
+  app_name: GearHub
   home: Home
   contact: Contact
   my_cart: Mon panier
@@ -14,7 +14,7 @@ base:
 
 # Navigation
 nav:
-  app_name: MonApp
+  app_name: GearHub
   articles: Articles
   about: À propos
   cart: Panier
