@@ -16,6 +16,7 @@ use App\Message\ReindexEntityMessage;
 use App\Repository\AddressRepository;
 use App\Repository\OrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Stripe\StripeClient;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -64,6 +65,7 @@ class CheckoutController extends AbstractController
         private LocaleSwitcher $localeSwitcher,
         private TranslatorInterface $translator,
         private MessageBusInterface $messageBus,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -263,7 +265,8 @@ class CheckoutController extends AbstractController
                     'customer_name'  => $name  ?: '',
                 ],
             ]);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logger->error('Stripe payment intent creation failed: ' . $e->getMessage(), ['exception' => $e]);
             return $this->json(['error' => 'Erreur de connexion au serveur de paiement.'], 502);
         }
 
