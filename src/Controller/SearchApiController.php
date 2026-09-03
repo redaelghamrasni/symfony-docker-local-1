@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Controller;
+
+use App\Service\MeilisearchService;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Attribute\Route;
+
+class SearchApiController extends AbstractController
+{
+    public function __construct(
+        private MeilisearchService $meilisearch,
+    ) {}
+
+    #[Route('/api/search', name: 'api_search', methods: ['GET'], requirements: ['_locale' => 'en|fr'])]
+    public function search(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query->get('q', ''));
+        if ($query === '') {
+            return new JsonResponse(['hits' => [], 'totalHits' => 0, 'processingTimeMs' => 0]);
+        }
+
+        $limit = min(max((int) $request->query->get('limit', 6), 1), 50);
+
+        // Allowed indexes (whitelist to prevent arbitrary access to Meilisearch indexes)
+        $allowedIndexes = ['articles', 'categories', 'users', 'orders'];
+        $index = (string) $request->query->get('index', 'articles');
+        if (!in_array($index, $allowedIndexes, true)) {
+            $index = 'articles';
+        }
+
+        $result = $this->meilisearch->search($index, $query, ['limit' => $limit]);
+
+        return new JsonResponse([
+            'hits' => $result['hits'],
+            'totalHits' => $result['totalHits'],
+            'processingTimeMs' => $result['processingTimeMs'],
+        ]);
+    }
+}

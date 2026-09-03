@@ -1,5 +1,3 @@
-const MEILISEARCH_URL = 'http://localhost:7700';
-const MEILISEARCH_KEY = 'changeme_master_key_dev';
 const SEARCH_LIMIT = 50;
 const DEBOUNCE_MS = 220;
 
@@ -16,6 +14,8 @@ const DEBOUNCE_MS = 220;
 function initAdminSearch(container) {
     if (container.dataset.searchInit) return;
     container.dataset.searchInit = '1';
+
+    const locale = document.documentElement.lang || 'fr';
 
     const input = container.querySelector('[data-admin-search-input]');
     if (!input) return;
@@ -76,15 +76,10 @@ function initAdminSearch(container) {
     async function runSearch(query) {
         lastQuery = query;
         try {
-            const res = await fetch(`${MEILISEARCH_URL}/indexes/${meiliIndex}/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${MEILISEARCH_KEY}`,
-                },
-                // Strip a leading '#' so typing an order number like "#123" still matches its id.
-                body: JSON.stringify({ q: query.replace(/^#/, ''), limit: SEARCH_LIMIT }),
-            });
+            const res = await fetch(
+                `/${locale}/api/search?q=${encodeURIComponent(query.replace(/^#/, ''))}&index=${encodeURIComponent(meiliIndex)}&limit=${SEARCH_LIMIT}`,
+                { headers: { 'Accept': 'application/json' } }
+            );
             if (!res.ok || query !== lastQuery) return;
             const { hits = [] } = await res.json();
 
@@ -103,7 +98,7 @@ function initAdminSearch(container) {
             hide(loadMoreWrap);
             showTableState();
         } catch (e) {
-            // Meilisearch unreachable — leave the current view untouched
+            // Search endpoint unreachable — leave the current view untouched
         }
     }
 

@@ -48,19 +48,14 @@ function initAutocomplete() {
     async function fetchResults(query) {
         lastQuery = query;
         try {
-            const res = await fetch(`${MEILISEARCH_URL}/indexes/articles/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${MEILISEARCH_KEY}`,
-                },
-                body: JSON.stringify({ q: query, limit: RESULTS_LIMIT }),
+            const res = await fetch(`/${locale}/api/search?q=${encodeURIComponent(query)}`, {
+                headers: { 'Accept': 'application/json' },
             });
             if (!res.ok || query !== lastQuery) return;
             const { hits = [] } = await res.json();
             render(hits, query);
         } catch {
-            // MeiliSearch not reachable
+            // Search endpoint not reachable
         }
     }
 
