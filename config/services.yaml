@@ -87,8 +87,8 @@ services:
     #Meilisearch service
     App\Service\MeilisearchService:
         arguments:
-            $meilisearchUrl: 'http://localhost:7700'
-            $apiKey: 'changeme_master_key_dev'
+            $meilisearchUrl: '%env(MEILI_ENDPOINT)%'
+            $apiKey: '%env(MEILI_KEY)%'
 
     App\Service\OllamaModelService:
         arguments:
