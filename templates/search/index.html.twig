@@ -114,124 +114,133 @@ document.addEventListener('DOMContentLoaded', initSearchPage);
 document.addEventListener('turbo:load', initSearchPage);
 
 function initSearchPage() {
-    // évite la double initialisation
-    if (document.getElementById('search-hits')?.dataset.searchInit === '1') return;
-    document.getElementById('search-hits').dataset.searchInit = '1';
+    const hitsEl = document.getElementById('search-hits');
+    if (!hitsEl || hitsEl.dataset.searchInit === '1') return;
+    hitsEl.dataset.searchInit = '1';
 
     const locale = document.documentElement.lang || 'fr';
+    const statsEl = document.getElementById('search-stats');
+    const searchboxEl = document.getElementById('search-searchbox');
     const urlParams = new URLSearchParams(window.location.search);
-    const initialQuery = urlParams.get('q') || '';
+    let currentQuery = urlParams.get('q') || '';
 
-    // Pré-remplit aussi la barre navbar
-    const navInput = document.querySelector('.search-autocomplete-input');
-    if (navInput && initialQuery) {
-        navInput.value = initialQuery;
+    // Champ de recherche
+    searchboxEl.innerHTML = `
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="search-page-input" value="${currentQuery.replace(/"/g, '&quot;')}"
+                placeholder="${locale === 'fr' ? 'Rechercher un article...' : 'Search for an article...'}"
+                style="flex:1; padding:12px 16px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px;">
+        </div>`;
+    const input = document.getElementById('search-page-input');
+
+    const addToCartLabel = {{ ('articles.actions.add_to_cart'|trans)|json_encode|raw }};
+    const viewLabel = {{ ('articles.actions.view'|trans)|json_encode|raw }};
+
+    let debounce = null;
+    input.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => runSearch(input.value.trim()), 220);
+    });
+
+    async function runSearch(query) {
+        currentQuery = query;
+        // met à jour l'URL sans recharger
+        const newUrl = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
+        window.history.replaceState({}, '', newUrl);
+
+        if (!query) {
+            statsEl.textContent = '';
+            hitsEl.innerHTML = '';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/${locale}/api/search?q=${encodeURIComponent(query)}&limit=50`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            renderStats(data);
+            renderHits(data.hits || []);
+        } catch {
+            // endpoint indisponible
+        }
     }
 
-    const { searchClient } = instantMeiliSearch(
-        'http://localhost:7700',
-        'changeme_master_key_dev',
-    );
+    function renderStats(data) {
+        if (data.totalHits === 0) {
+            statsEl.textContent = locale === 'fr'
+                ? `Aucun résultat pour "${currentQuery}"`
+                : `No results for "${currentQuery}"`;
+        } else {
+            statsEl.textContent = locale === 'fr'
+                ? `${data.totalHits} résultat(s) en ${data.processingTimeMs}ms`
+                : `${data.totalHits} result(s) in ${data.processingTimeMs}ms`;
+        }
+    }
 
-    const search = instantsearch({
-        indexName: 'articles',
-        searchClient,
-        initialUiState: {
-            articles: { query: initialQuery }
-        },
-        routing: {
-            stateMapping: {
-                stateToRoute(uiState) {
-                    return { q: uiState.articles?.query || '' };
-                },
-                routeToState(routeState) {
-                    return { articles: { query: routeState.q || '' } };
-                },
-            },
-        },
-    });
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
-    search.addWidgets([
-        instantsearch.widgets.searchBox({
-            container: '#search-searchbox',
-            placeholder: locale === 'fr' ? 'Rechercher un article...' : 'Search for an article...',
-            showReset: true,
-            showSubmit: true,
-        }),
+    function renderHits(hits) {
+        if (!hits.length) {
+            hitsEl.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <h2>${locale === 'fr' ? 'Aucun résultat' : 'No results'}</h2>
+                    <p>${locale === 'fr' ? 'Essayez un autre mot-clé.' : 'Try another keyword.'}</p>
+                </div>`;
+            return;
+        }
 
-        instantsearch.widgets.stats({
-            container: '#search-stats',
-            templates: {
-                text(data) {
-                    if (data.nbHits === 0) {
-                        return locale === 'fr'
-                            ? `Aucun résultat pour "${data.query}"`
-                            : `No results for "${data.query}"`;
-                    }
-                    return locale === 'fr'
-                        ? `${data.nbHits} résultat(s) en ${data.processingTimeMS}ms`
-                        : `${data.nbHits} result(s) in ${data.processingTimeMS}ms`;
-                },
-            },
-        }),
+        const list = document.createElement('ul');
+        list.className = 'ais-Hits-list';
 
-        instantsearch.widgets.hits({
-            container: '#search-hits',
-            templates: {
-                item(hit, { html, components }) {
-                    return html`
-                        <div class="product-card">
-                            <a href="/${locale}/article/${hit.id}" class="product-img-link">
-                                <div class="product-img-wrap">
-                                    ${hit.imageUrl
-                                        ? html`<img src="${hit.imageUrl}" alt="${hit.title}" loading="lazy" />`
-                                        : html`<div class="product-img-placeholder"><i class="bi bi-box-seam"></i></div>`}
-                                </div>
+        hits.forEach(hit => {
+            const li = document.createElement('li');
+            li.className = 'ais-Hits-item';
+            const img = hit.imageUrl
+                ? `<img src="${escapeHtml(hit.imageUrl)}" alt="${escapeHtml(hit.title)}" loading="lazy" />`
+                : `<div class="product-img-placeholder"><i class="bi bi-box-seam"></i></div>`;
+            li.innerHTML = `
+                <div class="product-card">
+                    <a href="/${locale}/article/${hit.id}" class="product-img-link">
+                        <div class="product-img-wrap">${img}</div>
+                    </a>
+                    <div class="product-body">
+                        <h3 class="product-title">
+                            <a href="/${locale}/article/${hit.id}">${escapeHtml(hit.title)}</a>
+                        </h3>
+                        <div class="product-price">
+                            <span class="product-price-current">${parseFloat(hit.price).toFixed(2)} $</span>
+                        </div>
+                        <div class="product-actions">
+                            <form class="form-add-to-cart" data-url="/${locale}/cart/add/${hit.id}" style="flex:1; display:flex;">
+                                <button type="submit" class="product-btn-cart btn-action-primary">
+                                    <i class="bi bi-cart-plus"></i> ${escapeHtml(addToCartLabel)}
+                                </button>
+                            </form>
+                            <a href="/${locale}/article/${hit.id}" class="product-btn-view btn-action-secondary">
+                                ${escapeHtml(viewLabel)}
                             </a>
-                            <div class="product-body">
-                                <h3 class="product-title">
-                                    <a href="/${locale}/article/${hit.id}">${components.Highlight({ hit, attribute: 'title' })}</a>
-                                </h3>
-                                <div class="product-price">
-                                    <span class="product-price-current">${parseFloat(hit.price).toFixed(2)} $</span>
-                                </div>
-                                <div class="product-actions">
-                                    <form class="form-add-to-cart" data-url="/${locale}/cart/add/${hit.id}" style="flex: 1; display: flex;">
-                                        <button type="submit" class="product-btn-cart btn-action-primary">
-                                            <i class="bi bi-cart-plus"></i> {{ 'articles.actions.add_to_cart'|trans }}
-                                        </button>
-                                    </form>
-                                    <a href="/${locale}/article/${hit.id}" class="product-btn-view btn-action-secondary">
-                                        {{ 'articles.actions.view'|trans }}
-                                    </a>
-                                </div>
-                            </div>
                         </div>
-                    `;
-                },
-                empty(results, { html }) {
-                    return html`
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🔍</div>
-                            <h2>${locale === 'fr' ? 'Aucun résultat' : 'No results'}</h2>
-                            <p>${locale === 'fr' ? 'Essayez un autre mot-clé.' : 'Try another keyword.'}</p>
-                        </div>
-                    `;
-                },
-            },
-        }),
+                    </div>
+                </div>`;
+            list.appendChild(li);
+        });
 
-        instantsearch.widgets.pagination({
-            container: '#search-pagination',
-            padding: 2,
-        }),
-    ]);
+        hitsEl.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.className = 'ais-Hits';
+        wrap.appendChild(list);
+        hitsEl.appendChild(wrap);
 
-    search.on('render', function() {
         if (typeof initCartForms === 'function') initCartForms();
-    });
+    }
 
-    search.start();
+    // recherche initiale
+    if (currentQuery) runSearch(currentQuery);
 }
 </script>
 {% endblock %}
