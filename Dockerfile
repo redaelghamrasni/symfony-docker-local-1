@@ -35,6 +35,7 @@ RUN apk add --no-cache rabbitmq-c-dev \
     && pecl install amqp \
     && docker-php-ext-enable amqp \
     && apk del .amqp-build-deps
+
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -53,6 +54,9 @@ COPY . .
 
 RUN composer dump-autoload --optimize --no-dev
 RUN npm run build
+RUN php bin/console tailwind:build --minify
+RUN php bin/console importmap:install
+RUN php bin/console asset-map:compile
 
 # ── Production ─────────────────────────────────────────────────────────
 FROM base AS production
@@ -62,7 +66,8 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 COPY docker/entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh \
+RUN mkdir -p /var/www/html/var \
+    && chmod +x /entrypoint.sh \
     && chown -R www-data:www-data /var/www/html/var \
     && mkdir -p /run/nginx
 
