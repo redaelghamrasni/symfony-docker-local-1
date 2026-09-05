@@ -1,6 +1,6 @@
 FROM php:8.4-fpm-alpine AS base
 
-# Extensions système nécessaires
+# Necessary packages for PHP extensions and other tools
 RUN apk add --no-cache \
     nginx \
     nodejs \
@@ -23,12 +23,18 @@ RUN apk add --no-cache \
         mbstring \
         sockets
 
-# Extension Redis
+# Redis Extension
 RUN apk add --no-cache $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS
 
+# AMQP Extension (RabbitMQ)
+RUN apk add --no-cache rabbitmq-c-dev \
+    && apk add --no-cache --virtual .amqp-build-deps $PHPIZE_DEPS \
+    && pecl install amqp \
+    && docker-php-ext-enable amqp \
+    && apk del .amqp-build-deps
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
