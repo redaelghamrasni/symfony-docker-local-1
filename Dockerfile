@@ -52,6 +52,10 @@ RUN npm ci
 
 COPY . .
 
+# APP_ENV=prod is forced here: the image installs with --no-dev, so booting the kernel in
+# dev (the default in the committed .env) would fail on the dev-only DebugBundle.
+ENV APP_ENV=prod APP_DEBUG=0
+
 RUN composer dump-autoload --optimize --no-dev
 RUN npm run build
 RUN php bin/console tailwind:build --minify

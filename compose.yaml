@@ -72,6 +72,31 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
   ###< rabbitmq ###
 
+###> messenger worker ###
+  worker:
+    build: .
+    depends_on:
+      - rabbitmq
+      - database
+      - redis
+    env_file:
+      - .env
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: 0
+      # Each DOCKER_* var lets an environment point the worker at compose services instead of
+      # the host-oriented defaults; unset (as on AWS, where .env already holds RDS/real hosts)
+      # it falls back to that environment's own .env value.
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL}}
+      REDIS_URL: ${DOCKER_REDIS_URL:-${REDIS_URL}}
+      MEILI_ENDPOINT: ${DOCKER_MEILI_ENDPOINT:-${MEILI_ENDPOINT}}
+      MAILER_DSN: ${DOCKER_MAILER_DSN:-${MAILER_DSN}}
+    # The image entrypoint boots php-fpm + nginx for the web container; the worker only consumes.
+    entrypoint: ["php", "bin/console"]
+    command: messenger:consume async --time-limit=3600 --memory-limit=128M -v
+    restart: unless-stopped
+###< messenger worker ###
+
 volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:
