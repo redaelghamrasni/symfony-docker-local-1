@@ -64,7 +64,6 @@ class SeedArticlesCommand extends Command
             $article = new Article();
             $article
                 ->setTitle($data['title'])
-                ->setName($data['title'])
                 ->setContent($data['fr'])
                 ->setPrice($data['price'])
                 ->setImageUrl($data['img'])

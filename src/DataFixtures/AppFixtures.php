@@ -183,7 +183,6 @@ class AppFixtures extends Fixture
 
             $article = new Article();
             $article->setTitle($title)
-                ->setName($title)
                 ->setContent($frContent)
                 ->setPrice($price)
                 ->setImageUrl($imageUrl)
