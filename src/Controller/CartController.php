@@ -44,7 +44,7 @@ class CartController extends AbstractController
             return $this->json([
                 'success' => true,
                 'message' => $translator->trans('cart.added_article', [
-                    '%name%' => $article->getName()
+                    '%name%' => $article->getTitle()
                 ]),
                 'itemCount' => $cart->getItems()->count(),
                 'imageUrl' => $article->getImageUrl(),
@@ -52,7 +52,7 @@ class CartController extends AbstractController
         }
 
         $this->addFlash('success', $translator->trans('cart.added_article', [
-            '%name%' => $article->getName()
+            '%name%' => $article->getTitle()
         ]));
 
         $referer = $request->headers->get('referer');
