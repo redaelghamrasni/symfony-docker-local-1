@@ -1,5 +1,8 @@
 
 ###> symfony/framework-bundle ###
+# Each environment keeps its own uncommitted .env; .env.dist is the committed template
+# (Symfony's Dotenv falls back to it when .env is absent).
+/.env
 /.env.local
 /.env.local.php
 /.env.*.local
