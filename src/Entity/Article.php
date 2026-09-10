@@ -53,9 +53,6 @@ class Article
     #[Groups(['article:read'])]
     private ?string $sku = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
-
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private string $price = '0.00';
 
@@ -147,18 +144,6 @@ class Article
             $tz = new \DateTimeZone('America/Toronto');
             $this->createdAt = new \DateTimeImmutable('now', $tz);
         }
-    }
-
-    public function getName(): ?string
-    {
-        return $this->title;
-    }
-
-    public function setName(string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
     }
 
     public function getPrice(): string
