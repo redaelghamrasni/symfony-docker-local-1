@@ -17,6 +17,9 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use App\Ai\Tool\OrderStatusTool;
+use Symfony\AI\Agent\Toolbox\AgentProcessor;
+use Symfony\AI\Agent\Toolbox\Toolbox;
 
 #[AsCommand(
     name: 'app:ask-faq',
@@ -37,6 +40,7 @@ final class AskFaqCommand extends Command
         private readonly SettingService $settingService,
         #[Autowire(param: 'app.chatbot.system_prompt')]
         private readonly string $systemPrompt,
+        private readonly OrderStatusTool $orderStatusTool,
     ) {
         parent::__construct();
     }
@@ -90,8 +94,16 @@ final class AskFaqCommand extends Command
 
         $model = $this->settingService->get('chatbot.model', 'qwen2.5');
         $platform = $this->modelResolver->isGeminiModel($model) ? $this->geminiPlatform : $this->ollamaPlatform;
-        $agent = new Agent($platform, $model, [new SystemPromptInputProcessor($this->systemPrompt)]);
+        $toolbox = new Toolbox([$this->orderStatusTool]);
+        $toolProcessor = new AgentProcessor($toolbox);
 
+        $agent = new Agent(
+            $platform,
+            $model,
+            [new SystemPromptInputProcessor($this->systemPrompt), $toolProcessor],
+            [$toolProcessor],
+        );
+        
         $result = $agent->call($prompt);
 
         $io->section('Generated Answer');

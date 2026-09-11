@@ -97,4 +97,61 @@ class OrderRepository extends ServiceEntityRepository
             $ids
         )));
     }
+
+        /**
+     * Soft search for orders according to the criteria that the client can provide.
+     * All parameters are optional; each present criterion refines the search.
+     * Used to IDENTIFY an order, NOT to authorize its disclosure (see the tool).
+     *
+     * @return Order[]
+     */
+    public function findByLooseCriteria(
+        ?string $customerName = null,
+        ?string $productKeyword = null,
+        ?\DateTimeImmutable $approxDate = null,
+        ?float $approxTotal = null,
+        ?int $limit = 10,
+    ): array {
+        $qb = $this->createQueryBuilder('o')
+            ->orderBy('o.createdAt', 'DESC')
+            ->setMaxResults($limit);
+
+        // Name : we test firstname + lastname concatenated, case-insensitive
+        if ($customerName) {
+            $qb->andWhere(
+                'LOWER(CONCAT(o.customerFirstName, \' \', o.customerLastName)) LIKE :name'
+            )->setParameter('name', '%' . mb_strtolower(trim($customerName)) . '%');
+        }
+
+        // Product : join on items, search by product name
+        if ($productKeyword) {
+            $qb->join('o.items', 'i')
+               ->join('i.article', 'a')
+               ->leftJoin('a.translations', 't')
+               ->andWhere(
+                   'LOWER(a.title) LIKE :product OR LOWER(t.title) LIKE :product'
+               )
+               ->setParameter('product', '%' . mb_strtolower(trim($productKeyword)) . '%');
+        }
+
+        // Approximate date : window of +/- 7 days around the provided date
+        if ($approxDate) {
+            $from = $approxDate->modify('-7 days');
+            $to = $approxDate->modify('+7 days');
+            $qb->andWhere('o.createdAt BETWEEN :from AND :to')
+               ->setParameter('from', $from)
+               ->setParameter('to', $to);
+        }
+
+        // Approximate total : window of +/- 15% around the provided amount
+        if ($approxTotal !== null) {
+            $min = (string) ($approxTotal * 0.85);
+            $max = (string) ($approxTotal * 1.15);
+            $qb->andWhere('o.total BETWEEN :min AND :max')
+               ->setParameter('min', $min)
+               ->setParameter('max', $max);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }
