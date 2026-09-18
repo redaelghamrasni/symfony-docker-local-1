@@ -372,6 +372,9 @@ admin:
     csrf_error: Security token validation failed.
     general_section: General Settings
     free_threshold_hint: "Leave empty to disable automatic free shipping."
+    chatbot_enabled_label: Enable chatbot
+    chatbot_enabled_hint: "When off, the chatbot is hidden everywhere and no model can be downloaded — useful on hosts with limited disk space (e.g. an AWS free-tier instance)."
+    chatbot_disabled_notice: "Chatbot is disabled: model selection and downloads are blocked."
     chatbot_model_hint: "Model used by the support chatbot: an Ollama model (switching to one not yet downloaded starts a background download) or a hosted Gemini model (used instantly, no download needed)."
     chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
     chatbot_model_ready: "Downloaded and ready."

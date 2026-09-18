@@ -28,6 +28,12 @@ class SettingService
         return $val !== null ? (float) $val : $default;
     }
 
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $val = $this->get($key);
+        return $val !== null ? in_array($val, ['1', 'true', 'on', 'yes'], true) : $default;
+    }
+
     public function set(string $key, mixed $value, string $label = '', string $type = 'text'): void
     {
         $setting = $this->repository->find($key);

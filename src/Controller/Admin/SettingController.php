@@ -41,6 +41,8 @@ class SettingController extends AbstractController
             }
 
             $settings = $request->request->all('settings');
+            $chatbotEnabled = ($settings['chatbot.enabled'] ?? $this->settingService->get('chatbot.enabled', '1')) === '1';
+
             foreach ($settings as $key => $value) {
                 $existing = $this->em->getRepository(Setting::class)->find($key);
                 if (!$existing) {
@@ -52,6 +54,7 @@ class SettingController extends AbstractController
                 $this->em->flush();
 
                 if ('chatbot.model' === $key && $value !== '' && $value !== $previousValue
+                    && $chatbotEnabled
                     && !$this->modelResolver->isGeminiModel($value)
                     && !$this->ollamaModelService->isModelAvailable($value)
                 ) {
@@ -64,8 +67,14 @@ class SettingController extends AbstractController
             return $this->redirectToRoute('admin_settings_index');
         }
 
+        $chatbotEnabled = $this->settingService->getBool('chatbot.enabled', true);
         $chatbotModel = $this->settingService->get('chatbot.model', 'qwen2.5');
-        $modelAvailability = $this->ollamaModelService->checkAvailability($this->chatbotAvailableModels);
+
+        // Skip talking to Ollama entirely while disabled — on a constrained host (e.g. EC2) it may
+        // not even be running, and there is nothing useful to check or download in that state.
+        $modelAvailability = $chatbotEnabled
+            ? $this->ollamaModelService->checkAvailability($this->chatbotAvailableModels)
+            : array_fill_keys($this->chatbotAvailableModels, false);
         $chatbotDownloadedModels = array_keys(array_filter($modelAvailability));
 
         // Gemini is a hosted API, not a local download — always "ready", never listed for storage cleanup.
@@ -80,6 +89,7 @@ class SettingController extends AbstractController
             'selectOptions' => [
                 'chatbot.model' => $this->chatbotAvailableModels,
             ],
+            'chatbotEnabled' => $chatbotEnabled,
             'chatbotModel' => $chatbotModel,
             'chatbotModelReady' => $modelAvailability[$chatbotModel] ?? false,
             'chatbotModelAvailability' => $modelAvailability,

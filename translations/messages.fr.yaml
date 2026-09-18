@@ -656,6 +656,9 @@ admin:
     csrf_error: Erreur de validation du jeton de sécurité.
     general_section: Paramètres généraux
     free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    chatbot_enabled_label: Activer le chatbot
+    chatbot_enabled_hint: "Une fois désactivé, le chatbot est masqué partout et aucun modèle ne peut être téléchargé — utile sur un serveur à l'espace disque limité (ex. une instance AWS gratuite)."
+    chatbot_disabled_notice: "Chatbot désactivé : la sélection de modèle et les téléchargements sont bloqués."
     chatbot_model_hint: "Modèle utilisé par le chatbot d'assistance : un modèle Ollama (en choisir un non encore téléchargé lance un téléchargement en arrière-plan) ou un modèle Gemini hébergé (utilisé instantanément, sans téléchargement)."
     chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
     chatbot_model_ready: "Téléchargé et prêt."
