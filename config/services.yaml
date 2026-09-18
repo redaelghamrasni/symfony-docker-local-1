@@ -10,7 +10,10 @@ parameters:
   locale: 'en'
   # Chatbot: models the admin is allowed to pick from — either pullable via Ollama, or a
   # hosted Gemini model (see app.chatbot.gemini_models below), no download involved for those.
-  app.chatbot.available_models: ['qwen2.5', 'qwen2.5:3b', 'qwen2.5:1.5b', 'llama3.1', 'mistral', 'phi3', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview']
+  # llama3.3 (70b, ~43GB): recent, large general-purpose flagship, for testing top-end quality.
+  # qwen2.5-coder:7b: coding-specialized. llava:7b: vision/image understanding. deepseek-r1:7b:
+  # reasoning/math-focused. All three ~4.7GB, EC2-friendly.
+  app.chatbot.available_models: ['qwen2.5', 'qwen2.5:3b', 'qwen2.5:1.5b', 'llama3.1', 'mistral', 'phi3', 'llama3.3', 'qwen2.5-coder:7b', 'llava:7b', 'deepseek-r1:7b', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview']
   # Subset of app.chatbot.available_models routed to the Gemini platform instead of Ollama.
   app.chatbot.gemini_models: ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
   app.chatbot.system_prompt: |
