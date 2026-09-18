@@ -999,3 +999,8 @@ faq:
   no_results: Aucune question ne correspond à votre recherche.
   question: question
   questions: questions
+
+chat:
+  unavailable_title: Assistant de discussion
+  unavailable_disabled: "L'assistant de discussion est actuellement désactivé. Merci de revenir plus tard."
+  unavailable_coming_soon: "L'assistant de discussion arrive bientôt."

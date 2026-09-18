@@ -1004,3 +1004,8 @@ faq:
   no_results: No questions match your search.
   question: question
   questions: questions
+
+chat:
+  unavailable_title: Chat assistant
+  unavailable_disabled: "The chat assistant is currently turned off. Please check back later."
+  unavailable_coming_soon: "The chat assistant is coming soon."
