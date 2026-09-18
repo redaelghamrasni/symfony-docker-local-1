@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -13,6 +14,7 @@ class OllamaModelService
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly string $ollamaHost,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -24,7 +26,12 @@ class OllamaModelService
                 'timeout' => 5,
             ]);
             $data = $response->toArray(false);
-        } catch (ExceptionInterface) {
+        } catch (ExceptionInterface $e) {
+            $this->logger->warning('Could not reach Ollama at {host} to list local models: {error}', [
+                'host' => $this->ollamaHost,
+                'error' => $e->getMessage(),
+            ]);
+
             return [];
         }
 
@@ -62,6 +69,12 @@ class OllamaModelService
      */
     public function pullModel(string $model): void
     {
+        $this->logger->info('Pulling Ollama model {model} from {host}...', [
+            'model' => $model,
+            'host' => $this->ollamaHost,
+        ]);
+        $startedAt = microtime(true);
+
         $response = $this->httpClient->request('POST', rtrim($this->ollamaHost, '/').'/api/pull', [
             'json' => ['model' => $model, 'stream' => false],
             'timeout' => 1800,
@@ -69,6 +82,11 @@ class OllamaModelService
 
         // Reading the content waits for the (non-streamed) response and surfaces HTTP errors.
         $response->getContent();
+
+        $this->logger->info('Pulled Ollama model {model} in {seconds}s.', [
+            'model' => $model,
+            'seconds' => round(microtime(true) - $startedAt, 1),
+        ]);
     }
 
     /**

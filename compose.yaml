@@ -91,6 +91,10 @@ services:
       REDIS_URL: ${DOCKER_REDIS_URL:-${REDIS_URL}}
       MEILI_ENDPOINT: ${DOCKER_MEILI_ENDPOINT:-${MEILI_ENDPOINT}}
       MAILER_DSN: ${DOCKER_MAILER_DSN:-${MAILER_DSN}}
+      # Ollama itself is not a compose service (runs on the host) — route through the
+      # Docker-provided host alias instead of "localhost", which inside this container
+      # would resolve to the container itself.
+      OLLAMA_HOST_URL: ${DOCKER_OLLAMA_HOST_URL:-${OLLAMA_HOST_URL}}
     # The image entrypoint boots php-fpm + nginx for the web container; the worker only consumes.
     entrypoint: ["php", "bin/console"]
     command: messenger:consume async --time-limit=3600 --memory-limit=128M -v
