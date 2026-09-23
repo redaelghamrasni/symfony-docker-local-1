@@ -414,24 +414,8 @@ class CheckoutController extends AbstractController
                     'is_guest'       => $this->getUser() === null,
                 ]);
 
-                // Until the Stripe webhook exists (W2), this page is the only
-                // thing that creates an order, and it trusts the query string.
-                // We cannot yet refuse — a mismatch may also mean a legitimate
-                // customer whose session was recycled — but an order whose
-                // payment_intent does not match the one this session created is
-                // exactly what a forged /checkout/success looks like.
-                if ($sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
-                    $this->paymentLogger->error('payment.order_placed_unverified', [
-                        'order_id'         => $order->getId(),
-                        'provider'         => 'stripe',
-                        'claimed_intent'   => $claimedIntentId,
-                        'session_intent'   => $sessionIntentId,
-                        'reason'           => $sessionIntentId === null
-                            ? 'no payment intent was created in this session'
-                            : 'payment intent does not match the one created in this session',
-                        'total'            => $order->getTotal(),
-                    ]);
-                }
+                $this->verifyStripePayment($order, $claimedIntentId, $sessionIntentId);
+                $this->entityManager->flush();
             }
 
             $this->clearCheckoutSession($session);
@@ -558,19 +542,47 @@ class CheckoutController extends AbstractController
                 'is_guest'        => $this->getUser() === null,
             ]);
 
-            // PayPal reports COMPLETED but we never check what was actually
-            // captured against what we charged. Recorded, not enforced, until
-            // the verification work lands.
+            // Same flag as the Stripe path: PayPal said COMPLETED, but confirm
+            // it captured the amount we actually charged.
             $capturedAmount = $capture['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
-            if ($capturedAmount !== null && abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
-                $this->paymentLogger->error('payment.amount_mismatch', [
+
+            if ($capturedAmount === null) {
+                $order->setPaymentVerified(false);
+                $order->setPaymentVerificationIssue('amount_missing');
+
+                $this->paymentLogger->error('payment.verification_failed', [
                     'order_id'        => $order->getId(),
                     'provider'        => 'paypal',
+                    'issue'           => 'amount_missing',
+                    'paypal_order_id' => $paypalOrderId,
+                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
+                ]);
+            } elseif (abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
+                $order->setPaymentVerified(false);
+                $order->setPaymentVerificationIssue('amount_mismatch');
+
+                $this->paymentLogger->error('payment.verification_failed', [
+                    'order_id'        => $order->getId(),
+                    'provider'        => 'paypal',
+                    'issue'           => 'amount_mismatch',
                     'paypal_order_id' => $paypalOrderId,
                     'captured'        => $capturedAmount,
                     'expected'        => $order->getTotal(),
+                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
+                ]);
+            } else {
+                $order->setPaymentVerified(true);
+
+                $this->paymentLogger->info('payment.verified', [
+                    'order_id'        => $order->getId(),
+                    'provider'        => 'paypal',
+                    'paypal_order_id' => $paypalOrderId,
+                    'amount'          => $capturedAmount,
+                    'currency'        => 'CAD',
                 ]);
             }
+
+            $this->entityManager->flush();
 
             $this->clearCheckoutSession($session);
             $this->cartService->clear();
@@ -770,6 +782,93 @@ class CheckoutController extends AbstractController
         $addr->setPhone($order->getCustomerPhone());
         $addr->setIsDefault(true);
         $this->entityManager->persist($addr);
+    }
+
+    /**
+     * Confirms with Stripe that the payment behind this order actually happened,
+     * and flags the order when it cannot be confirmed.
+     *
+     * The order is still stored either way. Refusing outright would mean a real
+     * customer whose payment succeeded but whose verification call failed (a
+     * Stripe outage, a recycled session) ends up charged with no order — the
+     * one outcome that is worse than a suspicious row in the database. A flagged
+     * order is visible, recoverable and safe as long as nothing ships before
+     * someone looks at it.
+     *
+     * Three things are checked, cheapest first:
+     *   1. the payment intent matches the one THIS session created — no network
+     *      call, and on its own it defeats a hand-typed /checkout/success;
+     *   2. Stripe reports the intent as succeeded;
+     *   3. the amount Stripe captured matches the order total.
+     */
+    private function verifyStripePayment(Order $order, ?string $claimedIntentId, ?string $sessionIntentId): void
+    {
+        $fail = function (string $issue, array $context = []) use ($order): void {
+            $order->setPaymentVerified(false);
+            $order->setPaymentVerificationIssue($issue);
+
+            $this->paymentLogger->error('payment.verification_failed', array_merge([
+                'order_id'    => $order->getId(),
+                'provider'    => 'stripe',
+                'issue'       => $issue,
+                'total'       => $order->getTotal(),
+                'action'      => 'order stored but flagged; do not fulfil until reviewed',
+            ], $context));
+        };
+
+        if ($claimedIntentId === null || $sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
+            $fail('intent_mismatch', [
+                'claimed_intent' => $claimedIntentId,
+                'session_intent' => $sessionIntentId,
+            ]);
+
+            return;
+        }
+
+        try {
+            $intent = $this->stripeClient->paymentIntents->retrieve($claimedIntentId, []);
+        } catch (\Throwable $e) {
+            $fail('verification_unavailable', [
+                'payment_intent' => $claimedIntentId,
+                'error'          => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (($intent->status ?? null) !== 'succeeded') {
+            $fail('intent_not_succeeded', [
+                'payment_intent' => $claimedIntentId,
+                'stripe_status'  => $intent->status ?? null,
+            ]);
+
+            return;
+        }
+
+        // Stripe works in cents; the order total is a decimal string.
+        $expectedCents = (int) round(((float) $order->getTotal()) * 100);
+        $receivedCents = (int) ($intent->amount_received ?? 0);
+
+        if ($receivedCents !== $expectedCents) {
+            $fail('amount_mismatch', [
+                'payment_intent' => $claimedIntentId,
+                'received_cents' => $receivedCents,
+                'expected_cents' => $expectedCents,
+            ]);
+
+            return;
+        }
+
+        $order->setPaymentVerified(true);
+        $order->setPaymentVerificationIssue(null);
+
+        $this->paymentLogger->info('payment.verified', [
+            'order_id'       => $order->getId(),
+            'provider'       => 'stripe',
+            'payment_intent' => $claimedIntentId,
+            'amount_cents'   => $receivedCents,
+            'currency'       => 'CAD',
+        ]);
     }
 
     private function capturePaymentInfo(Order $order, ?string $paymentIntentId): void

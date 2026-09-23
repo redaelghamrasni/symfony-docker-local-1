@@ -529,6 +529,8 @@ admin:
       no_addresses: Aucune adresse enregistrée.
       add_address: Ajouter une adresse
   orders:
+    payment_unverified: "Paiement non vérifié"
+    payment_unverified_hint: "Le paiement de cette commande n'a pas pu être confirmé auprès du prestataire. Ne pas expédier avant vérification."
     status_updated: "Statut de la commande mis à jour."
     status_invalid: "Statut invalide."
     tracking_required: "Veuillez renseigner un numéro de suivi pour marquer la commande comme expédiée."

@@ -114,6 +114,19 @@ class Order
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $stripePaymentIntentId = null;
 
+    /**
+     * Whether the payment was confirmed with the provider before the order was
+     * stored. Null on orders created before this check existed — unknown, not
+     * suspicious. False means the order exists but the payment could not be
+     * confirmed, and it must not be fulfilled until someone looks.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?bool $paymentVerified = null;
+
+    /** Short machine-readable reason when paymentVerified is false. */
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $paymentVerificationIssue = null;
+
     // Shipping tracking (set manually by admin)
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $shippingCarrierStatus = null; // pending, shipped, in_transit, delivered, failed
@@ -377,6 +390,15 @@ class Order
 
     public function getPaymentLast4(): ?string { return $this->paymentLast4; }
     public function setPaymentLast4(?string $v): self { $this->paymentLast4 = $v; return $this; }
+
+    public function isPaymentVerified(): ?bool { return $this->paymentVerified; }
+    public function setPaymentVerified(?bool $v): self { $this->paymentVerified = $v; return $this; }
+
+    public function getPaymentVerificationIssue(): ?string { return $this->paymentVerificationIssue; }
+    public function setPaymentVerificationIssue(?string $v): self { $this->paymentVerificationIssue = $v; return $this; }
+
+    /** True only when the payment was checked and failed — not for legacy orders. */
+    public function hasPaymentProblem(): bool { return $this->paymentVerified === false; }
 
     public function getStripePaymentIntentId(): ?string { return $this->stripePaymentIntentId; }
     public function setStripePaymentIntentId(?string $v): self { $this->stripePaymentIntentId = $v; return $this; }

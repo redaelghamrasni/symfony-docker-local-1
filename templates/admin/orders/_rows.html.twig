@@ -27,6 +27,14 @@
         <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">
             {{ statusLabels[order.status] ?? order.status|capitalize }}
         </span>
+        {# Payment could not be confirmed with the provider: do not fulfil
+           before checking. Absent on older orders, where it is simply unknown. #}
+        {% if order.hasPaymentProblem %}
+            <span title="{{ 'admin.orders.payment_unverified_hint'|trans }} ({{ order.paymentVerificationIssue }})"
+                  style="display:inline-block; margin-top:4px; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; background:#fee2e2; color:#991b1b;">
+                <i class="bi bi-exclamation-triangle-fill"></i> {{ 'admin.orders.payment_unverified'|trans }}
+            </span>
+        {% endif %}
     </td>
     <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">
         {{ order.createdAt|date('Y-m-d H:i') }}

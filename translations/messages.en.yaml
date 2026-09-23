@@ -550,6 +550,8 @@ admin:
       no_addresses: No addresses saved.
       add_address: Add new address
   orders:
+    payment_unverified: "Payment unverified"
+    payment_unverified_hint: "The payment behind this order could not be confirmed with the provider. Do not ship it before checking."
     status_updated: "Order status updated."
     status_invalid: "Invalid status."
     tracking_required: "Please enter a tracking number to mark the order as shipped."
