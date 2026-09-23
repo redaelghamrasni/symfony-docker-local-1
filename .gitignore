@@ -30,3 +30,8 @@
 /.idea/
 /.vscode/
 /node_modules/
+
+# Internal security/observability audit — deliberately untracked: this repo is
+# public, and the file inventories weaknesses in a live deployment.
+/LOGGING_AUDIT.md
+/LOGGING_AUDIT.pdf
