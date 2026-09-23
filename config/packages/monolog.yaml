@@ -30,6 +30,14 @@ when@test:
                 level: debug
 
 when@prod:
+    parameters:
+        # Verbosity is an env var so it can be raised on a running deploy without
+        # rebuilding the image. The default keeps deploys whose .env predates this
+        # variable booting unchanged — the server keeps its own .env, separate
+        # from the one in the repo.
+        app.log_level_default: 'info'
+        app.log_level: '%env(default:app.log_level_default:LOG_LEVEL)%'
+
     monolog:
         handlers:
             main:
@@ -42,7 +50,7 @@ when@prod:
             nested:
                 type: stream
                 path: php://stderr
-                level: debug
+                level: '%app.log_level%'
                 formatter: monolog.formatter.json
             console:
                 type: console

@@ -3,6 +3,7 @@ FROM php:8.4-fpm-alpine AS base
 # Necessary packages for PHP extensions and other tools
 RUN apk add --no-cache \
     nginx \
+    supervisor \
     nodejs \
     npm \
     git \
@@ -68,6 +69,9 @@ FROM base AS production
 COPY --from=build /var/www/html /var/www/html
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
+# zz- prefix: loaded after the base image's docker.conf, so its values win.
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN mkdir -p /var/www/html/var \
