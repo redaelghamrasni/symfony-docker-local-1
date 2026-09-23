@@ -65,7 +65,13 @@ class CheckoutController extends AbstractController
         private LocaleSwitcher $localeSwitcher,
         private TranslatorInterface $translator,
         private MessageBusInterface $messageBus,
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
+        // Channel loggers (see config/packages/monolog.yaml). These write on
+        // success as well as failure: the record of a completed order is the
+        // point, not a side effect of error handling.
+        private LoggerInterface $checkoutLogger,
+        private LoggerInterface $paymentLogger,
+        private LoggerInterface $shippingLogger,
     ) {
     }
 
@@ -182,8 +188,15 @@ class CheckoutController extends AbstractController
                         'customer_name'  => $name !== '' ? $name : 'Client',
                     ],
                 ]);
-            } catch (\Throwable) {
-                // Non-fatal; metadata/customer sync is a convenience, not required for payment to succeed
+            } catch (\Throwable $e) {
+                // Non-fatal: payment still works without the customer metadata.
+                // Logged anyway — a rising rate here means the Stripe customer
+                // records are drifting out of sync with ours.
+                $this->paymentLogger->warning('payment.customer_sync_failed', [
+                    'provider'       => 'stripe',
+                    'payment_intent' => $piId,
+                    'error'          => $e->getMessage(),
+                ]);
             }
         }
 
@@ -266,12 +279,33 @@ class CheckoutController extends AbstractController
                 ],
             ]);
         } catch (\Throwable $e) {
-            $this->logger->error('Stripe payment intent creation failed: ' . $e->getMessage(), ['exception' => $e]);
+            // Stable message + structured context: the message is what you
+            // aggregate and alert on, the context is what you investigate with.
+            // Interpolating $e->getMessage() into the message would make every
+            // occurrence a unique string and defeat both.
+            $this->paymentLogger->error('payment.intent.create_failed', [
+                'provider'     => 'stripe',
+                'cart_id'      => $cart->getId(),
+                'amount_cents' => $amount,
+                'currency'     => 'cad',
+                'error_class'  => $e::class,
+                'error'        => $e->getMessage(),
+            ]);
+
             return $this->json(['error' => 'Erreur de connexion au serveur de paiement.'], 502);
         }
 
         // Store PI ID so we can update the amount later
         $request->getSession()->set('checkout_pi_id', $paymentIntent->id);
+
+        $this->paymentLogger->info('payment.intent.created', [
+            'provider'       => 'stripe',
+            'payment_intent' => $paymentIntent->id,
+            'cart_id'        => $cart->getId(),
+            'amount_cents'   => $amount,
+            'currency'       => 'cad',
+            'is_guest'       => $this->getUser() === null,
+        ]);
 
         return $this->json([
             'clientSecret'   => $paymentIntent->client_secret,
@@ -316,8 +350,16 @@ class CheckoutController extends AbstractController
                 $this->stripeClient->paymentIntents->update($piId, [
                     'amount' => (int) round($grandTotal * 100),
                 ]);
-            } catch (\Throwable) {
-                // Non-fatal; user will see correct total on Stripe form
+            } catch (\Throwable $e) {
+                // Non-fatal for the customer (Stripe's form shows the right
+                // total), but it means our PaymentIntent and our cart disagree
+                // on the amount — worth seeing if it starts happening often.
+                $this->paymentLogger->warning('payment.intent.amount_update_failed', [
+                    'provider'       => 'stripe',
+                    'payment_intent' => $piId,
+                    'amount_cents'   => (int) round($grandTotal * 100),
+                    'error'          => $e->getMessage(),
+                ]);
             }
         }
 
@@ -345,14 +387,51 @@ class CheckoutController extends AbstractController
             $shippingCity    = $session->get('checkout_shipping_city');
             $shippingPostal  = $session->get('checkout_shipping_postal');
 
+            $claimedIntentId = $request->query->get('payment_intent');
+            $sessionIntentId = $session->get('checkout_pi_id');
+
             if (!$cart->isEmpty() && $checkoutEmail && $shippingStreet && $shippingCity && $shippingPostal) {
                 $order = $this->buildOrderFromSession($session, $cart);
-                $this->capturePaymentInfo($order, $request->query->get('payment_intent'));
+                $this->capturePaymentInfo($order, $claimedIntentId);
                 $this->entityManager->persist($order);
                 $this->saveAddressFromOrder($order);
                 $this->entityManager->flush();
                 $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
                 $this->sendOrderConfirmationEmail($order);
+
+                // The business event. Written on the success path on purpose:
+                // without it, a completed order leaves no trace in the logs and
+                // orders/conversion cannot be counted from them.
+                $this->checkoutLogger->info('checkout.order.placed', [
+                    'order_id'       => $order->getId(),
+                    'cart_id'        => $cart->getId(),
+                    'provider'       => 'stripe',
+                    'payment_intent' => $claimedIntentId,
+                    'total'          => $order->getTotal(),
+                    'currency'       => 'CAD',
+                    'item_count'     => count($order->getItems()),
+                    'province'       => $order->getShippingProvince(),
+                    'is_guest'       => $this->getUser() === null,
+                ]);
+
+                // Until the Stripe webhook exists (W2), this page is the only
+                // thing that creates an order, and it trusts the query string.
+                // We cannot yet refuse — a mismatch may also mean a legitimate
+                // customer whose session was recycled — but an order whose
+                // payment_intent does not match the one this session created is
+                // exactly what a forged /checkout/success looks like.
+                if ($sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
+                    $this->paymentLogger->error('payment.order_placed_unverified', [
+                        'order_id'         => $order->getId(),
+                        'provider'         => 'stripe',
+                        'claimed_intent'   => $claimedIntentId,
+                        'session_intent'   => $sessionIntentId,
+                        'reason'           => $sessionIntentId === null
+                            ? 'no payment intent was created in this session'
+                            : 'payment intent does not match the one created in this session',
+                        'total'            => $order->getTotal(),
+                    ]);
+                }
             }
 
             $this->clearCheckoutSession($session);
@@ -377,9 +456,28 @@ class CheckoutController extends AbstractController
 
         try {
             $result = $this->payPalService->createOrder($grandTotal);
+
+            $this->paymentLogger->info('payment.paypal.order_created', [
+                'provider'        => 'paypal',
+                'paypal_order_id' => $result['id'] ?? null,
+                'cart_id'         => $cart->getId(),
+                'total'           => $grandTotal,
+                'currency'        => 'CAD',
+            ]);
+
             return $this->json(['id' => $result['id']]);
         } catch (\Throwable $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
+            $this->paymentLogger->error('payment.paypal.create_failed', [
+                'provider'    => 'paypal',
+                'cart_id'     => $cart->getId(),
+                'total'       => $grandTotal,
+                'error_class' => $e::class,
+                'error'       => $e->getMessage(),
+            ]);
+
+            // The exception text goes to the log, not to the browser: it can
+            // carry internal detail, and it is useless to the customer.
+            return $this->json(['error' => 'Erreur de connexion au serveur de paiement.'], 502);
         }
     }
 
@@ -396,10 +494,26 @@ class CheckoutController extends AbstractController
         try {
             $capture = $this->payPalService->captureOrder($paypalOrderId);
         } catch (\Throwable $e) {
-            return $this->json(['error' => $e->getMessage()], 500);
+            $this->paymentLogger->error('payment.paypal.capture_failed', [
+                'provider'        => 'paypal',
+                'paypal_order_id' => $paypalOrderId,
+                'error_class'     => $e::class,
+                'error'           => $e->getMessage(),
+            ]);
+
+            return $this->json(['error' => 'Erreur lors de la finalisation du paiement.'], 502);
         }
 
         if (($capture['status'] ?? '') !== 'COMPLETED') {
+            // A customer who reaches this has been through PayPal's flow and
+            // still has no order — worth knowing about even though it is a
+            // "normal" outcome from the code's point of view.
+            $this->paymentLogger->warning('payment.paypal.capture_not_completed', [
+                'provider'        => 'paypal',
+                'paypal_order_id' => $paypalOrderId,
+                'status'          => $capture['status'] ?? null,
+            ]);
+
             return $this->json(['error' => 'PayPal capture not completed: ' . ($capture['status'] ?? '')], 400);
         }
 
@@ -429,6 +543,34 @@ class CheckoutController extends AbstractController
             $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
 
             $this->sendOrderConfirmationEmail($order);
+
+            // Same event name and shape as the Stripe path, so "how many orders
+            // were placed" is one query rather than two.
+            $this->checkoutLogger->info('checkout.order.placed', [
+                'order_id'        => $order->getId(),
+                'cart_id'         => $cart->getId(),
+                'provider'        => 'paypal',
+                'paypal_order_id' => $paypalOrderId,
+                'total'           => $order->getTotal(),
+                'currency'        => 'CAD',
+                'item_count'      => count($order->getItems()),
+                'province'        => $order->getShippingProvince(),
+                'is_guest'        => $this->getUser() === null,
+            ]);
+
+            // PayPal reports COMPLETED but we never check what was actually
+            // captured against what we charged. Recorded, not enforced, until
+            // the verification work lands.
+            $capturedAmount = $capture['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
+            if ($capturedAmount !== null && abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
+                $this->paymentLogger->error('payment.amount_mismatch', [
+                    'order_id'        => $order->getId(),
+                    'provider'        => 'paypal',
+                    'paypal_order_id' => $paypalOrderId,
+                    'captured'        => $capturedAmount,
+                    'expected'        => $order->getTotal(),
+                ]);
+            }
 
             $this->clearCheckoutSession($session);
             $this->cartService->clear();
@@ -493,9 +635,27 @@ class CheckoutController extends AbstractController
                     'height' => '15',
                 ]
             );
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // A failure here stalls the customer mid-checkout with no way to
+            // pick a shipping option, so it is an error, not a nuisance.
+            $this->shippingLogger->error('shipping.rates.lookup_failed', [
+                'provider'    => 'shippo',
+                'province'    => $data['province'] ?? null,
+                'postal_code' => $data['zip'] ?? null,
+                'item_count'  => $totalItems,
+                'error_class' => $e::class,
+                'error'       => $e->getMessage(),
+            ]);
+
             return $this->json(['error' => 'Erreur lors du chargement des tarifs.'], 502);
         }
+
+        $this->shippingLogger->info('shipping.rates.retrieved', [
+            'provider'   => 'shippo',
+            'province'   => $data['province'] ?? null,
+            'rate_count' => count($rates),
+            'item_count' => $totalItems,
+        ]);
 
         return $this->json(['rates' => $rates]);
     }
@@ -635,9 +795,19 @@ class CheckoutController extends AbstractController
             } else {
                 $order->setPaymentMethod(($pi->payment_method_types)[0] ?? 'card');
             }
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // The order is still created, but with a generic 'card' method and
+            // no brand or last4 — a silent downgrade of what the customer and
+            // support will later see on the order. Record that it happened.
             $order->setPaymentMethod('card');
             $order->setStripePaymentIntentId($paymentIntentId);
+
+            $this->paymentLogger->warning('payment.details_capture_failed', [
+                'provider'       => 'stripe',
+                'payment_intent' => $paymentIntentId,
+                'consequence'    => 'order stored without card brand or last4',
+                'error'          => $e->getMessage(),
+            ]);
         }
     }
 

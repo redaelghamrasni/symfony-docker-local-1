@@ -1,6 +1,14 @@
 monolog:
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        # Business channels. Each is autowirable as LoggerInterface $<name>Logger
+        # (e.g. $paymentLogger) and is routed to its own handler in prod so a
+        # successful business event survives — see the "business" handler below.
+        - checkout   # cart -> address -> shipping -> payment funnel
+        - payment    # Stripe and PayPal: intents, captures, verification outcomes
+        - shipping   # Shippo rate lookups and label data
+        - audit      # who changed what in the back-office
+        - mail       # transactional email dispatch
 
 when@dev:
     monolog:
@@ -40,18 +48,46 @@ when@prod:
 
     monolog:
         handlers:
+            # ── Business events ────────────────────────────────────────────
+            # Straight to stderr at info level, deliberately NOT behind
+            # fingers_crossed: that handler only flushes when something fails,
+            # which means a checkout that *succeeds* would leave no trace and
+            # orders could not be counted from logs. This handler is the record
+            # of what the business actually did.
+            business:
+                type: stream
+                path: php://stderr
+                level: info
+                formatter: monolog.formatter.json
+                channels: [checkout, payment, shipping, audit, mail]
+
+            # ── Technical errors ───────────────────────────────────────────
+            # Everything else stays buffered: nothing is written until an error
+            # occurs, at which point the preceding records provide the context.
+            # `doctrine` is excluded because that buffer would otherwise dump
+            # SQL *with bound parameters* — customer emails, addresses, names —
+            # into the log store on every error.
             main:
                 type: fingers_crossed
                 action_level: error
                 handler: nested
                 excluded_http_codes: [404, 405]
-                channels: ["!deprecation"]
+                channels: ["!deprecation", "!doctrine", "!checkout", "!payment", "!shipping", "!audit", "!mail"]
                 buffer_size: 50 # How many messages should be saved? Prevent memory leaks
             nested:
                 type: stream
                 path: php://stderr
                 level: '%app.log_level%'
                 formatter: monolog.formatter.json
+
+            # Doctrine errors still matter — just not the buffered SQL trail.
+            doctrine_errors:
+                type: stream
+                path: php://stderr
+                level: error
+                formatter: monolog.formatter.json
+                channels: [doctrine]
+
             console:
                 type: console
                 process_psr_3_messages: false
