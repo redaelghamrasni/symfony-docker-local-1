@@ -10,6 +10,15 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class SearchApiController extends AbstractController
 {
+    // Catalogue indexes: readable by anyone (public autocomplete, search page).
+    private const PUBLIC_INDEXES = ['articles', 'categories'];
+
+    // Back-office indexes: they hold personal data (names, emails), so they
+    // require ROLE_ADMIN. This route lives under /{_locale}/api/search, which
+    // does NOT match the ^/api firewall — it runs on the session firewall, so
+    // the check has to happen here rather than in security.yaml.
+    private const ADMIN_INDEXES = ['users', 'orders'];
+
     public function __construct(
         private MeilisearchService $meilisearch,
     ) {}
@@ -24,10 +33,14 @@ class SearchApiController extends AbstractController
 
         $limit = min(max((int) $request->query->get('limit', 6), 1), 50);
 
-        // Allowed indexes (whitelist to prevent arbitrary access to Meilisearch indexes)
-        $allowedIndexes = ['articles', 'categories', 'users', 'orders'];
+        // Whitelist to prevent arbitrary access to Meilisearch indexes.
         $index = (string) $request->query->get('index', 'articles');
-        if (!in_array($index, $allowedIndexes, true)) {
+
+        if (in_array($index, self::ADMIN_INDEXES, true)) {
+            if (!$this->isGranted('ROLE_ADMIN')) {
+                return new JsonResponse(['error' => 'Forbidden'], 403);
+            }
+        } elseif (!in_array($index, self::PUBLIC_INDEXES, true)) {
             $index = 'articles';
         }
 
