@@ -61,6 +61,28 @@ when@prod:
                 formatter: monolog.formatter.json
                 channels: [checkout, payment, shipping, audit, mail]
 
+            # Same records, also written to disk so the back-office log viewer
+            # (/admin/logs) has something to read and download. stderr remains
+            # the primary stream — this is a convenience copy, and the
+            # container's filesystem is ephemeral: files are lost when the
+            # container is replaced, which is why they rotate daily and are
+            # capped rather than kept forever.
+            business_file:
+                type: rotating_file
+                path: "%kernel.logs_dir%/business.log"
+                max_files: 7
+                level: info
+                formatter: monolog.formatter.json
+                channels: [checkout, payment, shipping, audit, mail]
+
+            app_file:
+                type: rotating_file
+                path: "%kernel.logs_dir%/app.log"
+                max_files: 7
+                level: warning
+                formatter: monolog.formatter.json
+                channels: ["!deprecation", "!event", "!checkout", "!payment", "!shipping", "!audit", "!mail"]
+
             # ── Technical errors ───────────────────────────────────────────
             # Everything else stays buffered: nothing is written until an error
             # occurs, at which point the preceding records provide the context.

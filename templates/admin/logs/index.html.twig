@@ -1,0 +1,149 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.logs.title'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.logs.title'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.logs.breadcrumb'|trans }}</p>
+{% endblock %}
+
+{% block content %}
+{% set levelStyles = {
+    'DEBUG':     'background:#f1f5f9;color:#475569;',
+    'INFO':      'background:#dbeafe;color:#1e40af;',
+    'NOTICE':    'background:#e0e7ff;color:#3730a3;',
+    'WARNING':   'background:#fef9c3;color:#854d0e;',
+    'ERROR':     'background:#fee2e2;color:#991b1b;',
+    'CRITICAL':  'background:#fecaca;color:#7f1d1d;',
+    'ALERT':     'background:#fecaca;color:#7f1d1d;',
+    'EMERGENCY': 'background:#fecaca;color:#7f1d1d;',
+    'RAW':       'background:#f1f5f9;color:#475569;'
+} %}
+
+<p style="margin:0 0 20px; color:#64748b; font-size: 14px;">{{ 'admin.logs.intro'|trans }}</p>
+
+{% if files is empty %}
+    <div style="padding: 32px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-align:center; color:#64748b;">
+        <i class="bi bi-journal-x" style="font-size: 28px; display:block; margin-bottom:10px;"></i>
+        {{ 'admin.logs.empty'|trans }}
+    </div>
+{% else %}
+
+    {# ── Available files ─────────────────────────────────────────────── #}
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px; overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                    <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.logs.file'|trans }}</th>
+                    <th style="padding:12px 16px; text-align:right; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.logs.size'|trans }}</th>
+                    <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.logs.modified'|trans }}</th>
+                    <th style="padding:12px 16px; text-align:right;"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for file in files %}
+                <tr style="border-bottom:1px solid #f1f5f9; {% if file.name == selected %}background:#f8fafc;{% endif %}">
+                    <td style="padding:12px 16px; font-weight:600; color:#0f172a; font-size:13px;">
+                        <i class="bi bi-file-earmark-text" style="color:#94a3b8;"></i> {{ file.name }}
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; color:#64748b; font-size:13px; font-variant-numeric: tabular-nums;">
+                        {{ (file.size / 1024)|number_format(1) }} KB
+                    </td>
+                    <td style="padding:12px 16px; color:#64748b; font-size:13px;">
+                        {{ file.modified|date('Y-m-d H:i') }}
+                    </td>
+                    <td style="padding:12px 16px; text-align:right; white-space:nowrap;">
+                        <a href="{{ path('admin_logs_index', {file: file.name}) }}" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                            <i class="bi bi-eye"></i> {{ 'admin.logs.view'|trans }}
+                        </a>
+                        <a href="{{ path('admin_logs_download', {name: file.name}) }}" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                            <i class="bi bi-download"></i> {{ 'admin.logs.download'|trans }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# ── Filters ─────────────────────────────────────────────────────── #}
+    <form method="get" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:16px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px;">
+        <input type="hidden" name="file" value="{{ selected }}">
+
+        <div>
+            <label for="level" style="display:block; font-size:12px; color:#64748b; margin-bottom:4px;">{{ 'admin.logs.level'|trans }}</label>
+            <select id="level" name="level" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+                <option value="">{{ 'admin.logs.all_levels'|trans }}</option>
+                {% for name in ['INFO', 'WARNING', 'ERROR', 'CRITICAL'] %}
+                    <option value="{{ name }}" {% if level == name %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="channel" style="display:block; font-size:12px; color:#64748b; margin-bottom:4px;">{{ 'admin.logs.channel'|trans }}</label>
+            <select id="channel" name="channel" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+                <option value="">{{ 'admin.logs.all_channels'|trans }}</option>
+                {% for name in channels %}
+                    <option value="{{ name }}" {% if channel == name %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="limit" style="display:block; font-size:12px; color:#64748b; margin-bottom:4px;">{{ 'admin.logs.lines'|trans }}</label>
+            <select id="limit" name="limit" style="padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+                {% for n in [50, 100, 250, 500] %}
+                    <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn-action-primary" style="font-size:13px; padding:8px 16px;">
+            <i class="bi bi-funnel"></i> {{ 'admin.logs.apply'|trans }}
+        </button>
+    </form>
+
+    {# ── Entries ─────────────────────────────────────────────────────── #}
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+        <div style="padding:12px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:13px; color:#475569;">
+            <strong>{{ selected }}</strong> — {{ 'admin.logs.showing'|trans({'%count%': entries|length}) }}
+        </div>
+
+        {% if entries is empty %}
+            <div style="padding:28px; text-align:center; color:#64748b; font-size:14px;">{{ 'admin.logs.no_entries'|trans }}</div>
+        {% else %}
+            <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <tbody>
+                {% for entry in entries %}
+                    <tr style="border-bottom:1px solid #f1f5f9; vertical-align:top;">
+                        <td style="padding:10px 12px; white-space:nowrap; color:#64748b; font-family:monospace; font-size:12px;">
+                            {{ entry.datetime is defined ? entry.datetime|slice(11, 8) : '—' }}
+                        </td>
+                        <td style="padding:10px 12px; white-space:nowrap;">
+                            <span style="padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700; {{ levelStyles[entry.level_name ?? 'RAW'] ?? '' }}">
+                                {{ entry.level_name ?? 'RAW' }}
+                            </span>
+                        </td>
+                        <td style="padding:10px 12px; white-space:nowrap; color:#475569; font-family:monospace; font-size:12px;">
+                            {{ entry.channel ?? '—' }}
+                        </td>
+                        <td style="padding:10px 12px; color:#0f172a; font-family:monospace; font-size:12px; word-break:break-word;">
+                            {{ entry.message ?? '' }}
+                            {% if entry.context is defined and entry.context is not empty %}
+                                <div style="margin-top:4px; color:#64748b; font-size:11px;">{{ entry.context|json_encode|slice(0, 400) }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding:10px 12px; white-space:nowrap; color:#94a3b8; font-family:monospace; font-size:11px;">
+                            {{ entry.extra.request_id is defined ? entry.extra.request_id|slice(0, 8) : '' }}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

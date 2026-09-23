@@ -365,7 +365,26 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Settings
+    logs: Logs
     back_to_store: Back to Store
+  logs:
+    title: Logs
+    breadcrumb: Maintenance / Logs
+    intro: "Application and business event logs written by this container. Files rotate daily and are kept for 7 days; they are lost when the container is replaced."
+    empty: "No log files yet. They appear once the application has written its first entries."
+    file: File
+    size: Size
+    modified: Last modified
+    view: View
+    download: Download
+    level: Level
+    channel: Channel
+    lines: Lines
+    all_levels: All levels
+    all_channels: All channels
+    apply: Apply
+    showing: "showing %count% entries (newest first)"
+    no_entries: No entries match these filters.
   settings:
     title: Settings
     saved: Settings saved successfully.

@@ -93,3 +93,9 @@ services:
     App\Service\OllamaModelService:
         arguments:
             $ollamaHost: '%env(OLLAMA_HOST_URL)%'
+
+    # Back-office log viewer: reads the rotating files written by the
+    # business/app Monolog handlers.
+    App\Service\LogFileService:
+        arguments:
+            $logDir: '%kernel.logs_dir%'
