@@ -1,5 +1,3 @@
-const MEILISEARCH_URL = 'http://localhost:7700';
-const MEILISEARCH_KEY = 'changeme_master_key_dev';
 const RESULTS_LIMIT = 6;
 const DEBOUNCE_MS = 220;
 
