@@ -370,8 +370,24 @@ admin:
   logs:
     title: Logs
     breadcrumb: Maintenance / Logs
-    intro: "Application and business event logs written by this container. Files rotate daily and are kept for 7 days; they are lost when the container is replaced."
+    intro: "Each type of log is written to its own file. Files rotate daily and are kept for 7 days; they live in the running container, so they are lost when it is replaced."
     empty: "No log files yet. They appear once the application has written its first entries."
+    empty_type: "No %type% entries have been recorded yet."
+    request_id: "Request ID — the same id appears on the web server access line for this request"
+    type:
+      checkout: Checkout
+      payment: Payments
+      shipping: Shipping
+      audit: Audit
+      mail: Email
+      app: Errors
+    description:
+      checkout: "Orders placed and the steps of the purchase funnel."
+      payment: "Stripe and PayPal: payment intents, captures and verification outcomes."
+      shipping: "Shippo rate lookups and shipping method selection."
+      audit: "Back-office actions: who changed what."
+      mail: "Transactional email sent to customers."
+      app: "Technical warnings and errors from the framework and application."
     file: File
     size: Size
     modified: Last modified

@@ -373,8 +373,24 @@ admin:
   logs:
     title: Journaux
     breadcrumb: Maintenance / Journaux
-    intro: "Journaux applicatifs et métier écrits par ce conteneur. Les fichiers tournent chaque jour et sont conservés 7 jours ; ils sont perdus au remplacement du conteneur."
+    intro: "Chaque type de journal est écrit dans son propre fichier. Les fichiers tournent chaque jour et sont conservés 7 jours ; ils vivent dans le conteneur en cours d'exécution et sont perdus à son remplacement."
     empty: "Aucun fichier de journal pour l'instant. Ils apparaissent dès que l'application écrit ses premières entrées."
+    empty_type: "Aucune entrée « %type% » n'a encore été enregistrée."
+    request_id: "Identifiant de requête — le même identifiant figure sur la ligne d'accès du serveur web pour cette requête"
+    type:
+      checkout: Commandes
+      payment: Paiements
+      shipping: Livraison
+      audit: Audit
+      mail: Courriels
+      app: Erreurs
+    description:
+      checkout: "Commandes passées et étapes du tunnel d'achat."
+      payment: "Stripe et PayPal : intentions de paiement, captures et résultats de vérification."
+      shipping: "Consultations de tarifs Shippo et choix du mode de livraison."
+      audit: "Actions du back-office : qui a modifié quoi."
+      mail: "Courriels transactionnels envoyés aux clients."
+      app: "Avertissements et erreurs techniques du framework et de l'application."
     file: Fichier
     size: Taille
     modified: Dernière modification

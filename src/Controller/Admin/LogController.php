@@ -10,12 +10,12 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Back-office log viewer.
+ * Back-office log viewer, one section per log type.
  *
- * Reads the rotating files written by the business/app handlers (see
- * config/packages/monolog.yaml). These are a convenience copy — the primary
- * stream is still the container's stdout/stderr — so what is visible here is
- * limited to the current container's lifetime.
+ * Each type is a Monolog channel with its own rotating file (see
+ * config/packages/monolog.yaml). These files are a convenience copy — in
+ * production the primary stream is still the container's stdout/stderr — so
+ * what is visible here covers the current container's lifetime only.
  */
 #[Route('/admin/logs', name: 'admin_logs_')]
 #[IsGranted('ROLE_ADMIN')]
@@ -28,24 +28,36 @@ class LogController extends AbstractController
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(Request $request): Response
     {
-        $files = $this->logFiles->listFiles();
+        $grouped = $this->logFiles->groupedByType();
 
-        // Default to the newest file so the page is useful on arrival.
-        $selected = $request->query->get('file') ?: ($files[0]['name'] ?? null);
-        $level    = $request->query->get('level', '');
-        $channel  = $request->query->get('channel', '');
-        $limit    = min(max((int) $request->query->get('limit', 100), 10), 1000);
+        $type = $request->query->get('type');
 
-        $entries  = $selected ? $this->logFiles->tail($selected, $limit, $level, $channel) : [];
-        $channels = $selected ? $this->logFiles->channelsIn($selected) : [];
+        if (!is_string($type) || !in_array($type, LogFileService::TYPES, true)) {
+            // Open on the type that has the most recent activity, so the page
+            // is useful on arrival rather than showing an arbitrary section.
+            $type = $this->mostRecentlyWrittenType($grouped) ?? LogFileService::TYPES[0];
+        }
+
+        $files = $grouped[$type]['files'];
+
+        // A specific file may be requested (an older rotation); otherwise show
+        // the newest one of this type.
+        $selected = $request->query->get('file');
+
+        if (!is_string($selected) || !in_array($selected, array_column($files, 'name'), true)) {
+            $selected = $files[0]['name'] ?? null;
+        }
+
+        $level = $request->query->get('level', '');
+        $limit = min(max((int) $request->query->get('limit', 100), 10), 1000);
 
         return $this->render('admin/logs/index.html.twig', [
+            'grouped'  => $grouped,
+            'type'     => $type,
             'files'    => $files,
             'selected' => $selected,
-            'entries'  => $entries,
-            'channels' => $channels,
+            'entries'  => $selected ? $this->logFiles->tail($selected, $limit, $level) : [],
             'level'    => $level,
-            'channel'  => $channel,
             'limit'    => $limit,
         ]);
     }
@@ -64,5 +76,23 @@ class LogController extends AbstractController
         }
 
         return $response;
+    }
+
+    /** @param array<string, array{latest: ?string, files: array}> $grouped */
+    private function mostRecentlyWrittenType(array $grouped): ?string
+    {
+        $best = null;
+        $bestTime = null;
+
+        foreach ($grouped as $type => $data) {
+            $modified = $data['files'][0]['modified'] ?? null;
+
+            if ($modified !== null && ($bestTime === null || $modified > $bestTime)) {
+                $best = $type;
+                $bestTime = $modified;
+            }
+        }
+
+        return $best;
     }
 }

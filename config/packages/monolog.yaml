@@ -1,4 +1,64 @@
 monolog:
+    # One rotating file per channel, in every environment, so the back-office
+    # viewer (/admin/logs) can offer each kind of log as its own section and
+    # each can be downloaded on its own. Defined here rather than under
+    # when@prod so the page also works while developing locally.
+    #
+    # These are a convenience copy for the viewer: in production the primary
+    # stream is still stdout/stderr (`docker logs`), and these files live in
+    # the container, so they rotate daily and are dropped after 7 days.
+    handlers:
+        checkout_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/checkout.log"
+            max_files: 7
+            level: info
+            formatter: monolog.formatter.json
+            channels: [checkout]
+
+        payment_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/payment.log"
+            max_files: 7
+            level: info
+            formatter: monolog.formatter.json
+            channels: [payment]
+
+        shipping_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/shipping.log"
+            max_files: 7
+            level: info
+            formatter: monolog.formatter.json
+            channels: [shipping]
+
+        audit_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/audit.log"
+            max_files: 7
+            level: info
+            formatter: monolog.formatter.json
+            channels: [audit]
+
+        mail_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/mail.log"
+            max_files: 7
+            level: info
+            formatter: monolog.formatter.json
+            channels: [mail]
+
+        # Everything that is not a business channel: framework, security,
+        # doctrine and application errors. Warning and above only — this is the
+        # "something went wrong" file, not a transcript.
+        app_file:
+            type: rotating_file
+            path: "%kernel.logs_dir%/app.log"
+            max_files: 7
+            level: warning
+            formatter: monolog.formatter.json
+            channels: ["!event", "!deprecation", "!checkout", "!payment", "!shipping", "!audit", "!mail"]
+
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
         # Business channels. Each is autowirable as LoggerInterface $<name>Logger
@@ -61,27 +121,8 @@ when@prod:
                 formatter: monolog.formatter.json
                 channels: [checkout, payment, shipping, audit, mail]
 
-            # Same records, also written to disk so the back-office log viewer
-            # (/admin/logs) has something to read and download. stderr remains
-            # the primary stream — this is a convenience copy, and the
-            # container's filesystem is ephemeral: files are lost when the
-            # container is replaced, which is why they rotate daily and are
-            # capped rather than kept forever.
-            business_file:
-                type: rotating_file
-                path: "%kernel.logs_dir%/business.log"
-                max_files: 7
-                level: info
-                formatter: monolog.formatter.json
-                channels: [checkout, payment, shipping, audit, mail]
-
-            app_file:
-                type: rotating_file
-                path: "%kernel.logs_dir%/app.log"
-                max_files: 7
-                level: warning
-                formatter: monolog.formatter.json
-                channels: ["!deprecation", "!event", "!checkout", "!payment", "!shipping", "!audit", "!mail"]
+            # (The per-channel files are declared once at the top of this file
+            # and apply to every environment.)
 
             # ── Technical errors ───────────────────────────────────────────
             # Everything else stays buffered: nothing is written until an error
