@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Address;
 use App\Service\CartService;
+use App\Service\CurrencyService;
 use App\Service\PayPalService;
 use App\Service\SettingService;
 use App\Service\TaxService;
@@ -65,6 +66,7 @@ class CheckoutController extends AbstractController
         private LocaleSwitcher $localeSwitcher,
         private TranslatorInterface $translator,
         private MessageBusInterface $messageBus,
+        private CurrencyService $currencyService,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -235,8 +237,12 @@ class CheckoutController extends AbstractController
             $session->set('checkout_name', $name !== '' ? $name : 'Client');
         }
 
+        // The cart decides the currency — never the request body. Amounts are
+        // converted through the service so zero-decimal currencies (JPY and
+        // friends) are not multiplied by 100 when they are added later.
+        $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
-        $amount   = (int) round($subtotal * 100);
+        $amount   = $this->currencyService->toMinorUnits($subtotal, $currency);
         if ($amount <= 0) {
             return $this->json(['error' => 'Montant de paiement invalide.'], 400);
         }
@@ -269,7 +275,7 @@ class CheckoutController extends AbstractController
 
             $paymentIntent = $this->stripeClient->paymentIntents->create([
                 'amount'                    => $amount,
-                'currency'                  => 'cad',
+                'currency'                  => $this->currencyService->forProvider($currency),
                 'customer'                  => $customerId,
                 'automatic_payment_methods' => ['enabled' => true],
                 'metadata' => [
@@ -286,8 +292,8 @@ class CheckoutController extends AbstractController
             $this->paymentLogger->error('payment.intent.create_failed', [
                 'provider'     => 'stripe',
                 'cart_id'      => $cart->getId(),
-                'amount_cents' => $amount,
-                'currency'     => 'cad',
+                'amount_minor' => $amount,
+                'currency'     => $this->currencyService->forProvider($currency),
                 'error_class'  => $e::class,
                 'error'        => $e->getMessage(),
             ]);
@@ -302,8 +308,8 @@ class CheckoutController extends AbstractController
             'provider'       => 'stripe',
             'payment_intent' => $paymentIntent->id,
             'cart_id'        => $cart->getId(),
-            'amount_cents'   => $amount,
-            'currency'       => 'cad',
+            'amount_minor'   => $amount,
+            'currency'       => $this->currencyService->forProvider($currency),
             'is_guest'       => $this->getUser() === null,
         ]);
 
@@ -325,6 +331,7 @@ class CheckoutController extends AbstractController
         $shippingReference = trim((string) ($data['shipping_reference'] ?? ''));
 
         $cart     = $this->cartService->getCurrentCart();
+        $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
 
         [$gst, $pst, $hst] = $this->calculateTaxes($province, $subtotal);
@@ -348,7 +355,8 @@ class CheckoutController extends AbstractController
         if ($piId) {
             try {
                 $this->stripeClient->paymentIntents->update($piId, [
-                    'amount' => (int) round($grandTotal * 100),
+                    'amount'   => $this->currencyService->toMinorUnits($grandTotal, $currency),
+                    'currency' => $this->currencyService->forProvider($currency),
                 ]);
             } catch (\Throwable $e) {
                 // Non-fatal for the customer (Stripe's form shows the right
@@ -357,7 +365,7 @@ class CheckoutController extends AbstractController
                 $this->paymentLogger->warning('payment.intent.amount_update_failed', [
                     'provider'       => 'stripe',
                     'payment_intent' => $piId,
-                    'amount_cents'   => (int) round($grandTotal * 100),
+                    'amount_minor'   => $this->currencyService->toMinorUnits($grandTotal, $currency),
                     'error'          => $e->getMessage(),
                 ]);
             }
@@ -383,6 +391,7 @@ class CheckoutController extends AbstractController
 
         if ($request->query->get('redirect_status') === 'succeeded') {
             $cart            = $this->cartService->getCurrentCart();
+            $currency        = $cart->getCurrency();
             $shippingStreet  = $session->get('checkout_shipping_address');
             $shippingCity    = $session->get('checkout_shipping_city');
             $shippingPostal  = $session->get('checkout_shipping_postal');
@@ -408,7 +417,7 @@ class CheckoutController extends AbstractController
                     'provider'       => 'stripe',
                     'payment_intent' => $claimedIntentId,
                     'total'          => $order->getTotal(),
-                    'currency'       => 'CAD',
+                    'currency'       => $this->currencyService->forProvider($currency),
                     'item_count'     => count($order->getItems()),
                     'province'       => $order->getShippingProvince(),
                     'is_guest'       => $this->getUser() === null,
@@ -435,6 +444,8 @@ class CheckoutController extends AbstractController
             return $this->json(['error' => 'Cart is empty'], 400);
         }
 
+        $currency = $cart->getCurrency();
+
         $session    = $request->getSession();
         $grandTotal = (float) ($session->get('checkout_grand_total') ?: $cart->getTotal());
 
@@ -446,7 +457,7 @@ class CheckoutController extends AbstractController
                 'paypal_order_id' => $result['id'] ?? null,
                 'cart_id'         => $cart->getId(),
                 'total'           => $grandTotal,
-                'currency'        => 'CAD',
+                'currency'        => $this->currencyService->forProvider($currency),
             ]);
 
             return $this->json(['id' => $result['id']]);
@@ -455,6 +466,7 @@ class CheckoutController extends AbstractController
                 'provider'    => 'paypal',
                 'cart_id'     => $cart->getId(),
                 'total'       => $grandTotal,
+                'currency'    => $this->currencyService->forProvider($currency),
                 'error_class' => $e::class,
                 'error'       => $e->getMessage(),
             ]);
@@ -503,6 +515,7 @@ class CheckoutController extends AbstractController
 
         $session        = $request->getSession();
         $cart           = $this->cartService->getCurrentCart();
+        $currency       = $cart->getCurrency();
         $email          = $session->get('checkout_email');
         $name           = $session->get('checkout_name', 'Client');
         $shippingStreet = $session->get('checkout_shipping_address');
@@ -536,7 +549,7 @@ class CheckoutController extends AbstractController
                 'provider'        => 'paypal',
                 'paypal_order_id' => $paypalOrderId,
                 'total'           => $order->getTotal(),
-                'currency'        => 'CAD',
+                'currency'        => $this->currencyService->forProvider($currency),
                 'item_count'      => count($order->getItems()),
                 'province'        => $order->getShippingProvince(),
                 'is_guest'        => $this->getUser() === null,
@@ -578,7 +591,7 @@ class CheckoutController extends AbstractController
                     'provider'        => 'paypal',
                     'paypal_order_id' => $paypalOrderId,
                     'amount'          => $capturedAmount,
-                    'currency'        => 'CAD',
+                    'currency'        => $this->currencyService->forProvider($currency),
                 ]);
             }
 
@@ -609,6 +622,7 @@ class CheckoutController extends AbstractController
         }
 
         $cart       = $this->cartService->getCurrentCart();
+        $currency   = $cart->getCurrency();
         $totalItems = 0;
         foreach ($cart->getItems() as $item) {
             $totalItems += $item->getQuantity();
@@ -624,7 +638,7 @@ class CheckoutController extends AbstractController
                 'carrier'   => 'Standard',
                 'service'   => 'Livraison gratuite',
                 'price'     => '0.00',
-                'currency'  => 'CAD',
+                'currency'  => $this->currencyService->forProvider($currency),
                 'days'      => null,
             ]]]);
         }
@@ -704,6 +718,9 @@ class CheckoutController extends AbstractController
 
         $order = new Order();
         $order->setUser($this->getUser());
+        // Snapshot the cart's currency, like the prices and addresses below:
+        // changing the shop's currencies later must not reinterpret this order.
+        $order->setCurrency($cart->getCurrency());
         $order->setStatus('pending');
         $order->setTotal($total);
         $order->setSubtotal($subtotal !== null ? (string) round((float) $subtotal, 2) : $cart->getTotal());
@@ -845,15 +862,33 @@ class CheckoutController extends AbstractController
             return;
         }
 
-        // Stripe works in cents; the order total is a decimal string.
-        $expectedCents = (int) round(((float) $order->getTotal()) * 100);
-        $receivedCents = (int) ($intent->amount_received ?? 0);
+        // Currency must match before the amount means anything: 37799 minor
+        // units is CA$377.99 in one currency and pocket change in another, so
+        // comparing the numbers alone would accept a payment in the wrong one.
+        $expectedCurrency = $this->currencyService->forProvider($order->getCurrency());
+        $paidCurrency     = strtolower((string) ($intent->currency ?? ''));
 
-        if ($receivedCents !== $expectedCents) {
+        if ($paidCurrency !== $expectedCurrency) {
+            $fail('currency_mismatch', [
+                'payment_intent' => $claimedIntentId,
+                'paid_currency'  => $paidCurrency,
+                'order_currency' => $expectedCurrency,
+            ]);
+
+            return;
+        }
+
+        // Providers work in the currency's smallest unit; the order total is a
+        // decimal string. The service knows which currencies have no minor unit.
+        $expectedMinor = $this->currencyService->toMinorUnits($order->getTotal(), $order->getCurrency());
+        $receivedMinor = (int) ($intent->amount_received ?? 0);
+
+        if ($receivedMinor !== $expectedMinor) {
             $fail('amount_mismatch', [
                 'payment_intent' => $claimedIntentId,
-                'received_cents' => $receivedCents,
-                'expected_cents' => $expectedCents,
+                'received_minor' => $receivedMinor,
+                'expected_minor' => $expectedMinor,
+                'currency'       => $expectedCurrency,
             ]);
 
             return;
@@ -866,8 +901,8 @@ class CheckoutController extends AbstractController
             'order_id'       => $order->getId(),
             'provider'       => 'stripe',
             'payment_intent' => $claimedIntentId,
-            'amount_cents'   => $receivedCents,
-            'currency'       => 'CAD',
+            'amount_minor'   => $receivedMinor,
+            'currency'       => $expectedCurrency,
         ]);
     }
 

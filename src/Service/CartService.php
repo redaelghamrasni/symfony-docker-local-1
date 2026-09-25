@@ -14,7 +14,8 @@ class CartService
     public function __construct(
         private EntityManagerInterface $em,
         private CartRepository $cartRepository,
-        private RequestStack $requestStack
+        private RequestStack $requestStack,
+        private CurrencyService $currencyService
     ) {}
 
     /**
@@ -34,6 +35,10 @@ class CartService
 
         // Créer un nouveau panier
         $cart = new Cart();
+        // Currency is fixed here, once, and never re-read from the request:
+        // every amount from this point on — display, taxes, payment, order —
+        // refers back to this value.
+        $cart->setCurrency($this->currencyService->default());
         $this->em->persist($cart);
         $this->em->flush();
 

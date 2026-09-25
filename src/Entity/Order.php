@@ -115,6 +115,14 @@ class Order
     private ?string $stripePaymentIntentId = null;
 
     /**
+     * Currency of every amount on this order, copied from the cart at order
+     * time. Snapshot like the prices and addresses around it: a later change
+     * to the shop's currencies must not reinterpret past orders.
+     */
+    #[ORM\Column(length: 3, options: ['default' => 'CAD'])]
+    private string $currency = 'CAD';
+
+    /**
      * Whether the payment was confirmed with the provider before the order was
      * stored. Null on orders created before this check existed — unknown, not
      * suspicious. False means the order exists but the payment could not be
@@ -390,6 +398,9 @@ class Order
 
     public function getPaymentLast4(): ?string { return $this->paymentLast4; }
     public function setPaymentLast4(?string $v): self { $this->paymentLast4 = $v; return $this; }
+
+    public function getCurrency(): string { return $this->currency; }
+    public function setCurrency(string $v): self { $this->currency = strtoupper($v); return $this; }
 
     public function isPaymentVerified(): ?bool { return $this->paymentVerified; }
     public function setPaymentVerified(?bool $v): self { $this->paymentVerified = $v; return $this; }

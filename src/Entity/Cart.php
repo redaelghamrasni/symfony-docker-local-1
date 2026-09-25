@@ -27,6 +27,18 @@ class Cart
     private $total = 0.00;
 
     /**
+     * Currency this cart is priced in, fixed when the cart is created.
+     *
+     * Held on the cart rather than resolved per request so the amount shown
+     * while browsing, the amount charged at checkout and the amount stored on
+     * the order cannot disagree — and so no request parameter can change it
+     * partway through a purchase. Defaults to CAD for carts created before
+     * this column existed.
+     */
+    #[ORM\Column(length: 3, options: ['default' => 'CAD'])]
+    private string $currency = 'CAD';
+
+    /**
      * Summary of __construct
      */
     public function __construct()
@@ -79,6 +91,18 @@ class Cart
     public function setTotal(string $total): self
     {
         $this->total = $total;
+        return $this;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
+    /** Set once, at cart creation, from App\Service\CurrencyService. */
+    public function setCurrency(string $currency): self
+    {
+        $this->currency = strtoupper($currency);
         return $this;
     }
 
