@@ -9,10 +9,9 @@
 parameters:
   locale: 'en'
 
-  # Currencies the shop accepts. Only CAD is backed by real pricing, tax rules
-  # and shipping rates today; adding a code here is the first step of enabling
-  # a market, not the whole of it. See App\Service\CurrencyService.
-  app.currency.supported: ['CAD']
+  # Currencies now live in the database and are managed at /admin/currencies.
+  # This is only the bootstrap default, used when the table has no default row
+  # yet (fresh install, or a deploy that has not run migrations).
   app.currency.default: 'CAD'
   # Chatbot: models the admin is allowed to pick from — either pullable via Ollama, or a
   # hosted Gemini model (see app.chatbot.gemini_models below), no download involved for those.
@@ -108,5 +107,6 @@ services:
 
     App\Service\CurrencyService:
         arguments:
-            $supported: '%app.currency.supported%'
-            $default: '%app.currency.default%'
+            # Only used before the currency table has a default row (fresh
+            # database, or between deploy and migration).
+            $fallbackCode: '%app.currency.default%'

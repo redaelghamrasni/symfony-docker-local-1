@@ -74,11 +74,20 @@ class Article
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $images;
 
+    /**
+     * Hand-set prices per currency. The $price field above stays the price in
+     * the shop's default currency; a row here overrides the converted amount
+     * for one other currency. Absence is normal, not an error.
+     */
+    #[ORM\OneToMany(targetEntity: ArticlePrice::class, mappedBy: 'article', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $prices;
+
     public function __construct()
     {
         $this->promotions = new ArrayCollection();
         $this->translations = new ArrayCollection();
         $this->images = new ArrayCollection();
+        $this->prices = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -223,6 +232,52 @@ class Article
             Promotion::TYPE_FIXED_PRICE => $value,
             default                     => $basePrice,
         };
+    }
+
+    /** @return Collection<int, ArticlePrice> */
+    public function getPrices(): Collection
+    {
+        return $this->prices;
+    }
+
+    public function addPrice(ArticlePrice $price): static
+    {
+        if (!$this->prices->contains($price)) {
+            $this->prices->add($price);
+            $price->setArticle($this);
+        }
+
+        return $this;
+    }
+
+    public function removePrice(ArticlePrice $price): static
+    {
+        if ($this->prices->removeElement($price) && $price->getArticle() === $this) {
+            $price->setArticle(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * The hand-set price for a currency, or null when none exists — in which
+     * case the caller converts from the default price.
+     *
+     * Kept on the entity (rather than in a repository) so templates and the
+     * cart can ask an article what it costs without a query per item; the
+     * collection is already loaded alongside the article.
+     */
+    public function getPriceFor(string $currencyCode): ?string
+    {
+        $code = strtoupper($currencyCode);
+
+        foreach ($this->prices as $price) {
+            if ($price->getCurrency()?->getCode() === $code) {
+                return $price->getPrice();
+            }
+        }
+
+        return null;
     }
 
     public function getImageUrl(): ?string
