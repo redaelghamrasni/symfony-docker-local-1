@@ -368,8 +368,66 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Paramètres
+    currencies: Devises
     logs: Journaux
     back_to_store: Retour à la boutique
+  currencies:
+    title: Devises
+    breadcrumb: Catalogue / Devises
+    intro: "Devises dans lesquelles la boutique peut afficher ses prix et encaisser. Les prix sont saisis dans la devise par défaut ; les autres devises utilisent un prix saisi à la main par article lorsqu'il existe, et le taux de change ci-dessous sinon."
+    create: Nouvelle devise
+    code: Code
+    name: Nom
+    rate: Taux
+    coverage: Tarification des articles
+    status: Statut
+    default: Par défaut
+    enabled: Visible
+    disabled: Masquée
+    base_prices: Les prix sont saisis dans cette devise
+    priced_count: "%priced% articles sur %total% tarifés à la main"
+    converted_rest: Les autres sont convertis au taux
+    edit: Modifier
+    enable: Afficher
+    disable: Masquer
+    make_default: Définir par défaut
+    save: Enregistrer
+    cancel: Annuler
+    confirm_default: "Définir cette devise par défaut ? Les prix de base des articles seront interprétés dans cette devise, ce qui modifie tous les prix convertis du catalogue."
+    confirm_delete: "Supprimer cette devise ? Les prix d'articles saisis à la main dans cette devise sont supprimés également. Les commandes passées conservent la devise enregistrée avec elles."
+    hint_article_prices: "Pour saisir un prix à la main sur un article précis, ouvrez l'article dans le catalogue et utilisez sa section Prix. Tout ce qui est laissé vide est converti automatiquement."
+    new_title: Nouvelle devise
+    edit_title: "Devise %code%"
+    form:
+      code: Code ISO
+      code_help: "Trois lettres, telles qu'utilisées par Stripe et PayPal (CAD, USD, EUR). Non modifiable par la suite."
+      code_invalid: Saisissez exactement trois lettres.
+      name: Nom
+      symbol: Symbole
+      symbol_position: Position du symbole
+      before: "Avant le montant ($ 12,00)"
+      after: "Après le montant (12,00 €)"
+      exchange_rate: Taux de change
+      rate_help: "Combien d'unités de cette devise vaut une unité de la devise par défaut. Utilisé uniquement pour les articles sans prix saisi à la main."
+      rate_help_default: La devise par défaut sert de référence et vaut toujours 1.
+      rate_positive: Le taux doit être supérieur à zéro.
+      enabled: Proposer cette devise aux visiteurs
+      enabled_help: Si décoché, la devise reste configurée mais n'apparaît pas dans le sélecteur de la boutique.
+      enabled_help_default: La devise par défaut est toujours disponible et ne peut pas être masquée.
+      position: Ordre d'affichage
+      position_help: Les plus petits nombres apparaissent en premier dans le sélecteur.
+      is_default_notice: Il s'agit de la devise par défaut. Son taux est fixé à 1 et elle ne peut être ni masquée ni supprimée.
+    flash:
+      created: Devise créée.
+      updated: Devise mise à jour.
+      deleted: Devise supprimée.
+      enabled: La devise est désormais visible dans la boutique.
+      disabled: La devise est désormais masquée dans la boutique.
+      default_changed: Devise par défaut modifiée.
+      duplicate: Une devise avec ce code existe déjà.
+      cannot_delete_default: La devise par défaut ne peut pas être supprimée. Définissez d'abord une autre devise par défaut.
+      cannot_disable_default: La devise par défaut ne peut pas être masquée.
+      csrf: Échec de la validation du jeton de sécurité.
   logs:
     title: Journaux
     breadcrumb: Maintenance / Journaux

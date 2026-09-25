@@ -1,0 +1,111 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.currencies.title'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.currencies.title'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.currencies.breadcrumb'|trans }}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;">
+    <p style="margin:0; color:#64748b; font-size:14px; max-width:70ch;">{{ 'admin.currencies.intro'|trans }}</p>
+    <a href="{{ path('admin_currencies_new') }}" class="btn-action-primary" style="font-size:13px; padding:9px 16px; white-space:nowrap;">
+        <i class="bi bi-plus-lg"></i> {{ 'admin.currencies.create'|trans }}
+    </a>
+</div>
+
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.currencies.code'|trans }}</th>
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.currencies.name'|trans }}</th>
+                <th style="padding:12px 16px; text-align:right; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.currencies.rate'|trans }}</th>
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.currencies.coverage'|trans }}</th>
+                <th style="padding:12px 16px; text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.currencies.status'|trans }}</th>
+                <th style="padding:12px 16px; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for currency in currencies %}
+            {% set priced = priceCounts[currency.code] ?? 0 %}
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:14px 16px; font-weight:700; color:#0f172a; font-size:13px;">
+                    {{ currency.code }}
+                    <span style="color:#94a3b8; font-weight:500;">{{ currency.symbol }}</span>
+                </td>
+                <td style="padding:14px 16px; color:#0f172a; font-size:13px;">{{ currency.name }}</td>
+                <td style="padding:14px 16px; text-align:right; font-family:monospace; font-size:13px; color:#475569; font-variant-numeric:tabular-nums;">
+                    {{ currency.isDefault ? '—' : currency.exchangeRate|number_format(4) }}
+                </td>
+                <td style="padding:14px 16px; font-size:12px; color:#64748b;">
+                    {% if currency.isDefault %}
+                        {{ 'admin.currencies.base_prices'|trans }}
+                    {% else %}
+                        {{ 'admin.currencies.priced_count'|trans({'%priced%': priced, '%total%': articleTotal}) }}
+                        {% if priced < articleTotal %}
+                            <div style="margin-top:3px; color:#8a6100;">
+                                <i class="bi bi-info-circle"></i> {{ 'admin.currencies.converted_rest'|trans }}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td style="padding:14px 16px; text-align:center; white-space:nowrap;">
+                    {% if currency.isDefault %}
+                        <span style="padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; background:#dbeafe; color:#1e40af;">
+                            {{ 'admin.currencies.default'|trans }}
+                        </span>
+                    {% elseif currency.enabled %}
+                        <span style="padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; background:#dcfce7; color:#166534;">
+                            {{ 'admin.currencies.enabled'|trans }}
+                        </span>
+                    {% else %}
+                        <span style="padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; background:#f1f5f9; color:#64748b;">
+                            {{ 'admin.currencies.disabled'|trans }}
+                        </span>
+                    {% endif %}
+                </td>
+                <td style="padding:14px 16px; text-align:right; white-space:nowrap;">
+                    <a href="{{ path('admin_currencies_edit', {id: currency.id}) }}" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                        <i class="bi bi-pencil"></i> {{ 'admin.currencies.edit'|trans }}
+                    </a>
+
+                    {% if not currency.isDefault %}
+                        <form method="post" action="{{ path('admin_currencies_toggle', {id: currency.id}) }}" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('currency_toggle_' ~ currency.id) }}">
+                            <button type="submit" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                                <i class="bi bi-{{ currency.enabled ? 'eye-slash' : 'eye' }}"></i>
+                                {{ (currency.enabled ? 'admin.currencies.disable' : 'admin.currencies.enable')|trans }}
+                            </button>
+                        </form>
+
+                        <form method="post" action="{{ path('admin_currencies_make_default', {id: currency.id}) }}" style="display:inline;"
+                              onsubmit="return confirm('{{ 'admin.currencies.confirm_default'|trans|e('js') }}');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('currency_default_' ~ currency.id) }}">
+                            <button type="submit" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                                <i class="bi bi-star"></i> {{ 'admin.currencies.make_default'|trans }}
+                            </button>
+                        </form>
+
+                        <form method="post" action="{{ path('admin_currencies_delete', {id: currency.id}) }}" style="display:inline;"
+                              onsubmit="return confirm('{{ 'admin.currencies.confirm_delete'|trans|e('js') }}');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('currency_delete_' ~ currency.id) }}">
+                            <button type="submit" class="btn-action-secondary" style="font-size:12px; padding:5px 12px; color:#991b1b;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<p style="margin-top:16px; font-size:12px; color:#8a9ab5; max-width:80ch;">
+    <i class="bi bi-lightbulb"></i> {{ 'admin.currencies.hint_article_prices'|trans }}
+</p>
+{% endblock %}

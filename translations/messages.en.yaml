@@ -365,8 +365,66 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Settings
+    currencies: Currencies
     logs: Logs
     back_to_store: Back to Store
+  currencies:
+    title: Currencies
+    breadcrumb: Catalogue / Currencies
+    intro: "Currencies the shop can price and charge in. Prices are authored in the default currency; other currencies use a hand-set price per article where one exists, and the exchange rate below otherwise."
+    create: New currency
+    code: Code
+    name: Name
+    rate: Rate
+    coverage: Article pricing
+    status: Status
+    default: Default
+    enabled: Visible
+    disabled: Hidden
+    base_prices: Prices are authored in this currency
+    priced_count: "%priced% of %total% articles priced by hand"
+    converted_rest: The rest are converted at the rate
+    edit: Edit
+    enable: Show
+    disable: Hide
+    make_default: Make default
+    save: Save
+    cancel: Cancel
+    confirm_default: "Make this the default currency? Article base prices will be interpreted as being in it, which changes every converted price in the catalogue."
+    confirm_delete: "Delete this currency? Hand-set article prices in it are deleted too. Past orders keep their own recorded currency."
+    hint_article_prices: "To set a price by hand for a specific article, open the article in the catalogue and use its Prices section. Anything left blank is converted automatically."
+    new_title: New currency
+    edit_title: "Currency %code%"
+    form:
+      code: ISO code
+      code_help: "Three letters, as used by Stripe and PayPal (CAD, USD, EUR). Cannot be changed later."
+      code_invalid: Use exactly three letters.
+      name: Name
+      symbol: Symbol
+      symbol_position: Symbol position
+      before: "Before the amount ($ 12.00)"
+      after: "After the amount (12,00 €)"
+      exchange_rate: Exchange rate
+      rate_help: "How many units of this currency one unit of the default currency buys. Used only for articles without a hand-set price."
+      rate_help_default: The default currency is the reference point and is always 1.
+      rate_positive: The rate must be greater than zero.
+      enabled: Offer this currency to visitors
+      enabled_help: When unticked, the currency stays configured but does not appear in the storefront selector.
+      enabled_help_default: The default currency is always available and cannot be hidden.
+      position: Display order
+      position_help: Lower numbers appear first in the storefront selector.
+      is_default_notice: This is the default currency. Its rate is fixed at 1 and it cannot be hidden or deleted.
+    flash:
+      created: Currency created.
+      updated: Currency updated.
+      deleted: Currency deleted.
+      enabled: Currency is now visible in the storefront.
+      disabled: Currency is now hidden from the storefront.
+      default_changed: Default currency changed.
+      duplicate: A currency with this code already exists.
+      cannot_delete_default: The default currency cannot be deleted. Make another currency the default first.
+      cannot_disable_default: The default currency cannot be hidden.
+      csrf: Security token validation failed.
   logs:
     title: Logs
     breadcrumb: Maintenance / Logs
