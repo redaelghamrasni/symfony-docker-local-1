@@ -202,6 +202,10 @@ error:
   try_again: Please try again
 
 #Cart
+currency:
+  select_label: Choose a currency
+  switched: Currency changed. Prices have been updated.
+
 cart:
   item_removed: "Item removed from cart"
   cleared: "Cart cleared"

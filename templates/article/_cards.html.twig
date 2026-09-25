@@ -24,11 +24,13 @@
             <a href="{{ path('app_article_show', {id: article.id}) }}">{{ article.getTranslatedTitle(app.request.locale) }}</a>
         </h3>
         <div class="product-price">
+            {# article_price / article_base_price resolve the visitor's currency:
+               a hand-set price if the admin set one, otherwise the converted amount. #}
             {% if article.hasActivePromotion %}
-                <span class="product-price-current sale">{{ article.effectivePrice|number_format(2, ',', ' ') }} $</span>
-                <span class="product-price-original">{{ article.price|number_format(2, ',', ' ') }} $</span>
+                <span class="product-price-current sale">{{ article_price(article)|money }}</span>
+                <span class="product-price-original">{{ article_base_price(article)|money }}</span>
             {% else %}
-                <span class="product-price-current">{{ article.price|number_format(2, ',', ' ') }} $</span>
+                <span class="product-price-current">{{ article_price(article)|money }}</span>
             {% endif %}
         </div>
         <div class="product-actions">

@@ -204,6 +204,10 @@ error:
   try_again: Veuillez réessayer
 
 #Cart
+currency:
+  select_label: Choisir une devise
+  switched: Devise modifiée. Les prix ont été mis à jour.
+
 cart:
   item_removed: "Article retiré du panier"
   cleared: "Panier vidé"
