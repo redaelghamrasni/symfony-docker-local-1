@@ -493,6 +493,14 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP ou GIF · max. 4 Mo"
       image_delete_label: Supprimer l'image actuelle
       image_delete_confirm: L'image sera supprimée lors de l'enregistrement
+      prices_title: Prix dans les autres devises
+      prices_intro: "Cet article coûte %price% en %currency%, la devise dans laquelle les prix sont saisis. Saisissez ci-dessous un prix à la main pour toute autre devise ; laissez un champ vide pour qu'il soit converti automatiquement au taux de cette devise."
+      prices_hint: "Vider un champ supprime le prix saisi à la main et rétablit la conversion automatique."
+      prices_save: Enregistrer les prix
+      prices_saved: Prix mis à jour.
+      prices_csrf: Échec de la validation du jeton de sécurité.
+      price_manual: saisi à la main
+      price_converted: "converti : %amount% (taux %rate%)"
       gallery_title: Galerie d'images
       gallery_empty: Aucune image dans la galerie
       gallery_upload_label: Ajouter des images

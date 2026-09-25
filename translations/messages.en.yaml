@@ -514,6 +514,14 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP or GIF · max 4 MB"
       image_delete_label: Delete current image
       image_delete_confirm: The image will be deleted on save
+      prices_title: Prices in other currencies
+      prices_intro: "This article costs %price% in %currency%, the currency prices are authored in. Set a price by hand for any other currency below; leave a field blank to let it be converted automatically at that currency's rate."
+      prices_hint: "Clearing a field removes the hand-set price and returns the article to automatic conversion."
+      prices_save: Save prices
+      prices_saved: Prices updated.
+      prices_csrf: Security token validation failed.
+      price_manual: set by hand
+      price_converted: "converted: %amount% (rate %rate%)"
       gallery_title: Image gallery
       gallery_empty: No images in the gallery
       gallery_upload_label: Add images
