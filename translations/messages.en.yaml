@@ -202,6 +202,10 @@ error:
   try_again: Please try again
 
 #Cart
+currency:
+  select_label: Choose a currency
+  switched: Currency changed. Prices have been updated.
+
 cart:
   item_removed: "Item removed from cart"
   cleared: "Cart cleared"
@@ -365,7 +369,133 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Settings
+    currencies: Currencies
+    taxes: Tax rates
+    logs: Logs
     back_to_store: Back to Store
+  taxes:
+    title: Tax rates
+    breadcrumb: Catalogue / Tax rates
+    intro: "Provincial sales-tax rates applied at checkout. Edit a rate here to change what checkout charges — no code deploy needed. Rates are entered as percentages."
+    create: New rate
+    province: Province
+    name: Name
+    combined: Combined
+    edit: Edit
+    save: Save
+    cancel: Cancel
+    confirm_delete: "Delete this province's rate? Orders where it lives will fall back to the default (5% GST). Past orders keep the tax they were charged."
+    hint_snapshot: "Changing a rate only affects new orders. Each past order stored the tax amount it was charged, so history is never rewritten."
+    new_title: New tax rate
+    edit_title: "Tax rate — %province%"
+    form:
+      province: Province code
+      province_help: "Two-letter code (QC, ON, NS). Cannot be changed after creation."
+      province_invalid: Use two to five letters.
+      name: Province name
+      gst: "GST (%)"
+      pst: "PST / QST (%)"
+      hst: "HST (%)"
+      percent_help: "As a percentage, e.g. 5 or 9.975."
+      range: The rate must be between 0 and 100.
+      mutual_exclusive: "A province uses either GST (+ PST/QST) or HST, not both. Leave the ones that don't apply at 0."
+    flash:
+      created: Tax rate created.
+      updated: Tax rate updated.
+      deleted: Tax rate deleted.
+      duplicate: A rate for this province already exists.
+      csrf: Security token validation failed.
+  currencies:
+    title: Currencies
+    breadcrumb: Catalogue / Currencies
+    intro: "Currencies the shop can price and charge in. Prices are authored in the default currency; other currencies use a hand-set price per article where one exists, and the exchange rate below otherwise."
+    create: New currency
+    code: Code
+    name: Name
+    rate: Rate
+    coverage: Article pricing
+    status: Status
+    default: Default
+    enabled: Visible
+    disabled: Hidden
+    base_prices: Prices are authored in this currency
+    priced_count: "%priced% of %total% articles priced by hand"
+    converted_rest: The rest are converted at the rate
+    edit: Edit
+    enable: Show
+    disable: Hide
+    make_default: Make default
+    save: Save
+    cancel: Cancel
+    confirm_default: "Make this the default currency? Article base prices will be interpreted as being in it, which changes every converted price in the catalogue."
+    confirm_delete: "Delete this currency? Hand-set article prices in it are deleted too. Past orders keep their own recorded currency."
+    hint_article_prices: "To set a price by hand for a specific article, open the article in the catalogue and use its Prices section. Anything left blank is converted automatically."
+    new_title: New currency
+    edit_title: "Currency %code%"
+    form:
+      code: ISO code
+      code_help: "Three letters, as used by Stripe and PayPal (CAD, USD, EUR). Cannot be changed later."
+      code_invalid: Use exactly three letters.
+      name: Name
+      symbol: Symbol
+      symbol_position: Symbol position
+      before: "Before the amount ($ 12.00)"
+      after: "After the amount (12,00 €)"
+      exchange_rate: Exchange rate
+      rate_help: "How many units of this currency one unit of the default currency buys. Used only for articles without a hand-set price."
+      rate_help_default: The default currency is the reference point and is always 1.
+      rate_positive: The rate must be greater than zero.
+      enabled: Offer this currency to visitors
+      enabled_help: When unticked, the currency stays configured but does not appear in the storefront selector.
+      enabled_help_default: The default currency is always available and cannot be hidden.
+      position: Display order
+      position_help: Lower numbers appear first in the storefront selector.
+      is_default_notice: This is the default currency. Its rate is fixed at 1 and it cannot be hidden or deleted.
+    flash:
+      created: Currency created.
+      updated: Currency updated.
+      deleted: Currency deleted.
+      enabled: Currency is now visible in the storefront.
+      disabled: Currency is now hidden from the storefront.
+      default_changed: Default currency changed.
+      duplicate: A currency with this code already exists.
+      cannot_delete_default: The default currency cannot be deleted. Make another currency the default first.
+      cannot_disable_default: The default currency cannot be hidden.
+      csrf: Security token validation failed.
+  logs:
+    title: Logs
+    breadcrumb: Maintenance / Logs
+    intro: "Each type of log is written to its own file. Files rotate daily and are kept for 7 days; they live in the running container, so they are lost when it is replaced."
+    empty: "No log files yet. They appear once the application has written its first entries."
+    empty_type: "No %type% entries have been recorded yet."
+    request_id: "Request ID — the same id appears on the web server access line for this request"
+    type:
+      checkout: Checkout
+      payment: Payments
+      shipping: Shipping
+      audit: Audit
+      mail: Email
+      app: Errors
+    description:
+      checkout: "Orders placed and the steps of the purchase funnel."
+      payment: "Stripe and PayPal: payment intents, captures and verification outcomes."
+      shipping: "Shippo rate lookups and shipping method selection."
+      audit: "Back-office actions: who changed what."
+      mail: "Transactional email sent to customers."
+      app: "Technical warnings and errors from the framework and application."
+    file: File
+    size: Size
+    modified: Last modified
+    view: View
+    download: Download
+    level: Level
+    channel: Channel
+    lines: Lines
+    all_levels: All levels
+    all_channels: All channels
+    apply: Apply
+    showing: "showing %count% entries (newest first)"
+    no_entries: No entries match these filters.
   settings:
     title: Settings
     saved: Settings saved successfully.
@@ -421,6 +551,14 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP or GIF · max 4 MB"
       image_delete_label: Delete current image
       image_delete_confirm: The image will be deleted on save
+      prices_title: Prices in other currencies
+      prices_intro: "This article costs %price% in %currency%, the currency prices are authored in. Set a price by hand for any other currency below; leave a field blank to let it be converted automatically at that currency's rate."
+      prices_hint: "Clearing a field removes the hand-set price and returns the article to automatic conversion."
+      prices_save: Save prices
+      prices_saved: Prices updated.
+      prices_csrf: Security token validation failed.
+      price_manual: set by hand
+      price_converted: "converted: %amount% (rate %rate%)"
       gallery_title: Image gallery
       gallery_empty: No images in the gallery
       gallery_upload_label: Add images
@@ -550,6 +688,8 @@ admin:
       no_addresses: No addresses saved.
       add_address: Add new address
   orders:
+    payment_unverified: "Payment unverified"
+    payment_unverified_hint: "The payment behind this order could not be confirmed with the provider. Do not ship it before checking."
     status_updated: "Order status updated."
     status_invalid: "Invalid status."
     tracking_required: "Please enter a tracking number to mark the order as shipped."

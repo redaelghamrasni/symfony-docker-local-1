@@ -4,10 +4,15 @@ namespace App\Controller\Admin;
 
 use App\Entity\Article;
 use App\Entity\ArticleImage;
+use App\Entity\ArticlePrice;
+use App\Entity\Currency;
 use App\Form\ArticleType;
 use App\Message\ReindexEntityMessage;
 use App\Repository\ArticleRepository;
+use App\Repository\CurrencyRepository;
+use App\Service\CurrencyService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,6 +35,9 @@ class ArticleController extends AbstractController
         private EntityManagerInterface $entityManager,
         private SluggerInterface $slugger,
         private MessageBusInterface $messageBus,
+        private CurrencyRepository $currencyRepository,
+        private CurrencyService $currencyService,
+        private LoggerInterface $auditLogger,
         #[Autowire('%kernel.project_dir%')] private string $projectDir,
     ) {}
 
@@ -117,11 +125,125 @@ class ArticleController extends AbstractController
             return $this->redirectToRoute('admin_articles_index');
         }
 
-        return $this->render('admin/articles/form.html.twig', [
+        return $this->render('admin/articles/form.html.twig', array_merge([
             'form' => $form->createView(),
             'article' => $article,
             'isEdit' => true,
-        ]);
+        ], $this->pricingContext($article)));
+    }
+
+    /**
+     * Currencies other than the default, with what each would charge for this
+     * article today. The converted figure is shown as a placeholder so an admin
+     * can see what the automatic price would be before deciding to override it.
+     *
+     * @return array{extraCurrencies: array, defaultCurrency: ?Currency, convertedPrices: array<string, string>}
+     */
+    private function pricingContext(Article $article): array
+    {
+        $default = $this->currencyRepository->findDefault();
+
+        $extra = array_values(array_filter(
+            $this->currencyRepository->findAllOrdered(),
+            static fn (Currency $c) => !$c->isDefault()
+        ));
+
+        $converted = [];
+
+        foreach ($extra as $currency) {
+            $converted[$currency->getCode()] = number_format(
+                $this->currencyService->convertFromDefault((float) $article->getPrice(), $currency->getCode()),
+                2,
+                '.',
+                ''
+            );
+        }
+
+        return [
+            'extraCurrencies' => $extra,
+            'defaultCurrency' => $default,
+            'convertedPrices' => $converted,
+        ];
+    }
+
+    /**
+     * Saves the hand-set prices for one article.
+     *
+     * A blank field means "no override" and removes any existing row, so the
+     * article falls back to conversion — that is the way to undo a manual
+     * price, rather than needing a separate delete action per currency.
+     */
+    #[Route('/{id}/prices', name: 'prices_save', methods: ['POST'])]
+    public function savePrices(Article $article, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('article_prices' . $article->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'admin.articles.form.prices_csrf');
+
+            return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
+        }
+
+        $submitted = $request->request->all('prices');
+        $changed = [];
+
+        foreach ($this->currencyRepository->findAllOrdered() as $currency) {
+            if ($currency->isDefault()) {
+                continue;
+            }
+
+            $code = $currency->getCode();
+            $raw = trim((string) ($submitted[$code] ?? ''));
+
+            $existing = null;
+            foreach ($article->getPrices() as $price) {
+                if ($price->getCurrency()?->getCode() === $code) {
+                    $existing = $price;
+                    break;
+                }
+            }
+
+            if ($raw === '' || !is_numeric($raw) || (float) $raw < 0) {
+                if ($existing !== null) {
+                    $article->removePrice($existing);
+                    $this->entityManager->remove($existing);
+                    $changed[$code] = 'cleared';
+                }
+
+                continue;
+            }
+
+            $value = number_format((float) $raw, 2, '.', '');
+
+            if ($existing !== null) {
+                if ($existing->getPrice() !== $value) {
+                    $existing->setPrice($value);
+                    $changed[$code] = $value;
+                }
+
+                continue;
+            }
+
+            $price = (new ArticlePrice())
+                ->setArticle($article)
+                ->setCurrency($currency)
+                ->setPrice($value);
+
+            $article->addPrice($price);
+            $this->entityManager->persist($price);
+            $changed[$code] = $value;
+        }
+
+        $this->entityManager->flush();
+
+        if ($changed !== []) {
+            $this->auditLogger->info('audit.article.prices_updated', [
+                'article_id' => $article->getId(),
+                'changes'    => $changed,
+            ]);
+        }
+
+        $this->addFlash('success', 'admin.articles.form.prices_saved');
+
+        return $this->redirectToRoute('admin_articles_edit', ['id' => $article->getId()]);
     }
 
     #[Route('/{id}/images', name: 'images_add', methods: ['POST'])]

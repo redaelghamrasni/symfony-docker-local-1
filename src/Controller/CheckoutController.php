@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Address;
 use App\Service\CartService;
+use App\Service\CurrencyService;
 use App\Service\PayPalService;
 use App\Service\SettingService;
 use App\Service\TaxService;
@@ -34,23 +35,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutController extends AbstractController
 {
-    // Canadian tax rates by province code
-    private const TAX_RATES = [
-        'AB' => ['gst' => 0.05, 'pst' => 0.00],
-        'BC' => ['gst' => 0.05, 'pst' => 0.07],
-        'MB' => ['gst' => 0.05, 'pst' => 0.07],
-        'NB' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NL' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NS' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NT' => ['gst' => 0.05, 'pst' => 0.00],
-        'NU' => ['gst' => 0.05, 'pst' => 0.00],
-        'ON' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.13],
-        'PE' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'QC' => ['gst' => 0.05, 'pst' => 0.09975],
-        'SK' => ['gst' => 0.05, 'pst' => 0.06],
-        'YT' => ['gst' => 0.05, 'pst' => 0.00],
-    ];
-
     public function __construct(
         private CartService $cartService,
         private StripeClient $stripeClient,
@@ -65,6 +49,8 @@ class CheckoutController extends AbstractController
         private LocaleSwitcher $localeSwitcher,
         private TranslatorInterface $translator,
         private MessageBusInterface $messageBus,
+        private CurrencyService $currencyService,
+        private TaxService $taxService,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -235,8 +221,12 @@ class CheckoutController extends AbstractController
             $session->set('checkout_name', $name !== '' ? $name : 'Client');
         }
 
+        // The cart decides the currency — never the request body. Amounts are
+        // converted through the service so zero-decimal currencies (JPY and
+        // friends) are not multiplied by 100 when they are added later.
+        $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
-        $amount   = (int) round($subtotal * 100);
+        $amount   = $this->currencyService->toMinorUnits($subtotal, $currency);
         if ($amount <= 0) {
             return $this->json(['error' => 'Montant de paiement invalide.'], 400);
         }
@@ -269,7 +259,7 @@ class CheckoutController extends AbstractController
 
             $paymentIntent = $this->stripeClient->paymentIntents->create([
                 'amount'                    => $amount,
-                'currency'                  => 'cad',
+                'currency'                  => $this->currencyService->forProvider($currency),
                 'customer'                  => $customerId,
                 'automatic_payment_methods' => ['enabled' => true],
                 'metadata' => [
@@ -286,8 +276,8 @@ class CheckoutController extends AbstractController
             $this->paymentLogger->error('payment.intent.create_failed', [
                 'provider'     => 'stripe',
                 'cart_id'      => $cart->getId(),
-                'amount_cents' => $amount,
-                'currency'     => 'cad',
+                'amount_minor' => $amount,
+                'currency'     => $this->currencyService->forProvider($currency),
                 'error_class'  => $e::class,
                 'error'        => $e->getMessage(),
             ]);
@@ -302,8 +292,8 @@ class CheckoutController extends AbstractController
             'provider'       => 'stripe',
             'payment_intent' => $paymentIntent->id,
             'cart_id'        => $cart->getId(),
-            'amount_cents'   => $amount,
-            'currency'       => 'cad',
+            'amount_minor'   => $amount,
+            'currency'       => $this->currencyService->forProvider($currency),
             'is_guest'       => $this->getUser() === null,
         ]);
 
@@ -325,6 +315,7 @@ class CheckoutController extends AbstractController
         $shippingReference = trim((string) ($data['shipping_reference'] ?? ''));
 
         $cart     = $this->cartService->getCurrentCart();
+        $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
 
         [$gst, $pst, $hst] = $this->calculateTaxes($province, $subtotal);
@@ -348,7 +339,8 @@ class CheckoutController extends AbstractController
         if ($piId) {
             try {
                 $this->stripeClient->paymentIntents->update($piId, [
-                    'amount' => (int) round($grandTotal * 100),
+                    'amount'   => $this->currencyService->toMinorUnits($grandTotal, $currency),
+                    'currency' => $this->currencyService->forProvider($currency),
                 ]);
             } catch (\Throwable $e) {
                 // Non-fatal for the customer (Stripe's form shows the right
@@ -357,7 +349,7 @@ class CheckoutController extends AbstractController
                 $this->paymentLogger->warning('payment.intent.amount_update_failed', [
                     'provider'       => 'stripe',
                     'payment_intent' => $piId,
-                    'amount_cents'   => (int) round($grandTotal * 100),
+                    'amount_minor'   => $this->currencyService->toMinorUnits($grandTotal, $currency),
                     'error'          => $e->getMessage(),
                 ]);
             }
@@ -383,6 +375,7 @@ class CheckoutController extends AbstractController
 
         if ($request->query->get('redirect_status') === 'succeeded') {
             $cart            = $this->cartService->getCurrentCart();
+            $currency        = $cart->getCurrency();
             $shippingStreet  = $session->get('checkout_shipping_address');
             $shippingCity    = $session->get('checkout_shipping_city');
             $shippingPostal  = $session->get('checkout_shipping_postal');
@@ -408,30 +401,14 @@ class CheckoutController extends AbstractController
                     'provider'       => 'stripe',
                     'payment_intent' => $claimedIntentId,
                     'total'          => $order->getTotal(),
-                    'currency'       => 'CAD',
+                    'currency'       => $this->currencyService->forProvider($currency),
                     'item_count'     => count($order->getItems()),
                     'province'       => $order->getShippingProvince(),
                     'is_guest'       => $this->getUser() === null,
                 ]);
 
-                // Until the Stripe webhook exists (W2), this page is the only
-                // thing that creates an order, and it trusts the query string.
-                // We cannot yet refuse — a mismatch may also mean a legitimate
-                // customer whose session was recycled — but an order whose
-                // payment_intent does not match the one this session created is
-                // exactly what a forged /checkout/success looks like.
-                if ($sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
-                    $this->paymentLogger->error('payment.order_placed_unverified', [
-                        'order_id'         => $order->getId(),
-                        'provider'         => 'stripe',
-                        'claimed_intent'   => $claimedIntentId,
-                        'session_intent'   => $sessionIntentId,
-                        'reason'           => $sessionIntentId === null
-                            ? 'no payment intent was created in this session'
-                            : 'payment intent does not match the one created in this session',
-                        'total'            => $order->getTotal(),
-                    ]);
-                }
+                $this->verifyStripePayment($order, $claimedIntentId, $sessionIntentId);
+                $this->entityManager->flush();
             }
 
             $this->clearCheckoutSession($session);
@@ -451,6 +428,8 @@ class CheckoutController extends AbstractController
             return $this->json(['error' => 'Cart is empty'], 400);
         }
 
+        $currency = $cart->getCurrency();
+
         $session    = $request->getSession();
         $grandTotal = (float) ($session->get('checkout_grand_total') ?: $cart->getTotal());
 
@@ -462,7 +441,7 @@ class CheckoutController extends AbstractController
                 'paypal_order_id' => $result['id'] ?? null,
                 'cart_id'         => $cart->getId(),
                 'total'           => $grandTotal,
-                'currency'        => 'CAD',
+                'currency'        => $this->currencyService->forProvider($currency),
             ]);
 
             return $this->json(['id' => $result['id']]);
@@ -471,6 +450,7 @@ class CheckoutController extends AbstractController
                 'provider'    => 'paypal',
                 'cart_id'     => $cart->getId(),
                 'total'       => $grandTotal,
+                'currency'    => $this->currencyService->forProvider($currency),
                 'error_class' => $e::class,
                 'error'       => $e->getMessage(),
             ]);
@@ -519,6 +499,7 @@ class CheckoutController extends AbstractController
 
         $session        = $request->getSession();
         $cart           = $this->cartService->getCurrentCart();
+        $currency       = $cart->getCurrency();
         $email          = $session->get('checkout_email');
         $name           = $session->get('checkout_name', 'Client');
         $shippingStreet = $session->get('checkout_shipping_address');
@@ -552,25 +533,53 @@ class CheckoutController extends AbstractController
                 'provider'        => 'paypal',
                 'paypal_order_id' => $paypalOrderId,
                 'total'           => $order->getTotal(),
-                'currency'        => 'CAD',
+                'currency'        => $this->currencyService->forProvider($currency),
                 'item_count'      => count($order->getItems()),
                 'province'        => $order->getShippingProvince(),
                 'is_guest'        => $this->getUser() === null,
             ]);
 
-            // PayPal reports COMPLETED but we never check what was actually
-            // captured against what we charged. Recorded, not enforced, until
-            // the verification work lands.
+            // Same flag as the Stripe path: PayPal said COMPLETED, but confirm
+            // it captured the amount we actually charged.
             $capturedAmount = $capture['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
-            if ($capturedAmount !== null && abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
-                $this->paymentLogger->error('payment.amount_mismatch', [
+
+            if ($capturedAmount === null) {
+                $order->setPaymentVerified(false);
+                $order->setPaymentVerificationIssue('amount_missing');
+
+                $this->paymentLogger->error('payment.verification_failed', [
                     'order_id'        => $order->getId(),
                     'provider'        => 'paypal',
+                    'issue'           => 'amount_missing',
+                    'paypal_order_id' => $paypalOrderId,
+                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
+                ]);
+            } elseif (abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
+                $order->setPaymentVerified(false);
+                $order->setPaymentVerificationIssue('amount_mismatch');
+
+                $this->paymentLogger->error('payment.verification_failed', [
+                    'order_id'        => $order->getId(),
+                    'provider'        => 'paypal',
+                    'issue'           => 'amount_mismatch',
                     'paypal_order_id' => $paypalOrderId,
                     'captured'        => $capturedAmount,
                     'expected'        => $order->getTotal(),
+                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
+                ]);
+            } else {
+                $order->setPaymentVerified(true);
+
+                $this->paymentLogger->info('payment.verified', [
+                    'order_id'        => $order->getId(),
+                    'provider'        => 'paypal',
+                    'paypal_order_id' => $paypalOrderId,
+                    'amount'          => $capturedAmount,
+                    'currency'        => $this->currencyService->forProvider($currency),
                 ]);
             }
+
+            $this->entityManager->flush();
 
             $this->clearCheckoutSession($session);
             $this->cartService->clear();
@@ -597,6 +606,7 @@ class CheckoutController extends AbstractController
         }
 
         $cart       = $this->cartService->getCurrentCart();
+        $currency   = $cart->getCurrency();
         $totalItems = 0;
         foreach ($cart->getItems() as $item) {
             $totalItems += $item->getQuantity();
@@ -612,7 +622,7 @@ class CheckoutController extends AbstractController
                 'carrier'   => 'Standard',
                 'service'   => 'Livraison gratuite',
                 'price'     => '0.00',
-                'currency'  => 'CAD',
+                'currency'  => $this->currencyService->forProvider($currency),
                 'days'      => null,
             ]]]);
         }
@@ -692,6 +702,9 @@ class CheckoutController extends AbstractController
 
         $order = new Order();
         $order->setUser($this->getUser());
+        // Snapshot the cart's currency, like the prices and addresses below:
+        // changing the shop's currencies later must not reinterpret this order.
+        $order->setCurrency($cart->getCurrency());
         $order->setStatus('pending');
         $order->setTotal($total);
         $order->setSubtotal($subtotal !== null ? (string) round((float) $subtotal, 2) : $cart->getTotal());
@@ -772,6 +785,111 @@ class CheckoutController extends AbstractController
         $this->entityManager->persist($addr);
     }
 
+    /**
+     * Confirms with Stripe that the payment behind this order actually happened,
+     * and flags the order when it cannot be confirmed.
+     *
+     * The order is still stored either way. Refusing outright would mean a real
+     * customer whose payment succeeded but whose verification call failed (a
+     * Stripe outage, a recycled session) ends up charged with no order — the
+     * one outcome that is worse than a suspicious row in the database. A flagged
+     * order is visible, recoverable and safe as long as nothing ships before
+     * someone looks at it.
+     *
+     * Three things are checked, cheapest first:
+     *   1. the payment intent matches the one THIS session created — no network
+     *      call, and on its own it defeats a hand-typed /checkout/success;
+     *   2. Stripe reports the intent as succeeded;
+     *   3. the amount Stripe captured matches the order total.
+     */
+    private function verifyStripePayment(Order $order, ?string $claimedIntentId, ?string $sessionIntentId): void
+    {
+        $fail = function (string $issue, array $context = []) use ($order): void {
+            $order->setPaymentVerified(false);
+            $order->setPaymentVerificationIssue($issue);
+
+            $this->paymentLogger->error('payment.verification_failed', array_merge([
+                'order_id'    => $order->getId(),
+                'provider'    => 'stripe',
+                'issue'       => $issue,
+                'total'       => $order->getTotal(),
+                'action'      => 'order stored but flagged; do not fulfil until reviewed',
+            ], $context));
+        };
+
+        if ($claimedIntentId === null || $sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
+            $fail('intent_mismatch', [
+                'claimed_intent' => $claimedIntentId,
+                'session_intent' => $sessionIntentId,
+            ]);
+
+            return;
+        }
+
+        try {
+            $intent = $this->stripeClient->paymentIntents->retrieve($claimedIntentId, []);
+        } catch (\Throwable $e) {
+            $fail('verification_unavailable', [
+                'payment_intent' => $claimedIntentId,
+                'error'          => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (($intent->status ?? null) !== 'succeeded') {
+            $fail('intent_not_succeeded', [
+                'payment_intent' => $claimedIntentId,
+                'stripe_status'  => $intent->status ?? null,
+            ]);
+
+            return;
+        }
+
+        // Currency must match before the amount means anything: 37799 minor
+        // units is CA$377.99 in one currency and pocket change in another, so
+        // comparing the numbers alone would accept a payment in the wrong one.
+        $expectedCurrency = $this->currencyService->forProvider($order->getCurrency());
+        $paidCurrency     = strtolower((string) ($intent->currency ?? ''));
+
+        if ($paidCurrency !== $expectedCurrency) {
+            $fail('currency_mismatch', [
+                'payment_intent' => $claimedIntentId,
+                'paid_currency'  => $paidCurrency,
+                'order_currency' => $expectedCurrency,
+            ]);
+
+            return;
+        }
+
+        // Providers work in the currency's smallest unit; the order total is a
+        // decimal string. The service knows which currencies have no minor unit.
+        $expectedMinor = $this->currencyService->toMinorUnits($order->getTotal(), $order->getCurrency());
+        $receivedMinor = (int) ($intent->amount_received ?? 0);
+
+        if ($receivedMinor !== $expectedMinor) {
+            $fail('amount_mismatch', [
+                'payment_intent' => $claimedIntentId,
+                'received_minor' => $receivedMinor,
+                'expected_minor' => $expectedMinor,
+                'currency'       => $expectedCurrency,
+            ]);
+
+            return;
+        }
+
+        $order->setPaymentVerified(true);
+        $order->setPaymentVerificationIssue(null);
+
+        $this->paymentLogger->info('payment.verified', [
+            'order_id'       => $order->getId(),
+            'provider'       => 'stripe',
+            'payment_intent' => $claimedIntentId,
+            'amount_minor'   => $receivedMinor,
+            'currency'       => $expectedCurrency,
+        ]);
+    }
+
     private function capturePaymentInfo(Order $order, ?string $paymentIntentId): void
     {
         if (!$paymentIntentId) {
@@ -846,20 +964,22 @@ class CheckoutController extends AbstractController
 
     private function calculateTaxes(string $province, float $subtotal): array
     {
-        $rates = self::TAX_RATES[$province] ?? [];
-        $gst   = round($subtotal * ($rates['gst'] ?? 0.0), 2);
-        $pst   = round($subtotal * ($rates['pst'] ?? 0.0), 2);
-        $hst   = round($subtotal * ($rates['hst'] ?? 0.0), 2);
+        // Single source of truth for rates: the tax_rate table via TaxService,
+        // so the amount stored on the order matches what the tax API returned.
+        $rates = $this->taxService->getRateForProvince($province);
+        $gst   = round($subtotal * $rates['gst'], 2);
+        $pst   = round($subtotal * $rates['pst'], 2);
+        $hst   = round($subtotal * $rates['hst'], 2);
         return [$gst, $pst, $hst];
     }
 
     #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]
-    public function calculateTaxApi(Request $request, TaxService $taxService): JsonResponse
+    public function calculateTaxApi(Request $request): JsonResponse
     {
         $data     = json_decode($request->getContent(), true) ?? [];
         $province = $data['province'] ?? 'QC';
         $cart     = $this->cartService->getCurrentCart();
-        $tax = $taxService->calculateTax((float) $cart->getTotal(), $province);
+        $tax = $this->taxService->calculateTax((float) $cart->getTotal(), $province);
 
         return $this->json($tax);
     }

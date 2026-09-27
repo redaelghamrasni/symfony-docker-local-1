@@ -97,7 +97,7 @@
                 <div style="padding: 20px;">
                     {% if article.price is defined %}
                         <div style="font-size: 2rem; font-weight: 700; color: #1a2340; letter-spacing: -0.02em;">
-                            {{ article.price|number_format(2, ',', ' ') }} $
+                            {{ article_price(article)|money }}
                         </div>
                     {% else %}
                         <span style="color: #8a9ab5; font-size: 14px;">—</span>

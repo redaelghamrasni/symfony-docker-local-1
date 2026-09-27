@@ -292,7 +292,7 @@
                             <div class="order-total">
                                 <div>
                                     <div class="order-info-label">{{ 'profile.orders.total'|trans }}</div>
-                                    <div class="order-amount">{{ order.total|number_format(2, ',', ' ') }} $</div>
+                                    <div class="order-amount">{{ order.total|money_snapshot(order.currency) }}</div>
                                     <div class="order-items-summary">
                                         {{ order.items|length }} {{ order.items|length == 1 ? 'profile.orders.item'|trans : 'profile.orders.items'|trans }}
                                     </div>

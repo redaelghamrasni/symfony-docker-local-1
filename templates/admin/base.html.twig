@@ -63,6 +63,18 @@
                         <i class="bi bi-gear"></i>
                         {{ 'admin.nav.settings'|trans }}
                     </a>
+                    <a href="{{ path('admin_currencies_index') }}" class="admin-nav-item {% if 'admin_currencies_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-currency-exchange"></i>
+                        {{ 'admin.nav.currencies'|trans }}
+                    </a>
+                    <a href="{{ path('admin_taxes_index') }}" class="admin-nav-item {% if 'admin_taxes_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-percent"></i>
+                        {{ 'admin.nav.taxes'|trans }}
+                    </a>
+                    <a href="{{ path('admin_logs_index') }}" class="admin-nav-item {% if 'admin_logs_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-journal-text"></i>
+                        {{ 'admin.nav.logs'|trans }}
+                    </a>
                     <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;">
                     <a href="{{ path('app_article_list') }}" class="admin-nav-item">
                         <i class="bi bi-arrow-left"></i>

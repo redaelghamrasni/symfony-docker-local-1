@@ -204,6 +204,10 @@ error:
   try_again: Veuillez réessayer
 
 #Cart
+currency:
+  select_label: Choisir une devise
+  switched: Devise modifiée. Les prix ont été mis à jour.
+
 cart:
   item_removed: "Article retiré du panier"
   cleared: "Panier vidé"
@@ -368,7 +372,133 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Paramètres
+    currencies: Devises
+    taxes: Taux de taxe
+    logs: Journaux
     back_to_store: Retour à la boutique
+  taxes:
+    title: Taux de taxe
+    breadcrumb: Catalogue / Taux de taxe
+    intro: "Taux de taxe de vente provinciaux appliqués au paiement. Modifiez un taux ici pour changer ce que facture le paiement — aucun déploiement de code nécessaire. Les taux se saisissent en pourcentage."
+    create: Nouveau taux
+    province: Province
+    name: Nom
+    combined: Combiné
+    edit: Modifier
+    save: Enregistrer
+    cancel: Annuler
+    confirm_delete: "Supprimer le taux de cette province ? Les commandes qui s'y rattachent utiliseront le taux par défaut (TPS 5 %). Les commandes passées conservent la taxe facturée."
+    hint_snapshot: "Modifier un taux n'affecte que les nouvelles commandes. Chaque commande passée a enregistré le montant de taxe facturé, l'historique n'est jamais réécrit."
+    new_title: Nouveau taux de taxe
+    edit_title: "Taux de taxe — %province%"
+    form:
+      province: Code de province
+      province_help: "Code à deux lettres (QC, ON, NS). Non modifiable après création."
+      province_invalid: Utilisez de deux à cinq lettres.
+      name: Nom de la province
+      gst: "TPS (%)"
+      pst: "TVP / TVQ (%)"
+      hst: "TVH (%)"
+      percent_help: "En pourcentage, par ex. 5 ou 9,975."
+      range: Le taux doit être compris entre 0 et 100.
+      mutual_exclusive: "Une province utilise soit la TPS (+ TVP/TVQ), soit la TVH, jamais les deux. Laissez à 0 celles qui ne s'appliquent pas."
+    flash:
+      created: Taux de taxe créé.
+      updated: Taux de taxe mis à jour.
+      deleted: Taux de taxe supprimé.
+      duplicate: Un taux existe déjà pour cette province.
+      csrf: Échec de la validation du jeton de sécurité.
+  currencies:
+    title: Devises
+    breadcrumb: Catalogue / Devises
+    intro: "Devises dans lesquelles la boutique peut afficher ses prix et encaisser. Les prix sont saisis dans la devise par défaut ; les autres devises utilisent un prix saisi à la main par article lorsqu'il existe, et le taux de change ci-dessous sinon."
+    create: Nouvelle devise
+    code: Code
+    name: Nom
+    rate: Taux
+    coverage: Tarification des articles
+    status: Statut
+    default: Par défaut
+    enabled: Visible
+    disabled: Masquée
+    base_prices: Les prix sont saisis dans cette devise
+    priced_count: "%priced% articles sur %total% tarifés à la main"
+    converted_rest: Les autres sont convertis au taux
+    edit: Modifier
+    enable: Afficher
+    disable: Masquer
+    make_default: Définir par défaut
+    save: Enregistrer
+    cancel: Annuler
+    confirm_default: "Définir cette devise par défaut ? Les prix de base des articles seront interprétés dans cette devise, ce qui modifie tous les prix convertis du catalogue."
+    confirm_delete: "Supprimer cette devise ? Les prix d'articles saisis à la main dans cette devise sont supprimés également. Les commandes passées conservent la devise enregistrée avec elles."
+    hint_article_prices: "Pour saisir un prix à la main sur un article précis, ouvrez l'article dans le catalogue et utilisez sa section Prix. Tout ce qui est laissé vide est converti automatiquement."
+    new_title: Nouvelle devise
+    edit_title: "Devise %code%"
+    form:
+      code: Code ISO
+      code_help: "Trois lettres, telles qu'utilisées par Stripe et PayPal (CAD, USD, EUR). Non modifiable par la suite."
+      code_invalid: Saisissez exactement trois lettres.
+      name: Nom
+      symbol: Symbole
+      symbol_position: Position du symbole
+      before: "Avant le montant ($ 12,00)"
+      after: "Après le montant (12,00 €)"
+      exchange_rate: Taux de change
+      rate_help: "Combien d'unités de cette devise vaut une unité de la devise par défaut. Utilisé uniquement pour les articles sans prix saisi à la main."
+      rate_help_default: La devise par défaut sert de référence et vaut toujours 1.
+      rate_positive: Le taux doit être supérieur à zéro.
+      enabled: Proposer cette devise aux visiteurs
+      enabled_help: Si décoché, la devise reste configurée mais n'apparaît pas dans le sélecteur de la boutique.
+      enabled_help_default: La devise par défaut est toujours disponible et ne peut pas être masquée.
+      position: Ordre d'affichage
+      position_help: Les plus petits nombres apparaissent en premier dans le sélecteur.
+      is_default_notice: Il s'agit de la devise par défaut. Son taux est fixé à 1 et elle ne peut être ni masquée ni supprimée.
+    flash:
+      created: Devise créée.
+      updated: Devise mise à jour.
+      deleted: Devise supprimée.
+      enabled: La devise est désormais visible dans la boutique.
+      disabled: La devise est désormais masquée dans la boutique.
+      default_changed: Devise par défaut modifiée.
+      duplicate: Une devise avec ce code existe déjà.
+      cannot_delete_default: La devise par défaut ne peut pas être supprimée. Définissez d'abord une autre devise par défaut.
+      cannot_disable_default: La devise par défaut ne peut pas être masquée.
+      csrf: Échec de la validation du jeton de sécurité.
+  logs:
+    title: Journaux
+    breadcrumb: Maintenance / Journaux
+    intro: "Chaque type de journal est écrit dans son propre fichier. Les fichiers tournent chaque jour et sont conservés 7 jours ; ils vivent dans le conteneur en cours d'exécution et sont perdus à son remplacement."
+    empty: "Aucun fichier de journal pour l'instant. Ils apparaissent dès que l'application écrit ses premières entrées."
+    empty_type: "Aucune entrée « %type% » n'a encore été enregistrée."
+    request_id: "Identifiant de requête — le même identifiant figure sur la ligne d'accès du serveur web pour cette requête"
+    type:
+      checkout: Commandes
+      payment: Paiements
+      shipping: Livraison
+      audit: Audit
+      mail: Courriels
+      app: Erreurs
+    description:
+      checkout: "Commandes passées et étapes du tunnel d'achat."
+      payment: "Stripe et PayPal : intentions de paiement, captures et résultats de vérification."
+      shipping: "Consultations de tarifs Shippo et choix du mode de livraison."
+      audit: "Actions du back-office : qui a modifié quoi."
+      mail: "Courriels transactionnels envoyés aux clients."
+      app: "Avertissements et erreurs techniques du framework et de l'application."
+    file: Fichier
+    size: Taille
+    modified: Dernière modification
+    view: Voir
+    download: Télécharger
+    level: Niveau
+    channel: Canal
+    lines: Lignes
+    all_levels: Tous les niveaux
+    all_channels: Tous les canaux
+    apply: Appliquer
+    showing: "%count% entrées affichées (les plus récentes d'abord)"
+    no_entries: Aucune entrée ne correspond à ces filtres.
   dashboard:
     breadcrumb: Tableau de bord
     total_articles: Total des articles
@@ -400,6 +530,14 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP ou GIF · max. 4 Mo"
       image_delete_label: Supprimer l'image actuelle
       image_delete_confirm: L'image sera supprimée lors de l'enregistrement
+      prices_title: Prix dans les autres devises
+      prices_intro: "Cet article coûte %price% en %currency%, la devise dans laquelle les prix sont saisis. Saisissez ci-dessous un prix à la main pour toute autre devise ; laissez un champ vide pour qu'il soit converti automatiquement au taux de cette devise."
+      prices_hint: "Vider un champ supprime le prix saisi à la main et rétablit la conversion automatique."
+      prices_save: Enregistrer les prix
+      prices_saved: Prix mis à jour.
+      prices_csrf: Échec de la validation du jeton de sécurité.
+      price_manual: saisi à la main
+      price_converted: "converti : %amount% (taux %rate%)"
       gallery_title: Galerie d'images
       gallery_empty: Aucune image dans la galerie
       gallery_upload_label: Ajouter des images
@@ -529,6 +667,8 @@ admin:
       no_addresses: Aucune adresse enregistrée.
       add_address: Ajouter une adresse
   orders:
+    payment_unverified: "Paiement non vérifié"
+    payment_unverified_hint: "Le paiement de cette commande n'a pas pu être confirmé auprès du prestataire. Ne pas expédier avant vérification."
     status_updated: "Statut de la commande mis à jour."
     status_invalid: "Statut invalide."
     tracking_required: "Veuillez renseigner un numéro de suivi pour marquer la commande comme expédiée."

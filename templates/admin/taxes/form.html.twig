@@ -1,0 +1,42 @@
+{% extends 'admin/base.html.twig' %}
+
+{% set heading = is_edit ? 'admin.taxes.edit_title'|trans({'%province%': rate.province}) : 'admin.taxes.new_title'|trans %}
+
+{% block title %}{{ heading }} - Admin{% endblock %}
+{% block page_title %}{{ heading }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">
+    <a href="{{ path('admin_taxes_index') }}" style="color:#8a9ab5;">{{ 'admin.taxes.title'|trans }}</a> / {{ heading }}
+</p>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+    {{ form_start(form) }}
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:24px; display:flex; flex-direction:column; gap:18px;">
+        {{ form_row(form.province) }}
+        {{ form_row(form.name) }}
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">{{ form_row(form.gstPercent) }}</div>
+            <div style="flex:1; min-width:140px;">{{ form_row(form.pstPercent) }}</div>
+            <div style="flex:1; min-width:140px;">{{ form_row(form.hstPercent) }}</div>
+        </div>
+
+        <div style="padding:12px 14px; background:#f8fafc; border-radius:6px; font-size:12px; color:#64748b;">
+            <i class="bi bi-info-circle"></i> {{ 'admin.taxes.form.mutual_exclusive'|trans }}
+        </div>
+    </div>
+
+    <div style="margin-top:18px; display:flex; gap:10px;">
+        <button type="submit" class="btn-action-primary" style="font-size:13px; padding:9px 18px;">
+            <i class="bi bi-check-lg"></i> {{ 'admin.taxes.save'|trans }}
+        </button>
+        <a href="{{ path('admin_taxes_index') }}" class="btn-action-secondary" style="font-size:13px; padding:9px 18px;">
+            {{ 'admin.taxes.cancel'|trans }}
+        </a>
+    </div>
+    {{ form_end(form) }}
+</div>
+{% endblock %}
