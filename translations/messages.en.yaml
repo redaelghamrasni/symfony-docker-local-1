@@ -370,8 +370,41 @@ admin:
     faq: FAQ
     settings: Settings
     currencies: Currencies
+    taxes: Tax rates
     logs: Logs
     back_to_store: Back to Store
+  taxes:
+    title: Tax rates
+    breadcrumb: Catalogue / Tax rates
+    intro: "Provincial sales-tax rates applied at checkout. Edit a rate here to change what checkout charges — no code deploy needed. Rates are entered as percentages."
+    create: New rate
+    province: Province
+    name: Name
+    combined: Combined
+    edit: Edit
+    save: Save
+    cancel: Cancel
+    confirm_delete: "Delete this province's rate? Orders where it lives will fall back to the default (5% GST). Past orders keep the tax they were charged."
+    hint_snapshot: "Changing a rate only affects new orders. Each past order stored the tax amount it was charged, so history is never rewritten."
+    new_title: New tax rate
+    edit_title: "Tax rate — %province%"
+    form:
+      province: Province code
+      province_help: "Two-letter code (QC, ON, NS). Cannot be changed after creation."
+      province_invalid: Use two to five letters.
+      name: Province name
+      gst: "GST (%)"
+      pst: "PST / QST (%)"
+      hst: "HST (%)"
+      percent_help: "As a percentage, e.g. 5 or 9.975."
+      range: The rate must be between 0 and 100.
+      mutual_exclusive: "A province uses either GST (+ PST/QST) or HST, not both. Leave the ones that don't apply at 0."
+    flash:
+      created: Tax rate created.
+      updated: Tax rate updated.
+      deleted: Tax rate deleted.
+      duplicate: A rate for this province already exists.
+      csrf: Security token validation failed.
   currencies:
     title: Currencies
     breadcrumb: Catalogue / Currencies

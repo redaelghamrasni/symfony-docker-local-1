@@ -373,8 +373,41 @@ admin:
     faq: FAQ
     settings: Paramètres
     currencies: Devises
+    taxes: Taux de taxe
     logs: Journaux
     back_to_store: Retour à la boutique
+  taxes:
+    title: Taux de taxe
+    breadcrumb: Catalogue / Taux de taxe
+    intro: "Taux de taxe de vente provinciaux appliqués au paiement. Modifiez un taux ici pour changer ce que facture le paiement — aucun déploiement de code nécessaire. Les taux se saisissent en pourcentage."
+    create: Nouveau taux
+    province: Province
+    name: Nom
+    combined: Combiné
+    edit: Modifier
+    save: Enregistrer
+    cancel: Annuler
+    confirm_delete: "Supprimer le taux de cette province ? Les commandes qui s'y rattachent utiliseront le taux par défaut (TPS 5 %). Les commandes passées conservent la taxe facturée."
+    hint_snapshot: "Modifier un taux n'affecte que les nouvelles commandes. Chaque commande passée a enregistré le montant de taxe facturé, l'historique n'est jamais réécrit."
+    new_title: Nouveau taux de taxe
+    edit_title: "Taux de taxe — %province%"
+    form:
+      province: Code de province
+      province_help: "Code à deux lettres (QC, ON, NS). Non modifiable après création."
+      province_invalid: Utilisez de deux à cinq lettres.
+      name: Nom de la province
+      gst: "TPS (%)"
+      pst: "TVP / TVQ (%)"
+      hst: "TVH (%)"
+      percent_help: "En pourcentage, par ex. 5 ou 9,975."
+      range: Le taux doit être compris entre 0 et 100.
+      mutual_exclusive: "Une province utilise soit la TPS (+ TVP/TVQ), soit la TVH, jamais les deux. Laissez à 0 celles qui ne s'appliquent pas."
+    flash:
+      created: Taux de taxe créé.
+      updated: Taux de taxe mis à jour.
+      deleted: Taux de taxe supprimé.
+      duplicate: Un taux existe déjà pour cette province.
+      csrf: Échec de la validation du jeton de sécurité.
   currencies:
     title: Devises
     breadcrumb: Catalogue / Devises

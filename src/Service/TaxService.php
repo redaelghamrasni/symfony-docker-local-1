@@ -2,46 +2,72 @@
 
 namespace App\Service;
 
+use App\Repository\TaxRateRepository;
+
+/**
+ * Resolves and applies Canadian sales tax.
+ *
+ * Rates now live in the tax_rate table (managed at /admin/taxes). The constant
+ * below is kept only as the seed for that table and as a last-resort fallback
+ * if the table is empty (fresh install, or a deploy that has not run
+ * migrations) — checkout must never fail for lack of a tax row.
+ *
+ * These are the current statutory rates as of 2026 (note Nova Scotia's HST is
+ * 14%, down from 15% in April 2025 — the old CheckoutController copy still had
+ * 15% and overcharged NS until this consolidation).
+ */
 class TaxService
 {
-    // Canadian tax rates by province code
-    private const RATES = [
-        'AB' => ['gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
-        'BC' => ['gst' => 0.05,   'pst' => 0.07,    'hst' => 0.00],
-        'MB' => ['gst' => 0.05,   'pst' => 0.07,    'hst' => 0.00],
-        'NB' => ['gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
-        'NL' => ['gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
-        'NS' => ['gst' => 0.00,   'pst' => 0.00,    'hst' => 0.14],
-        'NT' => ['gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
-        'NU' => ['gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
-        'ON' => ['gst' => 0.00,   'pst' => 0.00,    'hst' => 0.13],
-        'PE' => ['gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
-        'QC' => ['gst' => 0.05,   'pst' => 0.09975, 'hst' => 0.00],
-        'SK' => ['gst' => 0.05,   'pst' => 0.06,    'hst' => 0.00],
-        'YT' => ['gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
+    private const FALLBACK_RATES = [
+        'AB' => ['name' => 'Alberta',                   'gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
+        'BC' => ['name' => 'British Columbia',          'gst' => 0.05,   'pst' => 0.07,    'hst' => 0.00],
+        'MB' => ['name' => 'Manitoba',                  'gst' => 0.05,   'pst' => 0.07,    'hst' => 0.00],
+        'NB' => ['name' => 'New Brunswick',             'gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
+        'NL' => ['name' => 'Newfoundland and Labrador', 'gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
+        'NS' => ['name' => 'Nova Scotia',               'gst' => 0.00,   'pst' => 0.00,    'hst' => 0.14],
+        'NT' => ['name' => 'Northwest Territories',     'gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
+        'NU' => ['name' => 'Nunavut',                   'gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
+        'ON' => ['name' => 'Ontario',                   'gst' => 0.00,   'pst' => 0.00,    'hst' => 0.13],
+        'PE' => ['name' => 'Prince Edward Island',      'gst' => 0.00,   'pst' => 0.00,    'hst' => 0.15],
+        'QC' => ['name' => 'Quebec',                    'gst' => 0.05,   'pst' => 0.09975, 'hst' => 0.00],
+        'SK' => ['name' => 'Saskatchewan',              'gst' => 0.05,   'pst' => 0.06,    'hst' => 0.00],
+        'YT' => ['name' => 'Yukon',                     'gst' => 0.05,   'pst' => 0.00,    'hst' => 0.00],
     ];
 
+    /** Request-scoped memo so a page that resolves several times hits the DB once. */
+    private ?array $byProvince = null;
+
+    public function __construct(private readonly TaxRateRepository $taxRates)
+    {
+    }
+
+    /** The seed set, exposed for the migration that first populates the table. */
+    public static function seedRates(): array
+    {
+        return self::FALLBACK_RATES;
+    }
+
     /**
-     * Retourne le taux de taxe applicable pour une province canadienne
+     * The applicable rates for a province, from the database, falling back to
+     * the statutory defaults when no row exists. An unknown province gets 5%
+     * GST — the federal floor that applies everywhere in Canada.
      */
     public function getRateForProvince(string $provinceCode): array
     {
         $province = strtoupper($provinceCode);
-        $rates    = self::RATES[$province] ?? ['gst' => 0.05, 'pst' => 0.00, 'hst' => 0.00];
+        $rates = $this->rates()[$province] ?? self::FALLBACK_RATES[$province] ?? ['gst' => 0.05, 'pst' => 0.00, 'hst' => 0.00];
 
         return [
             'province'   => $province,
-            'gst'        => $rates['gst'],
-            'pst'        => $rates['pst'],
-            'hst'        => $rates['hst'],
-            'applicable' => $rates['gst'] + $rates['pst'] + $rates['hst'],
-            'type'       => $rates['hst'] > 0 ? 'hst' : 'gst_pst',
+            'gst'        => (float) $rates['gst'],
+            'pst'        => (float) $rates['pst'],
+            'hst'        => (float) $rates['hst'],
+            'applicable' => (float) $rates['gst'] + (float) $rates['pst'] + (float) $rates['hst'],
+            'type'       => (float) $rates['hst'] > 0 ? 'hst' : 'gst_pst',
         ];
     }
 
-    /**
-     * Calcule les taxes sur un montant donné
-     */
+    /** GST/PST/HST amounts for a subtotal — what the checkout stores on the order. */
     public function calculateTax(float $amount, string $provinceCode): array
     {
         $rates = $this->getRateForProvince($provinceCode);
@@ -64,5 +90,22 @@ class TaxService
             'type'         => $rates['type'],
             'province'     => $rates['province'],
         ];
+    }
+
+    /** @return array<string, array{gst: float, pst: float, hst: float}> */
+    private function rates(): array
+    {
+        if ($this->byProvince === null) {
+            $this->byProvince = [];
+            foreach ($this->taxRates->findAllOrdered() as $row) {
+                $this->byProvince[$row->getProvince()] = [
+                    'gst' => (float) $row->getGst(),
+                    'pst' => (float) $row->getPst(),
+                    'hst' => (float) $row->getHst(),
+                ];
+            }
+        }
+
+        return $this->byProvince;
     }
 }

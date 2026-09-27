@@ -35,23 +35,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutController extends AbstractController
 {
-    // Canadian tax rates by province code
-    private const TAX_RATES = [
-        'AB' => ['gst' => 0.05, 'pst' => 0.00],
-        'BC' => ['gst' => 0.05, 'pst' => 0.07],
-        'MB' => ['gst' => 0.05, 'pst' => 0.07],
-        'NB' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NL' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NS' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'NT' => ['gst' => 0.05, 'pst' => 0.00],
-        'NU' => ['gst' => 0.05, 'pst' => 0.00],
-        'ON' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.13],
-        'PE' => ['gst' => 0.00, 'pst' => 0.00, 'hst' => 0.15],
-        'QC' => ['gst' => 0.05, 'pst' => 0.09975],
-        'SK' => ['gst' => 0.05, 'pst' => 0.06],
-        'YT' => ['gst' => 0.05, 'pst' => 0.00],
-    ];
-
     public function __construct(
         private CartService $cartService,
         private StripeClient $stripeClient,
@@ -67,6 +50,7 @@ class CheckoutController extends AbstractController
         private TranslatorInterface $translator,
         private MessageBusInterface $messageBus,
         private CurrencyService $currencyService,
+        private TaxService $taxService,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -980,20 +964,22 @@ class CheckoutController extends AbstractController
 
     private function calculateTaxes(string $province, float $subtotal): array
     {
-        $rates = self::TAX_RATES[$province] ?? [];
-        $gst   = round($subtotal * ($rates['gst'] ?? 0.0), 2);
-        $pst   = round($subtotal * ($rates['pst'] ?? 0.0), 2);
-        $hst   = round($subtotal * ($rates['hst'] ?? 0.0), 2);
+        // Single source of truth for rates: the tax_rate table via TaxService,
+        // so the amount stored on the order matches what the tax API returned.
+        $rates = $this->taxService->getRateForProvince($province);
+        $gst   = round($subtotal * $rates['gst'], 2);
+        $pst   = round($subtotal * $rates['pst'], 2);
+        $hst   = round($subtotal * $rates['hst'], 2);
         return [$gst, $pst, $hst];
     }
 
     #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]
-    public function calculateTaxApi(Request $request, TaxService $taxService): JsonResponse
+    public function calculateTaxApi(Request $request): JsonResponse
     {
         $data     = json_decode($request->getContent(), true) ?? [];
         $province = $data['province'] ?? 'QC';
         $cart     = $this->cartService->getCurrentCart();
-        $tax = $taxService->calculateTax((float) $cart->getTotal(), $province);
+        $tax = $this->taxService->calculateTax((float) $cart->getTotal(), $province);
 
         return $this->json($tax);
     }
