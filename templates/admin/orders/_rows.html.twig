@@ -21,7 +21,7 @@
     <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ order.customerEmail }}</td>
     <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ order.items|length }}</td>
     <td style="padding: 14px 16px; text-align: right; font-weight: 600; color: #0f172a;">
-        {{ order.total|number_format(2, ',', ' ') }} $
+        {{ order.total|money_snapshot(order.currency) }}
     </td>
     <td style="padding: 14px 16px; text-align: center;">
         <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">

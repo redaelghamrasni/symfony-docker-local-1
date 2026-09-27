@@ -42,6 +42,8 @@ class CurrencyService
     /** Request-scoped memo: these are read repeatedly while rendering a page. */
     private ?array $enabledCache = null;
     private ?Currency $defaultCache = null;
+    /** All currencies indexed by code, for formatting historical amounts. */
+    private ?array $byCodeCache = null;
 
     public function __construct(
         private readonly CurrencyRepository $currencies,
@@ -232,5 +234,45 @@ class CurrencyService
         return $currency->getSymbolPosition() === 'after'
             ? $number . ' ' . $currency->getSymbol()
             : $currency->getSymbol() . ' ' . $number;
+    }
+
+    /**
+     * Formats a historical amount in exactly the currency it was recorded in.
+     *
+     * Unlike format(), the code is never normalised to the default and the
+     * currency is looked up across ALL currencies, not only the enabled ones.
+     * A past order — in an email, in order history, in the back office — must
+     * keep showing what the customer was actually charged, even after that
+     * currency has since been disabled or deleted from the shop. If the row is
+     * gone entirely, the amount is shown with its bare code (e.g. "272,15 EUR").
+     */
+    public function formatSnapshot(float|string $amount, ?string $code): string
+    {
+        $code = strtoupper((string) ($code ?: $this->default()));
+        $currency = $this->currencyByCode($code);
+        $decimals = $this->hasMinorUnit($code) ? 2 : 0;
+
+        $number = number_format((float) $amount, $decimals, ',', ' ');
+
+        if ($currency === null) {
+            return $number . ' ' . $code;
+        }
+
+        return $currency->getSymbolPosition() === 'after'
+            ? $number . ' ' . $currency->getSymbol()
+            : $currency->getSymbol() . ' ' . $number;
+    }
+
+    /** All currencies, enabled or not, indexed by code — for historical lookups. */
+    private function currencyByCode(string $code): ?Currency
+    {
+        if ($this->byCodeCache === null) {
+            $this->byCodeCache = [];
+            foreach ($this->currencies->findAllOrdered() as $currency) {
+                $this->byCodeCache[$currency->getCode()] = $currency;
+            }
+        }
+
+        return $this->byCodeCache[strtoupper($code)] ?? null;
     }
 }

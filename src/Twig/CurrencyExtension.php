@@ -35,8 +35,12 @@ class CurrencyExtension extends AbstractExtension implements GlobalsInterface
     public function getFilters(): array
     {
         return [
-            // {{ 377.99|money }} -> "$ 377,99"
+            // {{ 377.99|money }} -> "$ 377,99" (visitor's currency, live pages)
             new TwigFilter('money', [$this, 'money']),
+            // {{ item.subtotal|money_snapshot(order.currency) }} -> historical
+            // amounts shown in the currency the order recorded, even if that
+            // currency has since been disabled or removed.
+            new TwigFilter('money_snapshot', [$this, 'moneySnapshot']),
         ];
     }
 
@@ -53,6 +57,11 @@ class CurrencyExtension extends AbstractExtension implements GlobalsInterface
     public function money(float|string|null $amount, ?string $code = null): string
     {
         return $this->currencyService->format((float) ($amount ?? 0), $code);
+    }
+
+    public function moneySnapshot(float|string|null $amount, ?string $code): string
+    {
+        return $this->currencyService->formatSnapshot((float) ($amount ?? 0), $code);
     }
 
     public function articlePrice(Article $article, ?string $code = null): float
