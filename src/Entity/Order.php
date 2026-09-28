@@ -88,6 +88,15 @@ class Order
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $shippingProvince = null;
 
+    /**
+     * Destination country, ISO 3166-1 alpha-2, snapshot at order time like the
+     * rest of the shipping address. Defaults to CA for orders placed before the
+     * shop shipped internationally; it is what RecipientAddressAdapter feeds to
+     * the carrier for cross-border rating.
+     */
+    #[ORM\Column(length: 2, options: ['default' => 'CA'])]
+    private string $shippingCountry = 'CA';
+
     // Billing address
     #[ORM\Column(length: 255)]
     private ?string $billingStreet = null;
@@ -353,6 +362,9 @@ class Order
 
     public function getShippingProvince(): ?string { return $this->shippingProvince; }
     public function setShippingProvince(?string $v): self { $this->shippingProvince = $v; return $this; }
+
+    public function getShippingCountry(): string { return $this->shippingCountry; }
+    public function setShippingCountry(?string $v): self { $this->shippingCountry = strtoupper($v ?: 'CA'); return $this; }
 
     public function getBillingStreet(): ?string
     {

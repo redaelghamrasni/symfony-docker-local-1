@@ -332,6 +332,7 @@ checkout:
   city: City
   postal_code: Postal Code
   province: Province
+  country: Country
   payment_note: Test mode only — no real charges will be made.
   confirm_order: Confirm order
   order_summary: Your order

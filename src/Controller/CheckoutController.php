@@ -23,6 +23,7 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Intl\Countries;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -104,7 +105,22 @@ class CheckoutController extends AbstractController
             'stripe_public_key' => $_ENV['STRIPE_PUBLIC_KEY'] ?? $_SERVER['STRIPE_PUBLIC_KEY'] ?? getenv('STRIPE_PUBLIC_KEY'),
             'paypal_client_id'  => $_ENV['PAYPAL_CLIENT_ID'] ?? $_SERVER['PAYPAL_CLIENT_ID'] ?? getenv('PAYPAL_CLIENT_ID'),
             'customer_info'     => $customerInfo,
+            // Localised country list for the shipping selector, so the order
+            // records a real destination country (default Canada). Falls back
+            // to English names where the intl extension is absent (the polyfill
+            // only collates 'en'); production ships with ext-intl.
+            'countries'         => $this->countryNames($request->getLocale()),
         ]);
+    }
+
+    /** @return array<string, string> ISO code => localised country name */
+    private function countryNames(string $locale): array
+    {
+        try {
+            return Countries::getNames($locale);
+        } catch (\Throwable) {
+            return Countries::getNames('en');
+        }
     }
 
     #[Route('/checkout/save-customer-info', name: 'app_checkout_save_customer_info', methods: ['POST'])]
@@ -130,6 +146,13 @@ class CheckoutController extends AbstractController
         $shippingCity     = trim($data['checkout_shipping_city'] ?? '');
         $shippingPostal   = trim($data['checkout_shipping_postal'] ?? '');
         $shippingProvince = trim($data['checkout_shipping_province'] ?? '');
+        // ISO 3166-1 alpha-2; default to Canada when absent, and reject anything
+        // that is not a recognised country code so a bad value never reaches the
+        // carrier as a destination.
+        $shippingCountry  = strtoupper(trim($data['checkout_shipping_country'] ?? '')) ?: 'CA';
+        if (!Countries::exists($shippingCountry)) {
+            $shippingCountry = 'CA';
+        }
 
         $session = $request->getSession();
         $session->set('checkout_email', $email);
@@ -139,6 +162,7 @@ class CheckoutController extends AbstractController
         $session->set('checkout_shipping_city',     $shippingCity);
         $session->set('checkout_shipping_postal',   $shippingPostal);
         $session->set('checkout_shipping_province', $shippingProvince);
+        $session->set('checkout_shipping_country',  $shippingCountry);
         $session->set('checkout_billing_same',    (bool)($data['checkout_billing_same'] ?? true));
         $session->set('checkout_billing_address',   trim($data['checkout_billing_address'] ?? ''));
         $session->set('checkout_billing_city',      trim($data['checkout_billing_city'] ?? ''));
@@ -725,6 +749,7 @@ class CheckoutController extends AbstractController
         $order->setShippingCity($shippingCity);
         $order->setShippingPostalCode($shippingPostal);
         $order->setShippingProvince($shippingProvince ?: null);
+        $order->setShippingCountry($session->get('checkout_shipping_country') ?: 'CA');
 
         if ($billingSame || !$billingStreet) {
             $order->setBillingStreet($shippingStreet);
@@ -952,6 +977,7 @@ class CheckoutController extends AbstractController
             'checkout_email', 'checkout_name', 'checkout_phone',
             'checkout_shipping_address', 'checkout_shipping_city',
             'checkout_shipping_postal', 'checkout_shipping_province',
+            'checkout_shipping_country',
             'checkout_billing_same', 'checkout_billing_address',
             'checkout_billing_city', 'checkout_billing_postal', 'checkout_billing_province',
             'checkout_pi_id', 'checkout_subtotal', 'checkout_shipping_amount',

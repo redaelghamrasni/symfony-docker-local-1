@@ -91,6 +91,15 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shipping_country">{{ 'checkout.country' | trans }}</label>
+                        {% set selectedCountry = customer_info.shipping_country|default('CA') %}
+                        <select id="shipping_country" name="shipping_country" class="form-control">
+                            {% for code, name in countries %}
+                                <option value="{{ code }}" {% if selectedCountry == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div class="checkout-form-section">
@@ -558,6 +567,7 @@ async function saveCustomerInfo(paymentMessage) {
                 checkout_shipping_city:      document.getElementById('shipping_city')?.value.trim() ?? '',
                 checkout_shipping_postal:    document.getElementById('shipping_postal')?.value.trim() ?? '',
                 checkout_shipping_province:  document.getElementById('shipping_province')?.value ?? '',
+                checkout_shipping_country:   document.getElementById('shipping_country')?.value ?? '',
                 checkout_billing_same:       document.getElementById('billing_same')?.checked ?? true,
                 checkout_billing_address:    document.getElementById('billing_address')?.value.trim() ?? '',
                 checkout_billing_city:       document.getElementById('billing_city')?.value.trim() ?? '',

@@ -335,6 +335,7 @@ checkout:
   city: Ville
   postal_code: Code postal
   province: Province
+  country: Pays
   payment_note: Mode test uniquement — aucun vrai paiement ne sera effectué.
   confirm_order: Confirmer la commande
   order_summary: Votre commande
