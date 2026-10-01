@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Setting;
+use App\Market\MarketContext;
 use App\Message\PullOllamaModelMessage;
 use App\Service\ChatbotModelResolver;
 use App\Service\OllamaModelService;
@@ -26,6 +27,7 @@ class SettingController extends AbstractController
         private OllamaModelService $ollamaModelService,
         private ChatbotModelResolver $modelResolver,
         private MessageBusInterface $messageBus,
+        private MarketContext $marketContext,
         #[Autowire(param: 'app.chatbot.available_models')]
         private array $chatbotAvailableModels,
     ) {}
@@ -44,6 +46,13 @@ class SettingController extends AbstractController
             foreach ($settings as $key => $value) {
                 $existing = $this->em->getRepository(Setting::class)->find($key);
                 if (!$existing) {
+                    continue;
+                }
+
+                // The home country drives the whole market layer; never store an
+                // unrecognised code.
+                if ($key === MarketContext::HOME_COUNTRY_KEY && !$this->marketContext->isValidCountry((string) $value)) {
+                    $this->addFlash('error', 'admin.settings.invalid_country');
                     continue;
                 }
 
@@ -80,6 +89,7 @@ class SettingController extends AbstractController
             'selectOptions' => [
                 'chatbot.model' => $this->chatbotAvailableModels,
             ],
+            'countries' => $this->marketContext->countryNames($request->getLocale()),
             'chatbotModel' => $chatbotModel,
             'chatbotModelReady' => $modelAvailability[$chatbotModel] ?? false,
             'chatbotModelAvailability' => $modelAvailability,

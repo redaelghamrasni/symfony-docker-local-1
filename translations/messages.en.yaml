@@ -503,6 +503,9 @@ admin:
     csrf_error: Security token validation failed.
     general_section: General Settings
     free_threshold_hint: "Leave empty to disable automatic free shipping."
+    home_country: Home country
+    home_country_hint: "The country this shop operates from. It drives taxes, regions and the shipping origin for the active market."
+    invalid_country: "That is not a recognised country code; the home country was left unchanged."
     chatbot_model_hint: "Model used by the support chatbot: an Ollama model (switching to one not yet downloaded starts a background download) or a hosted Gemini model (used instantly, no download needed)."
     chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
     chatbot_model_ready: "Downloaded and ready."

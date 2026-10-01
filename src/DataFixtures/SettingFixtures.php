@@ -13,6 +13,11 @@ class SettingFixtures extends Fixture
         $setting = new Setting('shipping.free_threshold', 'Seuil de livraison gratuite ($)', 'number');
         $manager->persist($setting);
 
+        // Home country drives the market layer (tax model, regions, origin).
+        $homeCountry = new Setting('home_country', 'Home country', 'country');
+        $homeCountry->setValue('CA');
+        $manager->persist($homeCountry);
+
         $manager->flush();
     }
 }

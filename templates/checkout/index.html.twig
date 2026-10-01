@@ -93,7 +93,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="shipping_country">{{ 'checkout.country' | trans }}</label>
-                        {% set selectedCountry = customer_info.shipping_country|default('CA') %}
+                        {% set selectedCountry = customer_info.shipping_country|default(home_country) %}
                         <select id="shipping_country" name="shipping_country" class="form-control">
                             {% for code, name in countries %}
                                 <option value="{{ code }}" {% if selectedCountry == code %}selected{% endif %}>{{ name }}</option>

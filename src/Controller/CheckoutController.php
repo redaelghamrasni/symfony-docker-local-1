@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Address;
+use App\Market\MarketContext;
 use App\Service\CartService;
 use App\Service\CurrencyService;
 use App\Service\PayPalService;
@@ -23,7 +24,6 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Intl\Countries;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -52,6 +52,7 @@ class CheckoutController extends AbstractController
         private MessageBusInterface $messageBus,
         private CurrencyService $currencyService,
         private TaxService $taxService,
+        private MarketContext $marketContext,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -105,22 +106,11 @@ class CheckoutController extends AbstractController
             'stripe_public_key' => $_ENV['STRIPE_PUBLIC_KEY'] ?? $_SERVER['STRIPE_PUBLIC_KEY'] ?? getenv('STRIPE_PUBLIC_KEY'),
             'paypal_client_id'  => $_ENV['PAYPAL_CLIENT_ID'] ?? $_SERVER['PAYPAL_CLIENT_ID'] ?? getenv('PAYPAL_CLIENT_ID'),
             'customer_info'     => $customerInfo,
-            // Localised country list for the shipping selector, so the order
-            // records a real destination country (default Canada). Falls back
-            // to English names where the intl extension is absent (the polyfill
-            // only collates 'en'); production ships with ext-intl.
-            'countries'         => $this->countryNames($request->getLocale()),
+            // Localised country list for the shipping selector, and the shop's
+            // home country as the default when the customer has none yet.
+            'countries'         => $this->marketContext->countryNames($request->getLocale()),
+            'home_country'      => $this->marketContext->homeCountry(),
         ]);
-    }
-
-    /** @return array<string, string> ISO code => localised country name */
-    private function countryNames(string $locale): array
-    {
-        try {
-            return Countries::getNames($locale);
-        } catch (\Throwable) {
-            return Countries::getNames('en');
-        }
     }
 
     #[Route('/checkout/save-customer-info', name: 'app_checkout_save_customer_info', methods: ['POST'])]
@@ -146,12 +136,12 @@ class CheckoutController extends AbstractController
         $shippingCity     = trim($data['checkout_shipping_city'] ?? '');
         $shippingPostal   = trim($data['checkout_shipping_postal'] ?? '');
         $shippingProvince = trim($data['checkout_shipping_province'] ?? '');
-        // ISO 3166-1 alpha-2; default to Canada when absent, and reject anything
-        // that is not a recognised country code so a bad value never reaches the
+        // ISO 3166-1 alpha-2; default to the shop's home country when absent,
+        // and reject anything unrecognised so a bad value never reaches the
         // carrier as a destination.
-        $shippingCountry  = strtoupper(trim($data['checkout_shipping_country'] ?? '')) ?: 'CA';
-        if (!Countries::exists($shippingCountry)) {
-            $shippingCountry = 'CA';
+        $shippingCountry  = strtoupper(trim($data['checkout_shipping_country'] ?? ''));
+        if ($shippingCountry === '' || !$this->marketContext->isValidCountry($shippingCountry)) {
+            $shippingCountry = $this->marketContext->homeCountry();
         }
 
         $session = $request->getSession();
@@ -749,7 +739,7 @@ class CheckoutController extends AbstractController
         $order->setShippingCity($shippingCity);
         $order->setShippingPostalCode($shippingPostal);
         $order->setShippingProvince($shippingProvince ?: null);
-        $order->setShippingCountry($session->get('checkout_shipping_country') ?: 'CA');
+        $order->setShippingCountry($session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry());
 
         if ($billingSame || !$billingStreet) {
             $order->setBillingStreet($shippingStreet);
