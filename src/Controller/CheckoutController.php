@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Address;
 use App\Market\MarketContext;
+use App\Market\Tax\TaxEngineRegistry;
+use App\Market\Tax\TaxQuote;
 use App\Service\CartService;
 use App\Service\CurrencyService;
 use App\Service\PayPalService;
@@ -53,6 +55,7 @@ class CheckoutController extends AbstractController
         private MessageBusInterface $messageBus,
         private CurrencyService $currencyService,
         private TaxService $taxService,
+        private TaxEngineRegistry $taxEngineRegistry,
         private MarketContext $marketContext,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
@@ -333,20 +336,22 @@ class CheckoutController extends AbstractController
         $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
 
-        [$gst, $pst, $hst] = $this->calculateTaxes($province, $subtotal);
-        $taxes     = $gst + $pst + $hst;
+        $session  = $request->getSession();
+        $country  = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
+
+        // Tax comes from the active market's engine, not from Canada-specific
+        // code. The order's lines are recomputed from the same engine + inputs
+        // in buildOrderFromSession, so what is charged and what is stored match.
+        $quote      = $this->taxEngineRegistry->active()->quote($subtotal, $country, $province ?: null);
+        $taxes      = (float) $quote->total();
         $grandTotal = $subtotal + $taxes + $shipping;
 
         // Persist amounts to session
-        $session = $request->getSession();
         $session->set('checkout_subtotal',         $subtotal);
         $session->set('checkout_shipping_amount',  $shipping);
         $session->set('checkout_shipping_carrier',   $shippingCarrier !== '' ? $shippingCarrier : null);
         $session->set('checkout_shipping_method',    $shippingMethod !== '' ? $shippingMethod : null);
         $session->set('checkout_shipping_reference',  $shippingReference !== '' ? $shippingReference : null);
-        $session->set('checkout_tax_gst',          $gst);
-        $session->set('checkout_tax_pst',          $pst);
-        $session->set('checkout_tax_hst',          $hst);
         $session->set('checkout_grand_total',      $grandTotal);
 
         // Update Stripe PaymentIntent amount
@@ -711,10 +716,6 @@ class CheckoutController extends AbstractController
         $shippingCarrier   = $session->get('checkout_shipping_carrier');
         $shippingMethod    = $session->get('checkout_shipping_method');
         $shippingReference = $session->get('checkout_shipping_reference');
-        $taxGst         = $session->get('checkout_tax_gst');
-        $taxPst         = $session->get('checkout_tax_pst');
-        $taxHst         = $session->get('checkout_tax_hst');
-
         $order = new Order();
         $order->setUser($this->getUser());
         // Snapshot the cart's currency, like the prices and addresses below:
@@ -727,13 +728,15 @@ class CheckoutController extends AbstractController
         $order->setShippingMethodCarrier($shippingCarrier ?: null);
         $order->setShippingMethodName($shippingMethod ?: null);
         $order->setShippingMethodReference($shippingReference ?: null);
-        $this->applyTaxLines(
-            $order,
-            $shippingProvince ?: '',
-            (float) ($taxGst ?? 0),
-            (float) ($taxPst ?? 0),
-            (float) ($taxHst ?? 0),
+        // Recompute the tax from the active market's engine, with the same
+        // inputs updatePayment used, and snapshot the lines onto the order.
+        $taxCountry = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
+        $quote = $this->taxEngineRegistry->active()->quote(
+            (float) ($subtotal ?? $cart->getTotal()),
+            $taxCountry,
+            $shippingProvince ?: null,
         );
+        $this->applyTaxQuote($order, $quote);
 
         $nameParts = explode(' ', trim($name), 2);
         $order->setCustomerFirstName($nameParts[0] ?? 'Client');
@@ -977,59 +980,30 @@ class CheckoutController extends AbstractController
             'checkout_billing_city', 'checkout_billing_postal', 'checkout_billing_province',
             'checkout_pi_id', 'checkout_subtotal', 'checkout_shipping_amount',
             'checkout_shipping_carrier', 'checkout_shipping_method', 'checkout_shipping_reference',
-            'checkout_tax_gst', 'checkout_tax_pst', 'checkout_tax_hst', 'checkout_grand_total',
+            'checkout_grand_total',
         ] as $key) {
             $session->remove($key);
         }
     }
 
-    private function calculateTaxes(string $province, float $subtotal): array
-    {
-        // Single source of truth for rates: the tax_rate table via TaxService,
-        // so the amount stored on the order matches what the tax API returned.
-        $rates = $this->taxService->getRateForProvince($province);
-        $gst   = round($subtotal * $rates['gst'], 2);
-        $pst   = round($subtotal * $rates['pst'], 2);
-        $hst   = round($subtotal * $rates['hst'], 2);
-        return [$gst, $pst, $hst];
-    }
-
     /**
-     * Snapshots the tax breakdown onto the order as tax lines — one row per
-     * non-zero component. The charged amounts come from the checkout session
-     * (what the PaymentIntent was set to); the rates are read from TaxService
-     * for the receipt. Quebec's provincial tax is QST, not PST.
-     *
-     * This is still Canada-specific; when the TaxEngine lands (next step), the
-     * engine returns these lines directly and this helper goes away.
+     * Snapshots a tax engine's quote onto the order as OrderTaxLine rows.
+     * The engine produced the neutral TaxLineData; this maps them to the
+     * persisted entity and sets the total.
      */
-    private function applyTaxLines(Order $order, string $province, float $gst, float $pst, float $hst): void
+    private function applyTaxQuote(Order $order, TaxQuote $quote): void
     {
-        $province = strtoupper($province);
-        $rates = $this->taxService->getRateForProvince($province);
-        $jurisdiction = $province !== '' ? $province : null;
-
-        $components = [
-            ['gst', 'GST', (float) $rates['gst'], $gst],
-            [$province === 'QC' ? 'qst' : 'pst', $province === 'QC' ? 'QST' : 'PST', (float) $rates['pst'], $pst],
-            ['hst', 'HST', (float) $rates['hst'], $hst],
-        ];
-
-        foreach ($components as [$code, $label, $rate, $amount]) {
-            if ($amount <= 0) {
-                continue;
-            }
-
+        foreach ($quote->lines as $line) {
             $order->addTaxLine(new OrderTaxLine(
-                code: $code,
-                label: $label,
-                rate: $rate > 0 ? number_format($rate, 5, '.', '') : null,
-                amount: number_format($amount, 2, '.', ''),
-                jurisdiction: $jurisdiction,
+                code: $line->code,
+                label: $line->label,
+                rate: $line->rate,
+                amount: $line->amount,
+                jurisdiction: $line->jurisdiction,
             ));
         }
 
-        $order->recalculateTaxTotal();
+        $order->setTaxTotal($quote->total());
     }
 
     #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]

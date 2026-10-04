@@ -29,7 +29,12 @@ services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
-    
+
+    # Every tax engine is tagged so the registry can collect them.
+    _instanceof:
+        App\Market\Tax\TaxEngineInterface:
+            tags: ['app.tax_engine']
+
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:
@@ -110,3 +115,10 @@ services:
             # Only used before the currency table has a default row (fresh
             # database, or between deploy and migration).
             $fallbackCode: '%app.currency.default%'
+
+    # Tax engine registry: all tagged engines, with NoTaxEngine as the fallback
+    # so an unconfigured market still checks out (no tax rather than an error).
+    App\Market\Tax\TaxEngineRegistry:
+        arguments:
+            $engines: !tagged_iterator app.tax_engine
+            $fallback: '@App\Market\Tax\Engine\NoTaxEngine'
