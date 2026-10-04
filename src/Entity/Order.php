@@ -44,14 +44,16 @@ class Order
     #[ORM\Column(name: 'shipping_method_reference', length: 100, nullable: true)]
     private ?string $shippingMethodReference = null; // Shippo rate object_id (when applicable)
 
-    #[ORM\Column(name: 'tax_gst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
-    private ?string $taxGst = null;
+    /**
+     * Total tax charged, a convenience snapshot so the order knows its tax
+     * without loading the lines. The per-component breakdown lives in taxLines.
+     */
+    #[ORM\Column(name: 'tax_total', type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
+    private string $taxTotal = '0.00';
 
-    #[ORM\Column(name: 'tax_pst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
-    private ?string $taxPst = null;
-
-    #[ORM\Column(name: 'tax_hst', type: 'decimal', precision: 10, scale: 2, nullable: true)]
-    private ?string $taxHst = null;
+    /** @var Collection<int, OrderTaxLine> the tax breakdown, one row per component */
+    #[ORM\OneToMany(targetEntity: OrderTaxLine::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $taxLines;
 
     #[ORM\Column(name: 'created_at')]
     private ?\DateTimeImmutable $createdAt = null;
@@ -166,6 +168,7 @@ class Order
     public function __construct()
     {
         $this->items = new ArrayCollection();
+        $this->taxLines = new ArrayCollection();
         $tz = new \DateTimeZone('America/Toronto');
         $this->createdAt = new \DateTimeImmutable('now', $tz);
         $this->updatedAt = new \DateTimeImmutable('now', $tz);
@@ -231,14 +234,42 @@ class Order
     public function getShippingMethodReference(): ?string { return $this->shippingMethodReference; }
     public function setShippingMethodReference(?string $v): self { $this->shippingMethodReference = $v; return $this; }
 
-    public function getTaxGst(): ?string { return $this->taxGst; }
-    public function setTaxGst(?string $v): self { $this->taxGst = $v; return $this; }
+    public function getTaxTotal(): string { return $this->taxTotal; }
+    public function setTaxTotal(string $v): self { $this->taxTotal = $v; return $this; }
 
-    public function getTaxPst(): ?string { return $this->taxPst; }
-    public function setTaxPst(?string $v): self { $this->taxPst = $v; return $this; }
+    /** @return Collection<int, OrderTaxLine> */
+    public function getTaxLines(): Collection { return $this->taxLines; }
 
-    public function getTaxHst(): ?string { return $this->taxHst; }
-    public function setTaxHst(?string $v): self { $this->taxHst = $v; return $this; }
+    public function addTaxLine(OrderTaxLine $line): self
+    {
+        if (!$this->taxLines->contains($line)) {
+            $this->taxLines->add($line);
+            $line->setOrder($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTaxLine(OrderTaxLine $line): self
+    {
+        if ($this->taxLines->removeElement($line) && $line->getOrder() === $this) {
+            $line->setOrder(null);
+        }
+
+        return $this;
+    }
+
+    /** Sums the lines into taxTotal — call after building the breakdown. */
+    public function recalculateTaxTotal(): self
+    {
+        $total = 0.0;
+        foreach ($this->taxLines as $line) {
+            $total += (float) $line->getAmount();
+        }
+        $this->taxTotal = number_format($total, 2, '.', '');
+
+        return $this;
+    }
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {

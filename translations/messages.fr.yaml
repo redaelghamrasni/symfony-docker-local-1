@@ -204,6 +204,14 @@ error:
   try_again: Veuillez réessayer
 
 #Cart
+tax:
+  line:
+    gst: TPS
+    pst: TVP
+    qst: TVQ
+    hst: TVH
+    vat: TVA
+
 currency:
   select_label: Choisir une devise
   switched: Devise modifiée. Les prix ont été mis à jour.

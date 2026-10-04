@@ -172,24 +172,15 @@
                             </td>
                         </tr>
                         {% endif %}
-                        {% if order.taxGst and order.taxGst > 0 %}
+                        {% for line in order.taxLines %}
+                        {% set tkey = 'tax.line.' ~ line.code %}{% set tlabel = tkey|trans %}
                         <tr>
-                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_gst_label'|trans }}</td>
-                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxGst|money_snapshot(order.currency) }}</td>
+                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">
+                                {{ tlabel == tkey ? line.label : tlabel }}{% if line.rate %} ({{ (line.rate * 100)|number_format(3) }}%){% endif %}
+                            </td>
+                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ line.amount|money_snapshot(order.currency) }}</td>
                         </tr>
-                        {% endif %}
-                        {% if order.taxPst and order.taxPst > 0 %}
-                        <tr>
-                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_pst_label'|trans }}</td>
-                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxPst|money_snapshot(order.currency) }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if order.taxHst and order.taxHst > 0 %}
-                        <tr>
-                            <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.orders.show.order_tax_hst_label'|trans }}</td>
-                            <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ order.taxHst|money_snapshot(order.currency) }}</td>
-                        </tr>
-                        {% endif %}
+                        {% endfor %}
                         <tr>
                             <td colspan="3" style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; border-top: 2px solid #0f172a;">{{ 'common.total'|trans }}</td>
                             <td style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; font-size: 18px; border-top: 2px solid #0f172a; white-space: nowrap;">

@@ -13,6 +13,7 @@ use App\Service\StripeCustomerService;
 use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\OrderTaxLine;
 use App\Entity\User;
 use App\Message\ReindexEntityMessage;
 use App\Repository\AddressRepository;
@@ -726,9 +727,13 @@ class CheckoutController extends AbstractController
         $order->setShippingMethodCarrier($shippingCarrier ?: null);
         $order->setShippingMethodName($shippingMethod ?: null);
         $order->setShippingMethodReference($shippingReference ?: null);
-        $order->setTaxGst($taxGst !== null ? (string) round((float) $taxGst, 2) : '0.00');
-        $order->setTaxPst($taxPst !== null ? (string) round((float) $taxPst, 2) : '0.00');
-        $order->setTaxHst($taxHst !== null ? (string) round((float) $taxHst, 2) : '0.00');
+        $this->applyTaxLines(
+            $order,
+            $shippingProvince ?: '',
+            (float) ($taxGst ?? 0),
+            (float) ($taxPst ?? 0),
+            (float) ($taxHst ?? 0),
+        );
 
         $nameParts = explode(' ', trim($name), 2);
         $order->setCustomerFirstName($nameParts[0] ?? 'Client');
@@ -987,6 +992,44 @@ class CheckoutController extends AbstractController
         $pst   = round($subtotal * $rates['pst'], 2);
         $hst   = round($subtotal * $rates['hst'], 2);
         return [$gst, $pst, $hst];
+    }
+
+    /**
+     * Snapshots the tax breakdown onto the order as tax lines — one row per
+     * non-zero component. The charged amounts come from the checkout session
+     * (what the PaymentIntent was set to); the rates are read from TaxService
+     * for the receipt. Quebec's provincial tax is QST, not PST.
+     *
+     * This is still Canada-specific; when the TaxEngine lands (next step), the
+     * engine returns these lines directly and this helper goes away.
+     */
+    private function applyTaxLines(Order $order, string $province, float $gst, float $pst, float $hst): void
+    {
+        $province = strtoupper($province);
+        $rates = $this->taxService->getRateForProvince($province);
+        $jurisdiction = $province !== '' ? $province : null;
+
+        $components = [
+            ['gst', 'GST', (float) $rates['gst'], $gst],
+            [$province === 'QC' ? 'qst' : 'pst', $province === 'QC' ? 'QST' : 'PST', (float) $rates['pst'], $pst],
+            ['hst', 'HST', (float) $rates['hst'], $hst],
+        ];
+
+        foreach ($components as [$code, $label, $rate, $amount]) {
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $order->addTaxLine(new OrderTaxLine(
+                code: $code,
+                label: $label,
+                rate: $rate > 0 ? number_format($rate, 5, '.', '') : null,
+                amount: number_format($amount, 2, '.', ''),
+                jurisdiction: $jurisdiction,
+            ));
+        }
+
+        $order->recalculateTaxTotal();
     }
 
     #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]

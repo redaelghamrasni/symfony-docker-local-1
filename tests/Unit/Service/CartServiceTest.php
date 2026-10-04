@@ -5,6 +5,7 @@ namespace App\Tests\Unit\Service;
 use App\Entity\Cart;
 use App\Repository\CartRepository;
 use App\Service\CartService;
+use App\Service\CurrencyService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -31,7 +32,10 @@ class CartServiceTest extends TestCase
         $requestStack = $this->createMock(RequestStack::class);
         $requestStack->method('getSession')->willReturn($session);
 
-        $this->cartService = new CartService($em, $cartRepository, $requestStack);
+        $currencyService = $this->createMock(CurrencyService::class);
+        $currencyService->method('default')->willReturn('CAD');
+
+        $this->cartService = new CartService($em, $cartRepository, $requestStack, $currencyService);
     }
 
     public function testGetCurrentCartReturnsCart(): void

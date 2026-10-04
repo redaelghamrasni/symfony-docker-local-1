@@ -63,24 +63,13 @@
             <td style="padding: 4px 16px;">{{ 'email.order_confirmation.subtotal'|trans }}</td>
             <td style="padding: 4px 16px; text-align: right;">{{ order.subtotal|money_snapshot(order.currency) }}</td>
         </tr>
-        {% if order.taxGst and order.taxGst > 0 %}
+        {% for line in order.taxLines %}
+        {% set tkey = 'tax.line.' ~ line.code %}{% set tlabel = tkey|trans %}
         <tr>
-            <td style="padding: 4px 16px; color: #6b7280;">{{ 'email.order_confirmation.tax_gst'|trans }}</td>
-            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxGst|money_snapshot(order.currency) }}</td>
+            <td style="padding: 4px 16px; color: #6b7280;">{{ tlabel == tkey ? line.label : tlabel }}</td>
+            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ line.amount|money_snapshot(order.currency) }}</td>
         </tr>
-        {% endif %}
-        {% if order.taxPst and order.taxPst > 0 %}
-        <tr>
-            <td style="padding: 4px 16px; color: #6b7280;">{{ (order.shippingProvince == 'QC' ? 'email.order_confirmation.tax_qst' : 'email.order_confirmation.tax_pst')|trans }}</td>
-            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxPst|money_snapshot(order.currency) }}</td>
-        </tr>
-        {% endif %}
-        {% if order.taxHst and order.taxHst > 0 %}
-        <tr>
-            <td style="padding: 4px 16px; color: #6b7280;">{{ 'email.order_confirmation.tax_hst'|trans }}</td>
-            <td style="padding: 4px 16px; text-align: right; color: #6b7280;">{{ order.taxHst|money_snapshot(order.currency) }}</td>
-        </tr>
-        {% endif %}
+        {% endfor %}
         <tr>
             <td style="padding: 4px 16px; color: #6b7280;">{{ 'checkout.shipping'|trans }}</td>
             <td style="padding: 4px 16px; text-align: right; color: #6b7280;">

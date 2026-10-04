@@ -202,6 +202,14 @@ error:
   try_again: Please try again
 
 #Cart
+tax:
+  line:
+    gst: GST
+    pst: PST
+    qst: QST
+    hst: HST
+    vat: VAT
+
 currency:
   select_label: Choose a currency
   switched: Currency changed. Prices have been updated.

@@ -132,7 +132,7 @@ tests/Unit/ tests/Functional/
 ### Cart / order
 
 - **Cart / CartItem** — a "live" cart: `CartItem` captures the article's `unitPrice` at the time it's added, `Cart::recalculateTotal()` is called on every mutation. Persisted in the database, referenced from the session via a `cart_id` (see `CartService`).
-- **Order / OrderItem** — a frozen order: billing/shipping addresses are **denormalized** (copied, no FK to `Address`), price breakdown (`subtotal`, `shippingAmount`, `taxGst`/`taxPst`/`taxHst`), Stripe tracking fields (`stripePaymentIntentId`, `paymentBrand`, `paymentLast4`) and Shippo shipping fields (`shippingCarrier`, `trackingNumber`, `shippingLabelUrl`). `status`: `pending` → `in_progress` → `shipped` → `completed` (renamed from `processing` by migration `20260625000000`).
+- **Order / OrderItem / OrderTaxLine** — a frozen order: billing/shipping addresses are **denormalized** (copied, no FK to `Address`), price breakdown (`subtotal`, `shippingAmount`, `taxTotal`, `currency`, `shippingCountry`), Stripe tracking fields (`stripePaymentIntentId`, `paymentBrand`, `paymentLast4`) and Shippo shipping fields (`shippingCarrier`, `trackingNumber`, `shippingLabelUrl`). The tax breakdown is a child collection of **`OrderTaxLine`** rows (`code`, `label`, `rate`, `amount`, `jurisdiction`) — a snapshot that replaced the old fixed `taxGst`/`taxPst`/`taxHst` columns so any market's tax model fits (GST+QST, a single VAT line, US state+city, or none). `status`: `pending` → `in_progress` → `shipped` → `completed` (renamed from `processing` by migration `20260625000000`).
 
 ### User
 
@@ -220,7 +220,7 @@ The project serves two different clients: the server-rendered website (Twig/Stim
 
 ### Canadian taxes by province, Stripe + PayPal, Shippo
 
-- **TaxService** encodes the GST/PST/HST rules for the 13 Canadian provinces/territories (fixed hardcoded rates, no external service) — a sensible choice since rates rarely change and an external dependency would add latency/a point of failure for a deterministic calculation.
+- **TaxService** resolves GST/PST/HST rates for the 13 Canadian provinces/territories from the `tax_rate` table (editable at `/admin/taxes`), falling back to the statutory rates it carries as a constant when the table is empty — so a rate change is a data edit, not a deploy, and checkout never fails for a missing row. It is the first concrete tax engine of the planned market layer (see the portability design); the hardcoded-rate approach it replaced is kept only as that fallback seed.
 - **Dual payment method** (injected `StripeClient` + `PayPalService` via direct Guzzle HTTP): covers both integrated card payment (Stripe Elements/PaymentIntent) and users who prefer PayPal, a common need in consumer e-commerce.
 - **Shippo** for carrier rates and label generation: avoids coding a per-carrier integration (Canada Post, UPS, etc.), Shippo aggregates several carriers behind a single API.
 
