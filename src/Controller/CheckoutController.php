@@ -382,9 +382,7 @@ class CheckoutController extends AbstractController
         return $this->json([
             'ok'          => true,
             'subtotal'    => $subtotal,
-            'gst'         => $gst,
-            'pst'         => $pst,
-            'hst'         => $hst,
+            'taxes'       => $taxes,
             'shipping'    => $shipping,
             'grand_total' => $grandTotal,
         ]);
@@ -658,8 +656,9 @@ class CheckoutController extends AbstractController
                     'street1' => $data['address'] ?? '',
                     'city'    => $data['city'],
                     'zip'     => $data['zip'],
-                    'state'   => $data['province'] ?? 'QC',
-                    'country' => $data['country'] ?? 'CA',
+                    'state'   => $data['province'] ?? null,
+                    'country' => $data['country'] ?? $this->marketContext->homeCountry(),
+                    'phone'   => $data['phone'] ?? '',
                     'email'   => $data['email'] ?? '',
                 ],
                 [

@@ -2,41 +2,57 @@
 
 namespace App\Service;
 
+use App\Shipping\Adapter\CarrierAddressAdapter;
+use App\Shipping\Adapter\SenderAddressAdapter;
+use App\Shipping\ShippingAddress;
+
 // shippo/shippo-php uses global classes (no namespace): Shippo, Shippo_Address, Shippo_Parcel, etc.
 
 class ShippingService
 {
-    public function __construct(string $apiKey, private readonly string $environment)
-    {
+    public function __construct(
+        string $apiKey,
+        private readonly string $environment,
+        private readonly SenderAddressAdapter $sender,
+        private readonly CarrierAddressAdapter $carrier,
+        private readonly CurrencyService $currencies,
+    ) {
         \Shippo::setApiKey($apiKey);
     }
 
     /**
-     * Retourne les tarifs de livraison disponibles
+     * Returns the available shipping rates for a destination.
+     *
+     * The origin comes from the market (SenderAddressAdapter → home country +
+     * admin settings), not a constant; both addresses pass through the neutral
+     * ShippingAddress and the carrier adapter, so swapping Shippo touches the
+     * adapter, not this flow. When the parcel crosses a border, Shippo's intl
+     * rating requires a phone on both ends, enforced here before the API call.
      */
     public function getRates(array $toAddress, array $parcel): array
     {
-        $fromAddress = \Shippo_Address::create([
-            'name'    => 'MonApp Store',
-            'street1' => '123 rue Principale',
-            'city'    => 'Montréal',
-            'state'   => 'QC',
-            'zip'     => 'H1A1A1',
-            'country' => 'CA',
-            'phone'   => '+15140000000',
-            'email'   => 'no-reply@monapp.local',
-        ]);
+        $from = $this->sender->address();
+        $to   = new ShippingAddress(
+            name:       (string) ($toAddress['name'] ?: 'Customer'),
+            street1:    (string) $toAddress['street1'],
+            city:       (string) $toAddress['city'],
+            country:    strtoupper(trim((string) ($toAddress['country'] ?? $from->country))),
+            state:      $toAddress['state'] ?? null,
+            postalCode: $toAddress['zip'] ?? null,
+            phone:      $toAddress['phone'] ?? null,
+            email:      $toAddress['email'] ?? null,
+        );
 
-        $addressTo = \Shippo_Address::create([
-            'name'    => $toAddress['name'],
-            'street1' => $toAddress['street1'],
-            'city'    => $toAddress['city'],
-            'state'   => $toAddress['state'] ?? 'QC',
-            'zip'     => $toAddress['zip'],
-            'country' => $toAddress['country'] ?? 'CA',
-            'phone'   => $toAddress['phone'] ?? '',
-            'email'   => $toAddress['email'] ?? '',
-        ]);
+        // Shippo's international rating guide makes a phone mandatory on both
+        // the sender and the recipient; assert it before the call rather than
+        // letting the API fail opaquely. Domestic shipments skip this.
+        if ($to->isInternationalFrom($from)) {
+            $from->assertReadyForInternational('sender');
+            $to->assertReadyForInternational('recipient');
+        }
+
+        $fromAddress = \Shippo_Address::create($this->carrier->toPayload($from));
+        $addressTo   = \Shippo_Address::create($this->carrier->toPayload($to));
 
         $parcelObj = \Shippo_Parcel::create([
             'length'        => $parcel['length'] ?? '10',
@@ -86,13 +102,17 @@ class ShippingService
 
     private function mockRates(): array
     {
+        // The simulated prices are shown in the shop's default currency, not a
+        // hardcoded CAD, so a non-Canadian dev shop sees coherent amounts.
+        $currency = $this->currencies->default();
+
         return [
             [
                 'object_id'      => 'mock_standard',
                 'carrier'        => 'Standard (simulé)',
                 'service'        => 'Livraison standard',
                 'price'          => '9.99',
-                'currency'       => 'CAD',
+                'currency'       => $currency,
                 'days'           => 5,
                 'duration_terms' => null,
             ],
@@ -101,7 +121,7 @@ class ShippingService
                 'carrier'        => 'Express (simulé)',
                 'service'        => 'Livraison express',
                 'price'          => '19.99',
-                'currency'       => 'CAD',
+                'currency'       => $currency,
                 'days'           => 2,
                 'duration_terms' => null,
             ],
