@@ -122,3 +122,8 @@ services:
         arguments:
             $engines: !tagged_iterator app.tax_engine
             $fallback: '@App\Market\Tax\Engine\NoTaxEngine'
+
+    # Built-in region defaults live in an app-owned data file (no external library).
+    App\Market\RegionProvider\DefaultRegionProvider:
+        arguments:
+            $dataFile: '%kernel.project_dir%/config/market/regions.php'

@@ -84,12 +84,18 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="shipping_province">{{ 'checkout.province' | trans }}</label>
+                        {% if regions is not empty %}
                         <select id="shipping_province" name="shipping_province" class="form-control">
                             <option value="">—</option>
-                            {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
-                                <option value="{{ code }}" {% if customer_info.shipping_province|default('') == code %}selected{% endif %}>{{ name }} ({{ code }})</option>
+                            {% for region in regions %}
+                                {% set rk = 'region.' ~ home_country|lower ~ '.' ~ region.code|lower %}{% set rn = rk|trans %}
+                                <option value="{{ region.code }}" {% if customer_info.shipping_province|default('') == region.code %}selected{% endif %}>{{ rn == rk ? region.name : rn }} ({{ region.code }})</option>
                             {% endfor %}
                         </select>
+                        {% else %}
+                        <input id="shipping_province" name="shipping_province" type="text" class="form-control"
+                               value="{{ customer_info.shipping_province|default('') }}">
+                        {% endif %}
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="shipping_country">{{ 'checkout.country' | trans }}</label>
@@ -131,12 +137,17 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="billing_province">{{ 'checkout.province' | trans }}</label>
+                            {% if regions is not empty %}
                             <select id="billing_province" name="billing_province" class="form-control">
                                 <option value="">—</option>
-                                {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
-                                    <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                                {% for region in regions %}
+                                    {% set rk = 'region.' ~ home_country|lower ~ '.' ~ region.code|lower %}{% set rn = rk|trans %}
+                                    <option value="{{ region.code }}">{{ rn == rk ? region.name : rn }} ({{ region.code }})</option>
                                 {% endfor %}
                             </select>
+                            {% else %}
+                            <input id="billing_province" name="billing_province" type="text" class="form-control">
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -621,7 +632,7 @@ async function loadShippingRates() {
         const response = await fetch('{{ path('app_checkout_shipping_rates') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, address, city, zip, province, email, country: 'CA' }),
+            body: JSON.stringify({ name, address, city, zip, province, email, country: document.getElementById('shipping_country')?.value || '{{ home_country }}' }),
         });
 
         const data = await response.json();

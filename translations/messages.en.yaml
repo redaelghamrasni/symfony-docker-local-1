@@ -202,6 +202,22 @@ error:
   try_again: Please try again
 
 #Cart
+region:
+  ca:
+    ab: Alberta
+    bc: British Columbia
+    mb: Manitoba
+    nb: New Brunswick
+    nl: Newfoundland and Labrador
+    ns: Nova Scotia
+    nt: Northwest Territories
+    nu: Nunavut
+    on: Ontario
+    pe: Prince Edward Island
+    qc: Quebec
+    sk: Saskatchewan
+    yt: Yukon
+
 tax:
   line:
     gst: GST
@@ -380,8 +396,44 @@ admin:
     settings: Settings
     currencies: Currencies
     taxes: Tax rates
+    regions: Regions
     logs: Logs
     back_to_store: Back to Store
+  regions:
+    title: Regions
+    breadcrumb: Catalogue / Regions
+    intro: "Sub-national regions (provinces, states…) offered at checkout. Common markets are built in; add rows here only for a country not covered, or to customise one. If you define any region for a country, it replaces the built-in set for that country."
+    create: Add region
+    country: Country
+    code: Code
+    name: Name
+    edit: Edit
+    save: Save
+    cancel: Cancel
+    empty: "No overrides. Built-in defaults are used for every market."
+    home_effective: "Effective regions for the home market (%country%)"
+    source_override: admin-defined
+    source_default: built-in default
+    home_none: "No regions for this country — checkout shows a free-text region field. Add regions below to offer a dropdown."
+    confirm_delete: "Delete this region? If it is the last one for its country, that country falls back to the built-in defaults."
+    new_title: Add region
+    edit_title: "Region %region%"
+    form:
+      country: Country code
+      country_help: "Two-letter ISO code of the country this region belongs to (US, FR, SA…)."
+      country_invalid: Use a two-letter country code.
+      code: Region code
+      code_help: "Short stable code stored on orders (e.g. CA, NY, 34). Up to 10 characters."
+      code_invalid: "Letters, digits and hyphens only, up to 10 characters."
+      name: Region name
+      position: Display order
+      position_help: Lower numbers appear first in the checkout dropdown.
+      override_notice: "Adding a region for a country makes your list authoritative for it — the built-in defaults for that country are no longer used."
+    flash:
+      created: Region added.
+      updated: Region updated.
+      deleted: Region deleted.
+      csrf: Security token validation failed.
   taxes:
     title: Tax rates
     breadcrumb: Catalogue / Tax rates

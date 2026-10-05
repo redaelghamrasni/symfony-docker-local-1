@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Address;
 use App\Market\MarketContext;
+use App\Market\MarketProfile;
 use App\Market\Tax\TaxEngineRegistry;
 use App\Market\Tax\TaxQuote;
 use App\Service\CartService;
@@ -57,6 +58,7 @@ class CheckoutController extends AbstractController
         private TaxService $taxService,
         private TaxEngineRegistry $taxEngineRegistry,
         private MarketContext $marketContext,
+        private MarketProfile $marketProfile,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -114,6 +116,8 @@ class CheckoutController extends AbstractController
             // home country as the default when the customer has none yet.
             'countries'         => $this->marketContext->countryNames($request->getLocale()),
             'home_country'      => $this->marketContext->homeCountry(),
+            // Sub-national regions for the home market; empty → free-text field.
+            'regions'           => $this->marketProfile->regions(),
         ]);
     }
 
