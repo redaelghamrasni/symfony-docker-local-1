@@ -234,6 +234,49 @@
         </div>
     </div>
 
+    {# Shipping card — weight (required) + optional box dimensions #}
+    <div style="background: white; border: 1px solid #d6dde6; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px;">
+        <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #d6dde6;">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 700; color: #1a2340; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.articles.form.shipping_title'|trans }}</h2>
+        </div>
+        <div style="padding: 28px 24px; display: flex; flex-direction: column; gap: 28px;">
+
+            {# Weight #}
+            <div>
+                {{ form_label(form.weight, 'article_form.weight_label'|trans, {
+                    'label_attr': {'style': 'display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;'}
+                }) }}
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    {{ form_widget(form.weight, {'attr': {'style': 'width: 200px; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box;'}}) }}
+                    <span style="font-size: 14px; color: #8a9ab5;">kg</span>
+                </div>
+                <p style="margin: 6px 0 0; font-size: 12px; color: #8a9ab5;">{{ 'article_form.weight_help'|trans }}</p>
+                <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(form.weight) }}</div>
+            </div>
+
+            {# Dimensions (optional) #}
+            <div>
+                <div style="margin-bottom: 10px; font-size: 13px; font-weight: 600; color: #374155; text-transform: uppercase; letter-spacing: 0.04em;">{{ 'article_form.dimensions_label'|trans }}</div>
+                <div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+                    {% for dim in ['length', 'width', 'height'] %}
+                    <div>
+                        {{ form_label(attribute(form, dim), ('article_form.' ~ dim ~ '_label')|trans, {
+                            'label_attr': {'style': 'display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #8a9ab5;'}
+                        }) }}
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            {{ form_widget(attribute(form, dim), {'attr': {'style': 'width: 110px; padding: 10px 14px; border: 1px solid #d6dde6; border-radius: 6px; font-size: 15px; color: #1a2340; background: #f8fafc; box-sizing: border-box;'}}) }}
+                            <span style="font-size: 13px; color: #8a9ab5;">cm</span>
+                        </div>
+                        <div style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ form_errors(attribute(form, dim)) }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p style="margin: 8px 0 0; font-size: 12px; color: #8a9ab5;">{{ 'article_form.dimensions_help'|trans }}</p>
+            </div>
+
+        </div>
+    </div>
+
     {# Bottom action bar #}
     <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 16px;">
         <a href="{{ cancelUrl }}" class="btn-action-secondary">

@@ -62,6 +62,13 @@ article_form:
   new_title: Créer un nouvel article
   edit_title: Modifier l'article
   price_label: Prix
+  weight_label: Poids
+  weight_help: "Sert à estimer la livraison et à déclarer le colis en douane. Valeur par défaut : 0,5 kg."
+  dimensions_label: Dimensions du colis
+  dimensions_help: Longueur, largeur et hauteur du colis en cm. Chacune vaut 1 cm par défaut ; indiquez la taille réelle pour une livraison exacte.
+  length_label: Longueur
+  width_label: Largeur
+  height_label: Hauteur
   title_label: Titre
   title_placeholder: Entrez un titre accrocheur...
   content_label: Contenu
@@ -578,6 +585,7 @@ admin:
       info_title: Informations sur l'article
       content_title: Contenu de l'article
       pricing_title: Tarification
+      shipping_title: Expédition
       base_price_label: Prix régulier
       promotions_label: Promotions applicables
       promotions_hint: "Maintenez Ctrl / Cmd pour sélectionner plusieurs promotions"

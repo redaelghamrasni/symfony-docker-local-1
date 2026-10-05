@@ -60,6 +60,13 @@ article_form:
   new_title: Create a new article
   edit_title: Edit article
   price_label: Price
+  weight_label: Weight
+  weight_help: Used to estimate shipping and to declare the parcel at customs. Defaults to 0.5 kg.
+  dimensions_label: Box dimensions
+  dimensions_help: The parcel's length, width and height in cm. Each defaults to 1 cm; set the real size for accurate shipping.
+  length_label: Length
+  width_label: Width
+  height_label: Height
   title_label: Title
   title_placeholder: Enter a catchy title...
   content_label: Content
@@ -602,6 +609,7 @@ admin:
       info_title: Article Information
       content_title: Article Content
       pricing_title: Pricing
+      shipping_title: Shipping
       base_price_label: Regular Price
       promotions_label: Applicable Promotions
       promotions_hint: "Hold Ctrl / Cmd to select multiple promotions"

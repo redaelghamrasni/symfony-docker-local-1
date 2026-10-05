@@ -11,9 +11,10 @@ use App\Shipping\Customs\CustomsItem;
  * RecipientAddressAdapter builds the recipient from an order.
  *
  * Each cart line becomes one customs item: the article's title describes it,
- * its unit price times the quantity is the declared value, and the quantity
- * times a per-unit default is the net weight — the same 0.5 kg/item heuristic
- * the parcel estimate already uses, since the catalog carries no real weight.
+ * its unit price times the quantity is the declared value, and its weight times
+ * the quantity is the net weight. The article now carries a real weight (0.5 kg
+ * by default until an operator sets it), so the declaration reflects the catalog
+ * rather than a flat guess.
  *
  * Goods are declared as originating in the shop's country (passed in), because
  * the catalog has no per-article country of origin. An operator shipping goods
@@ -22,8 +23,8 @@ use App\Shipping\Customs\CustomsItem;
  */
 final class CartCustomsAdapter
 {
-    /** Default net weight per unit, in kilograms (matches the parcel estimate). */
-    private const WEIGHT_PER_UNIT_KG = 0.5;
+    /** Net weight per unit (kg) when an article somehow carries no weight. */
+    private const WEIGHT_PER_UNIT_FALLBACK_KG = 0.5;
 
     public function fromCart(Cart $cart, string $originCountry): CustomsDeclaration
     {
@@ -32,11 +33,15 @@ final class CartCustomsAdapter
         foreach ($cart->getItems() as $line) {
             $article  = $line->getArticle();
             $quantity = max(1, $line->getQuantity());
+            $unitKg   = $article !== null ? (float) $article->getWeight() : self::WEIGHT_PER_UNIT_FALLBACK_KG;
+            if ($unitKg <= 0) {
+                $unitKg = self::WEIGHT_PER_UNIT_FALLBACK_KG;
+            }
 
             $items[] = new CustomsItem(
                 description:   $article?->getTitle() ?: 'Item',
                 quantity:      $quantity,
-                netWeightKg:   self::WEIGHT_PER_UNIT_KG * $quantity,
+                netWeightKg:   round($unitKg * $quantity, 3),
                 valueAmount:   round((float) $line->getUnitPrice() * $quantity, 2),
                 valueCurrency: $cart->getCurrency(),
                 originCountry: strtoupper($originCountry),

@@ -13,8 +13,8 @@ class CartCustomsAdapterTest extends TestCase
     public function testBuildsOneCustomsLinePerCartItem(): void
     {
         $cart = $this->cart('CAD', [
-            ['title' => 'Wireless mouse', 'sku' => 'MOUSE-1', 'qty' => 2, 'unit' => '29.99'],
-            ['title' => 'USB cable',      'sku' => 'CABLE-1', 'qty' => 1, 'unit' => '9.50'],
+            ['title' => 'Wireless mouse', 'sku' => 'MOUSE-1', 'qty' => 2, 'unit' => '29.99', 'weight' => '0.250'],
+            ['title' => 'USB cable',      'sku' => 'CABLE-1', 'qty' => 1, 'unit' => '9.50',  'weight' => '0.100'],
         ]);
 
         $declaration = (new CartCustomsAdapter())->fromCart($cart, 'CA');
@@ -26,8 +26,18 @@ class CartCustomsAdapterTest extends TestCase
         $this->assertSame('MOUSE-1', $mouse->sku);
         $this->assertSame(2, $mouse->quantity);
         $this->assertSame(59.98, $mouse->valueAmount);   // unit * qty
-        $this->assertSame(1.0, $mouse->netWeightKg);      // 0.5kg * qty
+        $this->assertSame(0.5, $mouse->netWeightKg);      // article weight (0.25) * qty
         $this->assertSame('CAD', $mouse->valueCurrency);
+    }
+
+    public function testFallsBackTo05kgWhenAnArticleHasNoWeight(): void
+    {
+        $cart = $this->cart('CAD', [
+            ['title' => 'Mystery box', 'sku' => null, 'qty' => 3, 'unit' => '5.00', 'weight' => '0'],
+        ]);
+
+        // A zero/blank article weight should not produce a zero-weight parcel.
+        $this->assertSame(1.5, (new CartCustomsAdapter())->fromCart($cart, 'CA')->items[0]->netWeightKg);
     }
 
     public function testDeclaresGoodsAsMadeInTheGivenOriginCountry(): void
@@ -47,7 +57,7 @@ class CartCustomsAdapterTest extends TestCase
     }
 
     /**
-     * @param list<array{title: string, sku: ?string, qty: int, unit: string}> $lines
+     * @param list<array{title: string, sku: ?string, qty: int, unit: string, weight?: string}> $lines
      */
     private function cart(string $currency, array $lines): Cart
     {
@@ -56,6 +66,7 @@ class CartCustomsAdapterTest extends TestCase
             $article = $this->createMock(Article::class);
             $article->method('getTitle')->willReturn($line['title']);
             $article->method('getSku')->willReturn($line['sku']);
+            $article->method('getWeight')->willReturn($line['weight'] ?? '0.500');
 
             $item = $this->createMock(CartItem::class);
             $item->method('getArticle')->willReturn($article);

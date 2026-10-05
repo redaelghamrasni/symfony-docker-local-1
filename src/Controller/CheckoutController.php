@@ -630,10 +630,13 @@ class CheckoutController extends AbstractController
         }
 
         $cart       = $this->cartService->getCurrentCart();
-        $currency   = $cart->getCurrency();
-        $totalItems = 0;
+        $currency    = $cart->getCurrency();
+        $totalItems  = 0;
+        $totalWeight = 0.0;
         foreach ($cart->getItems() as $item) {
-            $totalItems += $item->getQuantity();
+            $quantity    = $item->getQuantity();
+            $totalItems += $quantity;
+            $totalWeight += (float) ($item->getArticle()?->getWeight() ?? 0.5) * $quantity;
         }
 
         // Free shipping threshold
@@ -664,7 +667,7 @@ class CheckoutController extends AbstractController
                     'email'   => $data['email'] ?? '',
                 ],
                 [
-                    'weight' => max(0.5, $totalItems * 0.5),
+                    'weight' => max(0.5, round($totalWeight, 3)),
                     'length' => '30',
                     'width'  => '20',
                     'height' => '15',
