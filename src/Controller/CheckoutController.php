@@ -34,6 +34,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Mime\Address as EmailAddress;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\ShippingService;
+use App\Shipping\Adapter\CartCustomsAdapter;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -47,6 +48,7 @@ class CheckoutController extends AbstractController
         private MailerInterface $mailer,
         private EntityManagerInterface $entityManager,
         private ShippingService $shippingService,
+        private CartCustomsAdapter $cartCustomsAdapter,
         private SettingService $settingService,
         private StripeCustomerService $stripeCustomerService,
         private AddressRepository $addressRepository,
@@ -666,7 +668,11 @@ class CheckoutController extends AbstractController
                     'length' => '30',
                     'width'  => '20',
                     'height' => '15',
-                ]
+                ],
+                // Declared contents, attached only when the parcel crosses a
+                // border (ShippingService decides). Goods are declared as made
+                // in the shop's home country by default.
+                $this->cartCustomsAdapter->fromCart($cart, $this->marketContext->homeCountry()),
             );
         } catch (\Throwable $e) {
             // A failure here stalls the customer mid-checkout with no way to

@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Shipping\Adapter\CarrierAddressAdapter;
 use App\Shipping\Adapter\SenderAddressAdapter;
+use App\Shipping\Customs\CustomsDeclaration;
 use App\Shipping\ShippingAddress;
 
 // shippo/shippo-php uses global classes (no namespace): Shippo, Shippo_Address, Shippo_Parcel, etc.
@@ -29,7 +30,7 @@ class ShippingService
      * adapter, not this flow. When the parcel crosses a border, Shippo's intl
      * rating requires a phone on both ends, enforced here before the API call.
      */
-    public function getRates(array $toAddress, array $parcel): array
+    public function getRates(array $toAddress, array $parcel, ?CustomsDeclaration $customs = null): array
     {
         $from = $this->sender->address();
         $to   = new ShippingAddress(
@@ -43,10 +44,12 @@ class ShippingService
             email:      $toAddress['email'] ?? null,
         );
 
+        $international = $to->isInternationalFrom($from);
+
         // Shippo's international rating guide makes a phone mandatory on both
         // the sender and the recipient; assert it before the call rather than
         // letting the API fail opaquely. Domestic shipments skip this.
-        if ($to->isInternationalFrom($from)) {
+        if ($international) {
             $from->assertReadyForInternational('sender');
             $to->assertReadyForInternational('recipient');
         }
@@ -63,12 +66,22 @@ class ShippingService
             'mass_unit'     => 'kg',
         ]);
 
-        $shipment = \Shippo_Shipment::create([
+        $shipmentPayload = [
             'address_from' => $fromAddress,
             'address_to'   => $addressTo,
             'parcels'      => [$parcelObj],
             'async'        => false,
-        ]);
+        ];
+
+        // A cross-border parcel must declare its contents to clear customs. The
+        // declaration is built upstream (CartCustomsAdapter) and only attached
+        // when the shipment actually leaves the origin country — a domestic
+        // parcel carries none.
+        if ($international && $customs !== null && !$customs->isEmpty()) {
+            $shipmentPayload['customs_declaration'] = $this->createCustomsDeclaration($customs, $from);
+        }
+
+        $shipment = \Shippo_Shipment::create($shipmentPayload);
 
         if ($shipment['status'] !== 'SUCCESS') {
             return [];
@@ -98,6 +111,43 @@ class ShippingService
         }
 
         return $rates;
+    }
+
+    /**
+     * Maps our neutral declaration to Shippo's customs objects and returns the
+     * created declaration's id for the shipment. This is the carrier mapping for
+     * customs — the Shippo-specific field names (`net_weight`, `value_amount`,
+     * `certify_signer`) stay contained here, as they do for addresses.
+     *
+     * @return string the Shippo customs declaration object id
+     */
+    private function createCustomsDeclaration(CustomsDeclaration $declaration, ShippingAddress $from): string
+    {
+        $itemIds = [];
+        foreach ($declaration->items as $item) {
+            $created = \Shippo_CustomsItem::create([
+                'description'   => $item->description,
+                'quantity'      => $item->quantity,
+                'net_weight'    => (string) $item->netWeightKg,
+                'mass_unit'     => 'kg',
+                'value_amount'  => number_format($item->valueAmount, 2, '.', ''),
+                'value_currency' => $item->valueCurrency,
+                'origin_country' => $item->originCountry,
+                'sku'           => $item->sku ?? '',
+                'tariff_number' => $item->hsCode ?? '',
+            ]);
+            $itemIds[] = $created['object_id'];
+        }
+
+        $created = \Shippo_CustomsDeclaration::create([
+            'contents_type'       => $declaration->contentsType,
+            'non_delivery_option' => $declaration->nonDeliveryOption,
+            'certify'             => true,
+            'certify_signer'      => $from->name,
+            'items'               => $itemIds,
+        ]);
+
+        return $created['object_id'];
     }
 
     private function mockRates(): array
