@@ -4,6 +4,13 @@
 
 {% block javascripts %}
     {{ parent() }}
+    {# Force a full page load when navigating here instead of a Turbo visit. The
+       checkout script bootstraps on DOMContentLoaded (which does not fire on a
+       Turbo visit) and declares top-level consts (which throw "already declared"
+       when Turbo re-evaluates the body script on its preview→render cycle). A
+       full load runs the script exactly once, cleanly — see also the base
+       template's turbo:load handlers for the Turbo-friendly pattern. #}
+    <meta name="turbo-visit-control" content="reload">
     {# Loaded async early so it is ready (or nearly ready) before DOMContentLoaded fires #}
     <script src="https://js.stripe.com/v3/" async></script>
     {% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
