@@ -56,6 +56,31 @@ class ArticleType extends AbstractType
                 'html5'  => true,
                 'attr'   => ['placeholder' => '0.00', 'step' => '0.01', 'min' => '0'],
             ])
+            ->add('weight', NumberType::class, [
+                'label'  => 'article_form.weight_label',
+                'scale'  => 3,
+                'html5'  => true,
+                'help'   => 'article_form.weight_help',
+                'attr'   => ['class' => 'form-control', 'placeholder' => '0.500', 'step' => '0.001', 'min' => '0'],
+            ])
+            ->add('length', NumberType::class, [
+                'label'  => 'article_form.length_label',
+                'scale'  => 2,
+                'html5'  => true,
+                'attr'   => ['class' => 'form-control', 'placeholder' => '1.00', 'step' => '0.01', 'min' => '0.01'],
+            ])
+            ->add('width', NumberType::class, [
+                'label'  => 'article_form.width_label',
+                'scale'  => 2,
+                'html5'  => true,
+                'attr'   => ['class' => 'form-control', 'placeholder' => '1.00', 'step' => '0.01', 'min' => '0.01'],
+            ])
+            ->add('height', NumberType::class, [
+                'label'  => 'article_form.height_label',
+                'scale'  => 2,
+                'html5'  => true,
+                'attr'   => ['class' => 'form-control', 'placeholder' => '1.00', 'step' => '0.01', 'min' => '0.01'],
+            ])
             ->add('promotions', EntityType::class, [
                 'class'        => Promotion::class,
                 'choice_label' => function (Promotion $p): string {

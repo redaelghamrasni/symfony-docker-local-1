@@ -56,6 +56,31 @@ class Article
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private string $price = '0.00';
 
+    // Physical shipping data. Weight (kilograms) feeds the parcel estimate and
+    // the customs declaration; the three box dimensions (centimetres) describe
+    // the parcel in full 3D. All default to a shippable starting value — 0.5 kg
+    // and 1 cm per side — so every article ships without data entry, and an
+    // operator refines them per article.
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 3, options: ['default' => '0.500'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\PositiveOrZero]
+    private string $weight = '0.500';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $length = '1.00';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $width = '1.00';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $height = '1.00';
+
     #[ORM\ManyToOne(inversedBy: 'articles')]
     #[ORM\JoinColumn(nullable: true)]
     private ?Category $category = null;
@@ -163,6 +188,58 @@ class Article
     public function setPrice(string|float|int $price): static
     {
         $this->price = (string) $price;
+
+        return $this;
+    }
+
+    /** Weight in kilograms. */
+    public function getWeight(): string
+    {
+        return $this->weight;
+    }
+
+    public function setWeight(string|float|int $weight): static
+    {
+        $this->weight = (string) $weight;
+
+        return $this;
+    }
+
+    /** Length in centimetres. */
+    public function getLength(): string
+    {
+        return $this->length;
+    }
+
+    public function setLength(string|float|int $length): static
+    {
+        $this->length = (string) $length;
+
+        return $this;
+    }
+
+    /** Width in centimetres. */
+    public function getWidth(): string
+    {
+        return $this->width;
+    }
+
+    public function setWidth(string|float|int $width): static
+    {
+        $this->width = (string) $width;
+
+        return $this;
+    }
+
+    /** Height in centimetres. */
+    public function getHeight(): string
+    {
+        return $this->height;
+    }
+
+    public function setHeight(string|float|int $height): static
+    {
+        $this->height = (string) $height;
 
         return $this;
     }

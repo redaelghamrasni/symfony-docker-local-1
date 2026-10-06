@@ -4,6 +4,13 @@
 
 {% block javascripts %}
     {{ parent() }}
+    {# Force a full page load when navigating here instead of a Turbo visit. The
+       checkout script bootstraps on DOMContentLoaded (which does not fire on a
+       Turbo visit) and declares top-level consts (which throw "already declared"
+       when Turbo re-evaluates the body script on its preview→render cycle). A
+       full load runs the script exactly once, cleanly — see also the base
+       template's turbo:load handlers for the Turbo-friendly pattern. #}
+    <meta name="turbo-visit-control" content="reload">
     {# Loaded async early so it is ready (or nearly ready) before DOMContentLoaded fires #}
     <script src="https://js.stripe.com/v3/" async></script>
     {% if paypal_client_id and paypal_client_id != 'your_paypal_sandbox_client_id' %}
@@ -84,10 +91,25 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="shipping_province">{{ 'checkout.province' | trans }}</label>
+                        {% if regions is not empty %}
                         <select id="shipping_province" name="shipping_province" class="form-control">
                             <option value="">—</option>
-                            {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
-                                <option value="{{ code }}" {% if customer_info.shipping_province|default('') == code %}selected{% endif %}>{{ name }} ({{ code }})</option>
+                            {% for region in regions %}
+                                {% set rk = 'region.' ~ home_country|lower ~ '.' ~ region.code|lower %}{% set rn = rk|trans %}
+                                <option value="{{ region.code }}" {% if customer_info.shipping_province|default('') == region.code %}selected{% endif %}>{{ rn == rk ? region.name : rn }} ({{ region.code }})</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <input id="shipping_province" name="shipping_province" type="text" class="form-control"
+                               value="{{ customer_info.shipping_province|default('') }}">
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="shipping_country">{{ 'checkout.country' | trans }}</label>
+                        {% set selectedCountry = customer_info.shipping_country|default(home_country) %}
+                        <select id="shipping_country" name="shipping_country" class="form-control">
+                            {% for code, name in countries %}
+                                <option value="{{ code }}" {% if selectedCountry == code %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -122,12 +144,17 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="billing_province">{{ 'checkout.province' | trans }}</label>
+                            {% if regions is not empty %}
                             <select id="billing_province" name="billing_province" class="form-control">
                                 <option value="">—</option>
-                                {% for code, name in {'AB':'Alberta','BC':'Colombie-Britannique','MB':'Manitoba','NB':'Nouveau-Brunswick','NL':'Terre-Neuve-et-Labrador','NS':'Nouvelle-Écosse','NT':'Territoires du Nord-Ouest','NU':'Nunavut','ON':'Ontario','PE':'Île-du-Prince-Édouard','QC':'Québec','SK':'Saskatchewan','YT':'Yukon'} %}
-                                    <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                                {% for region in regions %}
+                                    {% set rk = 'region.' ~ home_country|lower ~ '.' ~ region.code|lower %}{% set rn = rk|trans %}
+                                    <option value="{{ region.code }}">{{ rn == rk ? region.name : rn }} ({{ region.code }})</option>
                                 {% endfor %}
                             </select>
+                            {% else %}
+                            <input id="billing_province" name="billing_province" type="text" class="form-control">
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -558,6 +585,7 @@ async function saveCustomerInfo(paymentMessage) {
                 checkout_shipping_city:      document.getElementById('shipping_city')?.value.trim() ?? '',
                 checkout_shipping_postal:    document.getElementById('shipping_postal')?.value.trim() ?? '',
                 checkout_shipping_province:  document.getElementById('shipping_province')?.value ?? '',
+                checkout_shipping_country:   document.getElementById('shipping_country')?.value ?? '',
                 checkout_billing_same:       document.getElementById('billing_same')?.checked ?? true,
                 checkout_billing_address:    document.getElementById('billing_address')?.value.trim() ?? '',
                 checkout_billing_city:       document.getElementById('billing_city')?.value.trim() ?? '',
@@ -611,7 +639,7 @@ async function loadShippingRates() {
         const response = await fetch('{{ path('app_checkout_shipping_rates') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, address, city, zip, province, email, country: 'CA' }),
+            body: JSON.stringify({ name, address, city, zip, province, email, country: document.getElementById('shipping_country')?.value || '{{ home_country }}' }),
         });
 
         const data = await response.json();

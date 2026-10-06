@@ -3,8 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Address;
+use App\Market\MarketContext;
+use App\Market\MarketProfile;
+use App\Market\Tax\TaxEngineRegistry;
+use App\Market\Tax\TaxQuote;
 use App\Service\CartService;
 use App\Service\CurrencyService;
+use App\Service\OrderFinalizer;
+use App\Service\PaymentOutcome;
 use App\Service\PayPalService;
 use App\Service\SettingService;
 use App\Service\TaxService;
@@ -12,26 +18,22 @@ use App\Service\StripeCustomerService;
 use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\OrderTaxLine;
 use App\Entity\User;
-use App\Message\ReindexEntityMessage;
 use App\Repository\AddressRepository;
 use App\Repository\OrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Stripe\StripeClient;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Mime\Address as EmailAddress;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\ShippingService;
+use App\Shipping\Adapter\CartCustomsAdapter;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Translation\LocaleSwitcher;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CheckoutController extends AbstractController
 {
@@ -39,18 +41,19 @@ class CheckoutController extends AbstractController
         private CartService $cartService,
         private StripeClient $stripeClient,
         private PayPalService $payPalService,
-        private MailerInterface $mailer,
         private EntityManagerInterface $entityManager,
         private ShippingService $shippingService,
+        private CartCustomsAdapter $cartCustomsAdapter,
         private SettingService $settingService,
         private StripeCustomerService $stripeCustomerService,
         private AddressRepository $addressRepository,
         private OrderRepository $orderRepository,
-        private LocaleSwitcher $localeSwitcher,
-        private TranslatorInterface $translator,
-        private MessageBusInterface $messageBus,
+        private OrderFinalizer $orderFinalizer,
         private CurrencyService $currencyService,
         private TaxService $taxService,
+        private TaxEngineRegistry $taxEngineRegistry,
+        private MarketContext $marketContext,
+        private MarketProfile $marketProfile,
         private LoggerInterface $logger,
         // Channel loggers (see config/packages/monolog.yaml). These write on
         // success as well as failure: the record of a completed order is the
@@ -104,6 +107,12 @@ class CheckoutController extends AbstractController
             'stripe_public_key' => $_ENV['STRIPE_PUBLIC_KEY'] ?? $_SERVER['STRIPE_PUBLIC_KEY'] ?? getenv('STRIPE_PUBLIC_KEY'),
             'paypal_client_id'  => $_ENV['PAYPAL_CLIENT_ID'] ?? $_SERVER['PAYPAL_CLIENT_ID'] ?? getenv('PAYPAL_CLIENT_ID'),
             'customer_info'     => $customerInfo,
+            // Localised country list for the shipping selector, and the shop's
+            // home country as the default when the customer has none yet.
+            'countries'         => $this->marketContext->countryNames($request->getLocale()),
+            'home_country'      => $this->marketContext->homeCountry(),
+            // Sub-national regions for the home market; empty → free-text field.
+            'regions'           => $this->marketProfile->regions(),
         ]);
     }
 
@@ -130,6 +139,13 @@ class CheckoutController extends AbstractController
         $shippingCity     = trim($data['checkout_shipping_city'] ?? '');
         $shippingPostal   = trim($data['checkout_shipping_postal'] ?? '');
         $shippingProvince = trim($data['checkout_shipping_province'] ?? '');
+        // ISO 3166-1 alpha-2; default to the shop's home country when absent,
+        // and reject anything unrecognised so a bad value never reaches the
+        // carrier as a destination.
+        $shippingCountry  = strtoupper(trim($data['checkout_shipping_country'] ?? ''));
+        if ($shippingCountry === '' || !$this->marketContext->isValidCountry($shippingCountry)) {
+            $shippingCountry = $this->marketContext->homeCountry();
+        }
 
         $session = $request->getSession();
         $session->set('checkout_email', $email);
@@ -139,6 +155,7 @@ class CheckoutController extends AbstractController
         $session->set('checkout_shipping_city',     $shippingCity);
         $session->set('checkout_shipping_postal',   $shippingPostal);
         $session->set('checkout_shipping_province', $shippingProvince);
+        $session->set('checkout_shipping_country',  $shippingCountry);
         $session->set('checkout_billing_same',    (bool)($data['checkout_billing_same'] ?? true));
         $session->set('checkout_billing_address',   trim($data['checkout_billing_address'] ?? ''));
         $session->set('checkout_billing_city',      trim($data['checkout_billing_city'] ?? ''));
@@ -318,20 +335,22 @@ class CheckoutController extends AbstractController
         $currency = $cart->getCurrency();
         $subtotal = (float) $cart->getTotal();
 
-        [$gst, $pst, $hst] = $this->calculateTaxes($province, $subtotal);
-        $taxes     = $gst + $pst + $hst;
+        $session  = $request->getSession();
+        $country  = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
+
+        // Tax comes from the active market's engine, not from Canada-specific
+        // code. The order's lines are recomputed from the same engine + inputs
+        // in populateOrderFromSession, so what is charged and what is stored match.
+        $quote      = $this->taxEngineRegistry->active()->quote($subtotal, $country, $province ?: null);
+        $taxes      = (float) $quote->total();
         $grandTotal = $subtotal + $taxes + $shipping;
 
         // Persist amounts to session
-        $session = $request->getSession();
         $session->set('checkout_subtotal',         $subtotal);
         $session->set('checkout_shipping_amount',  $shipping);
         $session->set('checkout_shipping_carrier',   $shippingCarrier !== '' ? $shippingCarrier : null);
         $session->set('checkout_shipping_method',    $shippingMethod !== '' ? $shippingMethod : null);
         $session->set('checkout_shipping_reference',  $shippingReference !== '' ? $shippingReference : null);
-        $session->set('checkout_tax_gst',          $gst);
-        $session->set('checkout_tax_pst',          $pst);
-        $session->set('checkout_tax_hst',          $hst);
         $session->set('checkout_grand_total',      $grandTotal);
 
         // Update Stripe PaymentIntent amount
@@ -355,12 +374,25 @@ class CheckoutController extends AbstractController
             }
         }
 
+        // Pre-persist the order as `pending` now that the amount is finalized and
+        // the session holds everything. This is what makes the webhook (and the
+        // browser return) able to finalize an order without the session — see
+        // docs/stripe-webhook-plan.md. Never lets a storage hiccup break the
+        // checkout UI: the totals are still returned.
+        try {
+            $this->upsertPendingOrder($session, $cart);
+        } catch (\Throwable $e) {
+            $this->paymentLogger->error('checkout.pending_order_upsert_failed', [
+                'cart_id' => $cart->getId(),
+                'error'   => $e->getMessage(),
+                'action'  => 'order not pre-persisted; webhook will rely on browser return',
+            ]);
+        }
+
         return $this->json([
             'ok'          => true,
             'subtotal'    => $subtotal,
-            'gst'         => $gst,
-            'pst'         => $pst,
-            'hst'         => $hst,
+            'taxes'       => $taxes,
             'shipping'    => $shipping,
             'grand_total' => $grandTotal,
         ]);
@@ -369,48 +401,36 @@ class CheckoutController extends AbstractController
     #[Route('/checkout/success', name: 'app_checkout_success', methods: ['GET'])]
     public function success(Request $request): Response
     {
-        $session       = $request->getSession();
-        $checkoutEmail = $session->get('checkout_email');
-        $checkoutName  = $session->get('checkout_name', 'Client');
+        $session = $request->getSession();
 
         if ($request->query->get('redirect_status') === 'succeeded') {
             $cart            = $this->cartService->getCurrentCart();
-            $currency        = $cart->getCurrency();
-            $shippingStreet  = $session->get('checkout_shipping_address');
-            $shippingCity    = $session->get('checkout_shipping_city');
-            $shippingPostal  = $session->get('checkout_shipping_postal');
-
             $claimedIntentId = $request->query->get('payment_intent');
-            $sessionIntentId = $session->get('checkout_pi_id');
 
-            if (!$cart->isEmpty() && $checkoutEmail && $shippingStreet && $shippingCity && $shippingPostal) {
-                $order = $this->buildOrderFromSession($session, $cart);
-                $this->capturePaymentInfo($order, $claimedIntentId);
-                $this->entityManager->persist($order);
-                $this->saveAddressFromOrder($order);
-                $this->entityManager->flush();
-                $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
-                $this->sendOrderConfirmationEmail($order);
+            $order = $this->findFinalizableOrder($session, $claimedIntentId);
 
-                // The business event. Written on the success path on purpose:
-                // without it, a completed order leaves no trace in the logs and
-                // orders/conversion cannot be counted from them.
-                $this->checkoutLogger->info('checkout.order.placed', [
-                    'order_id'       => $order->getId(),
-                    'cart_id'        => $cart->getId(),
-                    'provider'       => 'stripe',
-                    'payment_intent' => $claimedIntentId,
-                    'total'          => $order->getTotal(),
-                    'currency'       => $this->currencyService->forProvider($currency),
-                    'item_count'     => count($order->getItems()),
-                    'province'       => $order->getShippingProvince(),
-                    'is_guest'       => $this->getUser() === null,
-                ]);
-
-                $this->verifyStripePayment($order, $claimedIntentId, $sessionIntentId);
-                $this->entityManager->flush();
+            // Fallback: the order was not pre-persisted (update-payment never ran,
+            // or its upsert failed). Build it from the session now so a paid
+            // customer still gets an order, exactly as before the webhook work.
+            if (!$order) {
+                $order = $this->upsertPendingOrder($session, $cart);
             }
 
+            if ($order) {
+                $outcome   = $this->buildStripeOutcome($order, $claimedIntentId);
+                $performed = $this->orderFinalizer->finalizePaid($order, $outcome);
+
+                // Address bookkeeping belongs to the customer, not the payment;
+                // do it once, on the path that actually finalized the order.
+                if ($performed) {
+                    $this->saveAddressFromOrder($order);
+                    $this->entityManager->flush();
+                }
+            }
+
+            // Session/cart clearing is browser-side by nature and must not break
+            // anything if the webhook already finalized the order (it did not
+            // touch the session). It simply runs.
             $this->clearCheckoutSession($session);
             $this->cartService->clear();
         }
@@ -497,89 +517,48 @@ class CheckoutController extends AbstractController
             return $this->json(['error' => 'PayPal capture not completed: ' . ($capture['status'] ?? '')], 400);
         }
 
-        $session        = $request->getSession();
-        $cart           = $this->cartService->getCurrentCart();
-        $currency       = $cart->getCurrency();
-        $email          = $session->get('checkout_email');
-        $name           = $session->get('checkout_name', 'Client');
-        $shippingStreet = $session->get('checkout_shipping_address');
-        $shippingCity   = $session->get('checkout_shipping_city');
-        $shippingPostal = $session->get('checkout_shipping_postal');
+        $session = $request->getSession();
+        $cart    = $this->cartService->getCurrentCart();
 
-        if (!$cart->isEmpty() && $email && $shippingStreet && $shippingCity && $shippingPostal) {
-            $order = $this->buildOrderFromSession($session, $cart);
-            $order->setPaymentMethod('paypal');
+        $order = $this->findFinalizableOrder($session, null);
+        if (!$order) {
+            $order = $this->upsertPendingOrder($session, $cart);
+        }
+
+        if ($order) {
+            // This order is being paid through PayPal, not the Stripe
+            // PaymentIntent pre-persisted at update-payment: drop the PI link so
+            // no stray Stripe webhook could ever finalize it, and flush before
+            // the finalizer's refresh so the change survives.
             $order->setStripePaymentIntentId(null);
+            $this->entityManager->flush();
+
+            $cap              = $capture['purchase_units'][0]['payments']['captures'][0]['amount'] ?? null;
+            $capturedAmount   = $cap['value'] ?? null;
+            $capturedCurrency = isset($cap['currency_code']) ? strtolower((string) $cap['currency_code']) : null;
 
             $payerEmail = $capture['payment_source']['paypal']['email_address']
                 ?? $capture['payer']['email_address']
                 ?? null;
-            if ($payerEmail) {
-                $order->setPaymentBrand($payerEmail);
+
+            $outcome = new PaymentOutcome(
+                provider: 'paypal',
+                providerConfirmed: true, // capture status was COMPLETED
+                paidCurrency: $capturedCurrency,
+                paidMinor: $capturedAmount !== null
+                    ? $this->currencyService->toMinorUnits((string) $capturedAmount, $order->getCurrency())
+                    : null,
+                reference: $paypalOrderId,
+                paymentMethod: 'paypal',
+                paymentBrand: $payerEmail,
+            );
+
+            $performed = $this->orderFinalizer->finalizePaid($order, $outcome);
+
+            if ($performed) {
+                $this->saveAddressFromOrder($order);
+                $this->entityManager->flush();
             }
-
-            $this->entityManager->persist($order);
-            $this->saveAddressFromOrder($order);
-            $this->entityManager->flush();
-            $this->messageBus->dispatch(new ReindexEntityMessage('order', $order->getId()));
-
-            $this->sendOrderConfirmationEmail($order);
-
-            // Same event name and shape as the Stripe path, so "how many orders
-            // were placed" is one query rather than two.
-            $this->checkoutLogger->info('checkout.order.placed', [
-                'order_id'        => $order->getId(),
-                'cart_id'         => $cart->getId(),
-                'provider'        => 'paypal',
-                'paypal_order_id' => $paypalOrderId,
-                'total'           => $order->getTotal(),
-                'currency'        => $this->currencyService->forProvider($currency),
-                'item_count'      => count($order->getItems()),
-                'province'        => $order->getShippingProvince(),
-                'is_guest'        => $this->getUser() === null,
-            ]);
-
-            // Same flag as the Stripe path: PayPal said COMPLETED, but confirm
-            // it captured the amount we actually charged.
-            $capturedAmount = $capture['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
-
-            if ($capturedAmount === null) {
-                $order->setPaymentVerified(false);
-                $order->setPaymentVerificationIssue('amount_missing');
-
-                $this->paymentLogger->error('payment.verification_failed', [
-                    'order_id'        => $order->getId(),
-                    'provider'        => 'paypal',
-                    'issue'           => 'amount_missing',
-                    'paypal_order_id' => $paypalOrderId,
-                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
-                ]);
-            } elseif (abs((float) $capturedAmount - (float) $order->getTotal()) > 0.01) {
-                $order->setPaymentVerified(false);
-                $order->setPaymentVerificationIssue('amount_mismatch');
-
-                $this->paymentLogger->error('payment.verification_failed', [
-                    'order_id'        => $order->getId(),
-                    'provider'        => 'paypal',
-                    'issue'           => 'amount_mismatch',
-                    'paypal_order_id' => $paypalOrderId,
-                    'captured'        => $capturedAmount,
-                    'expected'        => $order->getTotal(),
-                    'action'          => 'order stored but flagged; do not fulfil until reviewed',
-                ]);
-            } else {
-                $order->setPaymentVerified(true);
-
-                $this->paymentLogger->info('payment.verified', [
-                    'order_id'        => $order->getId(),
-                    'provider'        => 'paypal',
-                    'paypal_order_id' => $paypalOrderId,
-                    'amount'          => $capturedAmount,
-                    'currency'        => $this->currencyService->forProvider($currency),
-                ]);
-            }
-
-            $this->entityManager->flush();
 
             $this->clearCheckoutSession($session);
             $this->cartService->clear();
@@ -606,10 +585,13 @@ class CheckoutController extends AbstractController
         }
 
         $cart       = $this->cartService->getCurrentCart();
-        $currency   = $cart->getCurrency();
-        $totalItems = 0;
+        $currency    = $cart->getCurrency();
+        $totalItems  = 0;
+        $totalWeight = 0.0;
         foreach ($cart->getItems() as $item) {
-            $totalItems += $item->getQuantity();
+            $quantity    = $item->getQuantity();
+            $totalItems += $quantity;
+            $totalWeight += (float) ($item->getArticle()?->getWeight() ?? 0.5) * $quantity;
         }
 
         // Free shipping threshold
@@ -634,16 +616,21 @@ class CheckoutController extends AbstractController
                     'street1' => $data['address'] ?? '',
                     'city'    => $data['city'],
                     'zip'     => $data['zip'],
-                    'state'   => $data['province'] ?? 'QC',
-                    'country' => $data['country'] ?? 'CA',
+                    'state'   => $data['province'] ?? null,
+                    'country' => $data['country'] ?? $this->marketContext->homeCountry(),
+                    'phone'   => $data['phone'] ?? '',
                     'email'   => $data['email'] ?? '',
                 ],
                 [
-                    'weight' => max(0.5, $totalItems * 0.5),
+                    'weight' => max(0.5, round($totalWeight, 3)),
                     'length' => '30',
                     'width'  => '20',
                     'height' => '15',
-                ]
+                ],
+                // Declared contents, attached only when the parcel crosses a
+                // border (ShippingService decides). Goods are declared as made
+                // in the shop's home country by default.
+                $this->cartCustomsAdapter->fromCart($cart, $this->marketContext->homeCountry()),
             );
         } catch (\Throwable $e) {
             // A failure here stalls the customer mid-checkout with no way to
@@ -672,35 +659,174 @@ class CheckoutController extends AbstractController
 
     // ── Shared helpers ────────────────────────────────────────────────────
 
-    private function buildOrderFromSession(\Symfony\Component\HttpFoundation\Session\SessionInterface $session, Cart $cart): Order
+    /**
+     * Creates or updates the session's `pending` order from the current session
+     * and cart, links the Stripe PaymentIntent both ways, and remembers the
+     * order id in the session. Returns null (creating nothing) while the session
+     * does not yet hold the fields the order's non-nullable columns require.
+     */
+    private function upsertPendingOrder(SessionInterface $session, Cart $cart): ?Order
     {
-        $name            = $session->get('checkout_name', 'Client');
-        $email           = $session->get('checkout_email');
-        $phone           = $session->get('checkout_phone');
-        $shippingStreet  = $session->get('checkout_shipping_address');
-        $shippingCity    = $session->get('checkout_shipping_city');
-        $shippingPostal  = $session->get('checkout_shipping_postal');
+        $email  = $session->get('checkout_email');
+        $street = $session->get('checkout_shipping_address');
+        $city   = $session->get('checkout_shipping_city');
+        $postal = $session->get('checkout_shipping_postal');
+
+        if ($cart->isEmpty() || !$email || !$street || !$city || !$postal) {
+            return null;
+        }
+
+        $order = null;
+        $existingId = $session->get('checkout_order_id');
+        if ($existingId) {
+            $candidate = $this->orderRepository->find($existingId);
+            // Only reuse a still-pending row: once paid, the order is immutable.
+            if ($candidate && $candidate->getStatus() === 'pending') {
+                $order = $candidate;
+            }
+        }
+        if (!$order) {
+            $order = new Order();
+        }
+
+        $this->populateOrderFromSession($order, $session, $cart);
+
+        // The PaymentIntent id on the order is the DB-level idempotency guard
+        // (unique index); the order id in the PI metadata is the webhook's
+        // fallback lookup. Set both.
+        $piId = $session->get('checkout_pi_id');
+        if ($piId) {
+            $order->setStripePaymentIntentId($piId);
+        }
+
+        $this->entityManager->persist($order);
+        $this->entityManager->flush();
+
+        $session->set('checkout_order_id', $order->getId());
+
+        if ($piId) {
+            try {
+                $this->stripeClient->paymentIntents->update($piId, [
+                    'metadata' => ['order_id' => (string) $order->getId()],
+                ]);
+            } catch (\Throwable $e) {
+                $this->paymentLogger->warning('payment.intent.metadata_update_failed', [
+                    'provider'       => 'stripe',
+                    'payment_intent' => $piId,
+                    'order_id'       => $order->getId(),
+                    'error'          => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $order;
+    }
+
+    /**
+     * Finds the order a payment should finalize: the one pre-persisted for this
+     * session, or — failing that — the one carrying the claimed PaymentIntent id.
+     */
+    private function findFinalizableOrder(SessionInterface $session, ?string $claimedIntentId): ?Order
+    {
+        $id = $session->get('checkout_order_id');
+        if ($id) {
+            $order = $this->orderRepository->find($id);
+            if ($order) {
+                return $order;
+            }
+        }
+
+        if ($claimedIntentId) {
+            return $this->orderRepository->findOneByStripePaymentIntentId($claimedIntentId);
+        }
+
+        return null;
+    }
+
+    /**
+     * Asks Stripe what actually happened to this order's payment and packages it
+     * for the finalizer. The authoritative PaymentIntent is the one stored on the
+     * order (set server-side), not the id the browser passed back; the claimed id
+     * is only a fallback for the pre-webhook build path. A retrieval failure
+     * yields an unconfirmed outcome, which the finalizer flags rather than trusts.
+     */
+    private function buildStripeOutcome(Order $order, ?string $claimedIntentId): PaymentOutcome
+    {
+        $piId = $order->getStripePaymentIntentId() ?: $claimedIntentId;
+        if (!$piId) {
+            return new PaymentOutcome('stripe', false, null, null, null);
+        }
+
+        try {
+            $pi = $this->stripeClient->paymentIntents->retrieve($piId, ['expand' => ['payment_method']]);
+        } catch (\Throwable $e) {
+            $this->paymentLogger->warning('payment.details_capture_failed', [
+                'provider'       => 'stripe',
+                'payment_intent' => $piId,
+                'consequence'    => 'order finalized without card brand or last4; flagged unverified',
+                'error'          => $e->getMessage(),
+            ]);
+
+            return new PaymentOutcome('stripe', false, null, null, $piId, 'card');
+        }
+
+        $method = 'card';
+        $brand  = null;
+        $last4  = null;
+        $pm     = $pi->payment_method ?? null;
+        if (is_object($pm)) {
+            $method = $pm->type ?? 'card';
+            $card   = $pm->card ?? null;
+            if ($card !== null) {
+                $brand = $card->brand ?? null;
+                $last4 = $card->last4 ?? null;
+            }
+        } else {
+            $method = ($pi->payment_method_types[0] ?? null) ?: 'card';
+        }
+
+        return new PaymentOutcome(
+            provider: 'stripe',
+            providerConfirmed: ($pi->status ?? null) === 'succeeded',
+            paidCurrency: $pi->currency !== null ? strtolower((string) $pi->currency) : null,
+            paidMinor: isset($pi->amount_received) ? (int) $pi->amount_received : null,
+            reference: $piId,
+            paymentMethod: $method,
+            paymentBrand: $brand,
+            paymentLast4: $last4,
+        );
+    }
+
+    /**
+     * Fills an order (new or still-pending) from the session and cart. Items and
+     * tax lines are rebuilt from scratch each call so a second update-payment
+     * (province or shipping change) does not duplicate them on the same order.
+     */
+    private function populateOrderFromSession(Order $order, SessionInterface $session, Cart $cart): void
+    {
+        $name             = $session->get('checkout_name', 'Client');
+        $email            = $session->get('checkout_email');
+        $phone            = $session->get('checkout_phone');
+        $shippingStreet   = $session->get('checkout_shipping_address');
+        $shippingCity     = $session->get('checkout_shipping_city');
+        $shippingPostal   = $session->get('checkout_shipping_postal');
         $shippingProvince = $session->get('checkout_shipping_province');
-        $billingSame     = $session->get('checkout_billing_same', true);
-        $billingStreet   = $session->get('checkout_billing_address');
-        $billingCity     = $session->get('checkout_billing_city');
-        $billingPostal   = $session->get('checkout_billing_postal');
-        $billingProvince = $session->get('checkout_billing_province');
+        $billingSame      = $session->get('checkout_billing_same', true);
+        $billingStreet    = $session->get('checkout_billing_address');
+        $billingCity      = $session->get('checkout_billing_city');
+        $billingPostal    = $session->get('checkout_billing_postal');
+        $billingProvince  = $session->get('checkout_billing_province');
 
         // Use grand total if available (includes taxes + shipping), else fall back to cart subtotal
         $grandTotal = $session->get('checkout_grand_total');
-        $total      = $grandTotal !== null ? (string) round((float)$grandTotal, 2) : $cart->getTotal();
+        $total      = $grandTotal !== null ? (string) round((float) $grandTotal, 2) : $cart->getTotal();
 
-        $subtotal       = $session->get('checkout_subtotal');
-        $shippingAmount = $session->get('checkout_shipping_amount');
+        $subtotal          = $session->get('checkout_subtotal');
+        $shippingAmount    = $session->get('checkout_shipping_amount');
         $shippingCarrier   = $session->get('checkout_shipping_carrier');
         $shippingMethod    = $session->get('checkout_shipping_method');
         $shippingReference = $session->get('checkout_shipping_reference');
-        $taxGst         = $session->get('checkout_tax_gst');
-        $taxPst         = $session->get('checkout_tax_pst');
-        $taxHst         = $session->get('checkout_tax_hst');
 
-        $order = new Order();
         $order->setUser($this->getUser());
         // Snapshot the cart's currency, like the prices and addresses below:
         // changing the shop's currencies later must not reinterpret this order.
@@ -712,9 +838,19 @@ class CheckoutController extends AbstractController
         $order->setShippingMethodCarrier($shippingCarrier ?: null);
         $order->setShippingMethodName($shippingMethod ?: null);
         $order->setShippingMethodReference($shippingReference ?: null);
-        $order->setTaxGst($taxGst !== null ? (string) round((float) $taxGst, 2) : '0.00');
-        $order->setTaxPst($taxPst !== null ? (string) round((float) $taxPst, 2) : '0.00');
-        $order->setTaxHst($taxHst !== null ? (string) round((float) $taxHst, 2) : '0.00');
+
+        // Rebuild the tax breakdown from the active market's engine, with the
+        // same inputs updatePayment used, and snapshot the lines onto the order.
+        foreach ($order->getTaxLines()->toArray() as $existingLine) {
+            $order->removeTaxLine($existingLine);
+        }
+        $taxCountry = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
+        $quote = $this->taxEngineRegistry->active()->quote(
+            (float) ($subtotal ?? $cart->getTotal()),
+            $taxCountry,
+            $shippingProvince ?: null,
+        );
+        $this->applyTaxQuote($order, $quote);
 
         $nameParts = explode(' ', trim($name), 2);
         $order->setCustomerFirstName($nameParts[0] ?? 'Client');
@@ -725,6 +861,7 @@ class CheckoutController extends AbstractController
         $order->setShippingCity($shippingCity);
         $order->setShippingPostalCode($shippingPostal);
         $order->setShippingProvince($shippingProvince ?: null);
+        $order->setShippingCountry($session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry());
 
         if ($billingSame || !$billingStreet) {
             $order->setBillingStreet($shippingStreet);
@@ -738,6 +875,9 @@ class CheckoutController extends AbstractController
             $order->setBillingProvince($billingProvince ?: $shippingProvince ?: null);
         }
 
+        foreach ($order->getItems()->toArray() as $existingItem) {
+            $order->removeItem($existingItem);
+        }
         foreach ($cart->getItems() as $cartItem) {
             $orderItem = new OrderItem();
             $orderItem->setArticle($cartItem->getArticle());
@@ -746,8 +886,6 @@ class CheckoutController extends AbstractController
             $orderItem->setSubtotal(number_format($cartItem->getSubtotal(), 2, '.', ''));
             $order->addItem($orderItem);
         }
-
-        return $order;
     }
 
     private function saveAddressFromOrder(Order $order): void
@@ -786,191 +924,40 @@ class CheckoutController extends AbstractController
     }
 
     /**
-     * Confirms with Stripe that the payment behind this order actually happened,
-     * and flags the order when it cannot be confirmed.
-     *
-     * The order is still stored either way. Refusing outright would mean a real
-     * customer whose payment succeeded but whose verification call failed (a
-     * Stripe outage, a recycled session) ends up charged with no order — the
-     * one outcome that is worse than a suspicious row in the database. A flagged
-     * order is visible, recoverable and safe as long as nothing ships before
-     * someone looks at it.
-     *
-     * Three things are checked, cheapest first:
-     *   1. the payment intent matches the one THIS session created — no network
-     *      call, and on its own it defeats a hand-typed /checkout/success;
-     *   2. Stripe reports the intent as succeeded;
-     *   3. the amount Stripe captured matches the order total.
+     * Snapshots a tax engine's quote onto the order as OrderTaxLine rows.
+     * The engine produced the neutral TaxLineData; this maps them to the
+     * persisted entity and sets the total.
      */
-    private function verifyStripePayment(Order $order, ?string $claimedIntentId, ?string $sessionIntentId): void
+    private function applyTaxQuote(Order $order, TaxQuote $quote): void
     {
-        $fail = function (string $issue, array $context = []) use ($order): void {
-            $order->setPaymentVerified(false);
-            $order->setPaymentVerificationIssue($issue);
-
-            $this->paymentLogger->error('payment.verification_failed', array_merge([
-                'order_id'    => $order->getId(),
-                'provider'    => 'stripe',
-                'issue'       => $issue,
-                'total'       => $order->getTotal(),
-                'action'      => 'order stored but flagged; do not fulfil until reviewed',
-            ], $context));
-        };
-
-        if ($claimedIntentId === null || $sessionIntentId === null || $claimedIntentId !== $sessionIntentId) {
-            $fail('intent_mismatch', [
-                'claimed_intent' => $claimedIntentId,
-                'session_intent' => $sessionIntentId,
-            ]);
-
-            return;
+        foreach ($quote->lines as $line) {
+            $order->addTaxLine(new OrderTaxLine(
+                code: $line->code,
+                label: $line->label,
+                rate: $line->rate,
+                amount: $line->amount,
+                jurisdiction: $line->jurisdiction,
+            ));
         }
 
-        try {
-            $intent = $this->stripeClient->paymentIntents->retrieve($claimedIntentId, []);
-        } catch (\Throwable $e) {
-            $fail('verification_unavailable', [
-                'payment_intent' => $claimedIntentId,
-                'error'          => $e->getMessage(),
-            ]);
-
-            return;
-        }
-
-        if (($intent->status ?? null) !== 'succeeded') {
-            $fail('intent_not_succeeded', [
-                'payment_intent' => $claimedIntentId,
-                'stripe_status'  => $intent->status ?? null,
-            ]);
-
-            return;
-        }
-
-        // Currency must match before the amount means anything: 37799 minor
-        // units is CA$377.99 in one currency and pocket change in another, so
-        // comparing the numbers alone would accept a payment in the wrong one.
-        $expectedCurrency = $this->currencyService->forProvider($order->getCurrency());
-        $paidCurrency     = strtolower((string) ($intent->currency ?? ''));
-
-        if ($paidCurrency !== $expectedCurrency) {
-            $fail('currency_mismatch', [
-                'payment_intent' => $claimedIntentId,
-                'paid_currency'  => $paidCurrency,
-                'order_currency' => $expectedCurrency,
-            ]);
-
-            return;
-        }
-
-        // Providers work in the currency's smallest unit; the order total is a
-        // decimal string. The service knows which currencies have no minor unit.
-        $expectedMinor = $this->currencyService->toMinorUnits($order->getTotal(), $order->getCurrency());
-        $receivedMinor = (int) ($intent->amount_received ?? 0);
-
-        if ($receivedMinor !== $expectedMinor) {
-            $fail('amount_mismatch', [
-                'payment_intent' => $claimedIntentId,
-                'received_minor' => $receivedMinor,
-                'expected_minor' => $expectedMinor,
-                'currency'       => $expectedCurrency,
-            ]);
-
-            return;
-        }
-
-        $order->setPaymentVerified(true);
-        $order->setPaymentVerificationIssue(null);
-
-        $this->paymentLogger->info('payment.verified', [
-            'order_id'       => $order->getId(),
-            'provider'       => 'stripe',
-            'payment_intent' => $claimedIntentId,
-            'amount_minor'   => $receivedMinor,
-            'currency'       => $expectedCurrency,
-        ]);
+        $order->setTaxTotal($quote->total());
     }
 
-    private function capturePaymentInfo(Order $order, ?string $paymentIntentId): void
-    {
-        if (!$paymentIntentId) {
-            $order->setPaymentMethod('card');
-            return;
-        }
-        try {
-            $pi = $this->stripeClient->paymentIntents->retrieve(
-                $paymentIntentId,
-                ['expand' => ['payment_method']]
-            );
-            $order->setStripePaymentIntentId($paymentIntentId);
-            $pm = $pi->payment_method;
-            if ($pm !== null) {
-                $order->setPaymentMethod($pm->type ?? 'card');
-                $card = $pm->card ?? null;
-                if ($card !== null) {
-                    $order->setPaymentBrand($card->brand ?? null);
-                    $order->setPaymentLast4($card->last4 ?? null);
-                }
-            } else {
-                $order->setPaymentMethod(($pi->payment_method_types)[0] ?? 'card');
-            }
-        } catch (\Throwable $e) {
-            // The order is still created, but with a generic 'card' method and
-            // no brand or last4 — a silent downgrade of what the customer and
-            // support will later see on the order. Record that it happened.
-            $order->setPaymentMethod('card');
-            $order->setStripePaymentIntentId($paymentIntentId);
-
-            $this->paymentLogger->warning('payment.details_capture_failed', [
-                'provider'       => 'stripe',
-                'payment_intent' => $paymentIntentId,
-                'consequence'    => 'order stored without card brand or last4',
-                'error'          => $e->getMessage(),
-            ]);
-        }
-    }
-
-    private function sendOrderConfirmationEmail(Order $order): void
-    {
-        // Send in the customer's preferred language; default to French when unavailable (e.g. guest checkout)
-        $locale = $order->getUser()?->getLocale() ?? 'fr';
-
-        $this->localeSwitcher->runWithLocale($locale, function () use ($order, $locale): void {
-            $message = (new TemplatedEmail())
-                ->from(new EmailAddress('no-reply@monapp.local', 'MonApp'))
-                ->to($order->getCustomerEmail())
-                ->subject($this->translator->trans('email.order_confirmation.subject'))
-                ->htmlTemplate('emails/order_confirmation.html.twig')
-                ->context(['order' => $order, 'locale' => $locale]);
-
-            $this->mailer->send($message);
-        });
-    }
-
-    private function clearCheckoutSession(\Symfony\Component\HttpFoundation\Session\SessionInterface $session): void
+    private function clearCheckoutSession(SessionInterface $session): void
     {
         foreach ([
             'checkout_email', 'checkout_name', 'checkout_phone',
             'checkout_shipping_address', 'checkout_shipping_city',
             'checkout_shipping_postal', 'checkout_shipping_province',
+            'checkout_shipping_country',
             'checkout_billing_same', 'checkout_billing_address',
             'checkout_billing_city', 'checkout_billing_postal', 'checkout_billing_province',
-            'checkout_pi_id', 'checkout_subtotal', 'checkout_shipping_amount',
+            'checkout_pi_id', 'checkout_order_id', 'checkout_subtotal', 'checkout_shipping_amount',
             'checkout_shipping_carrier', 'checkout_shipping_method', 'checkout_shipping_reference',
-            'checkout_tax_gst', 'checkout_tax_pst', 'checkout_tax_hst', 'checkout_grand_total',
+            'checkout_grand_total',
         ] as $key) {
             $session->remove($key);
         }
-    }
-
-    private function calculateTaxes(string $province, float $subtotal): array
-    {
-        // Single source of truth for rates: the tax_rate table via TaxService,
-        // so the amount stored on the order matches what the tax API returned.
-        $rates = $this->taxService->getRateForProvince($province);
-        $gst   = round($subtotal * $rates['gst'], 2);
-        $pst   = round($subtotal * $rates['pst'], 2);
-        $hst   = round($subtotal * $rates['hst'], 2);
-        return [$gst, $pst, $hst];
     }
 
     #[Route('/checkout/tax', name: 'app_checkout_tax', methods: ['POST'])]

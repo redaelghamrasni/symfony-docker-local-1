@@ -1,0 +1,67 @@
+# Roadmap
+
+Shared working memory across sessions. Two clearly separated sets: what we are
+consolidating now, and a longer-term product vision we are *not* starting yet.
+
+See `ARCHITECTURE.md` for how the system works today and `CLAUDE.md` for conventions.
+
+---
+
+## Immediate priority — critical-path consolidation (in progress)
+
+Tackle in this order; each item is a step, not a parallel track.
+
+1. **Stripe webhook.** ✅ Code-complete (2026-10-06), Unit suite green, webhook
+   side validated locally with signed payloads; **not yet committed/deployed**.
+   Remaining: commit, run migration on prod, configure the dashboard endpoint +
+   server `STRIPE_WEBHOOK_SECRET`, and one browser test-card pass. Was the
+   highest-value fix: order creation no longer depends on the browser returning
+   to `/checkout/success`, so a payment whose browser never returns no longer
+   leaves a charged customer with **no order**; idempotent so a duplicated event
+   (or webhook + browser return) never creates two orders.
+   Detailed living plan + progress: [`docs/stripe-webhook-plan.md`](docs/stripe-webhook-plan.md).
+2. **CheckoutController end-to-end tests.** The most financially critical flow
+   (tax → Stripe/PayPal → shipping → order) is currently untested. Do this
+   *after* the webhook, since the webhook changes the order-creation logic.
+3. **Route a real business message on RabbitMQ.** Messenger/worker infra is
+   wired but no business message flows through it. Target: stock management /
+   concurrency control.
+4. **Redis cache invalidation.** The `articles`/`categories` tags are set but
+   never invalidated, so the public catalog can stay stale up to 1h. Invalidate
+   in the admin create/edit/delete controllers for articles and categories.
+5. **Shipping-rate snapshot fallback.** Replaces the simulated mock fallback that
+   was removed on 2026-10-06 (`ShippingService::getRates` is now external-only and
+   logs `shipping.rates.empty` with Shippo's messages when it returns nothing).
+   Build a mechanism that **downloads the most recent real rates and stores them**,
+   so that *when Shippo returns empty rates* the checkout falls back to the latest
+   known-good rates instead of none. Requirements captured from the request:
+   - Refresh **daily** (scheduled) **and on server startup**.
+   - On a refresh, if Shippo returns empty, **retry until it returns a full set**,
+     then store that snapshot (don't overwrite a good snapshot with an empty one).
+   - Persist the snapshot (table or cache) keyed by route/parcel profile; serve it
+     as the fallback only when the live call yields nothing.
+   - This is the shipping instance of the deferred "every heavy service needs a
+     degraded mode" principle below — a real-data degraded mode, not mock prices.
+   Do **after** priorities 1–4.
+
+---
+
+## Deferred priority — product vision (do NOT start now; recorded only)
+
+> This is an assumed direction, not a sprint commitment.
+
+**Principle: every heavy service must have a degraded mode that works without
+it**, so GearHub can be deployed minimally in low-infrastructure markets
+(e.g. Afghanistan: little cloud, cash-dominant).
+
+- **Database.** Connection is already portable via `DATABASE_URL` + Doctrine.
+  Add **SQLite** as a zero-server option. Guard cross-engine SQL compatibility
+  (migrations, native SQL) by running the test suite against each DBMS — which
+  requires good test coverage first.
+- **FAQ / pgvector.** Introduce a `FaqSearchInterface` with a SQL keyword-search
+  fallback when pgvector is absent.
+- **AI / Ollama.** Make optional.
+- **Meilisearch / Redis / RabbitMQ.** A degraded mode for each: SQL `LIKE`
+  search, file-based cache, synchronous processing.
+- **Payment.** The `ManualGateway` (cash) already on the roadmap is the most
+  relevant option for these markets.

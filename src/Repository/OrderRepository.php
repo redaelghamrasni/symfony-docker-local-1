@@ -17,6 +17,61 @@ class OrderRepository extends ServiceEntityRepository
         parent::__construct($registry, Order::class);
     }
 
+    public function findOneByStripePaymentIntentId(string $paymentIntentId): ?Order
+    {
+        return $this->createQueryBuilder('o')
+            ->andWhere('o.stripePaymentIntentId = :pi')
+            ->setParameter('pi', $paymentIntentId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Atomically claims a pending order for finalization: flips pending → paid
+     * in a single conditional UPDATE and reports whether THIS call won the race.
+     *
+     * This is the hard idempotency guard the webhook relies on. When the webhook
+     * and the browser return (or two webhook deliveries) both reach an order, the
+     * database lets exactly one UPDATE match `status = 'pending'`; every other
+     * caller sees 0 affected rows and must treat the order as already finalized.
+     * The caller refreshes the managed entity afterwards — a bulk DQL UPDATE does
+     * not touch the identity map.
+     */
+    public function markPaidIfPending(int $id): bool
+    {
+        $affected = $this->getEntityManager()
+            ->createQuery(
+                'UPDATE App\Entity\Order o
+                    SET o.status = :paid, o.updatedAt = :now
+                  WHERE o.id = :id AND o.status = :pending'
+            )
+            ->setParameter('paid', 'paid')
+            ->setParameter('pending', 'pending')
+            ->setParameter('id', $id)
+            ->setParameter('now', new \DateTimeImmutable('now', new \DateTimeZone('America/Toronto')))
+            ->execute();
+
+        return $affected === 1;
+    }
+
+    /**
+     * Orders still `pending` and untouched since before the given cutoff — the
+     * purge command's candidates for reconciliation against Stripe.
+     *
+     * @return Order[]
+     */
+    public function findPendingOlderThan(\DateTimeImmutable $before): array
+    {
+        return $this->createQueryBuilder('o')
+            ->andWhere('o.status = :pending')
+            ->setParameter('pending', 'pending')
+            ->andWhere('o.updatedAt < :before')
+            ->setParameter('before', $before)
+            ->orderBy('o.updatedAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findLastByUser(User $user): ?Order
     {
         return $this->createQueryBuilder('o')

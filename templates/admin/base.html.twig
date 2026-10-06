@@ -71,6 +71,10 @@
                         <i class="bi bi-percent"></i>
                         {{ 'admin.nav.taxes'|trans }}
                     </a>
+                    <a href="{{ path('admin_regions_index') }}" class="admin-nav-item {% if 'admin_regions_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-geo-alt"></i>
+                        {{ 'admin.nav.regions'|trans }}
+                    </a>
                     <a href="{{ path('admin_logs_index') }}" class="admin-nav-item {% if 'admin_logs_' in app.request.attributes.get('_route') %}active{% endif %}">
                         <i class="bi bi-journal-text"></i>
                         {{ 'admin.nav.logs'|trans }}

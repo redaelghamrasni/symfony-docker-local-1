@@ -62,6 +62,13 @@ article_form:
   new_title: Créer un nouvel article
   edit_title: Modifier l'article
   price_label: Prix
+  weight_label: Poids
+  weight_help: "Sert à estimer la livraison et à déclarer le colis en douane. Valeur par défaut : 0,5 kg."
+  dimensions_label: Dimensions du colis
+  dimensions_help: Longueur, largeur et hauteur du colis en cm. Chacune vaut 1 cm par défaut ; indiquez la taille réelle pour une livraison exacte.
+  length_label: Longueur
+  width_label: Largeur
+  height_label: Hauteur
   title_label: Titre
   title_placeholder: Entrez un titre accrocheur...
   content_label: Contenu
@@ -182,10 +189,12 @@ common:
   shipping_address: Adresse de livraison
   billing_address: Adresse de facturation
   status_pending: En attente
+  status_paid: Payée
   status_in_progress: En cours
   status_shipped: Expédiée
   status_completed: Terminée
   status_cancelled: Annulée
+  status_abandoned: Abandonnée
   roles: Rôles
   joined: Inscrit
   last_updated: Dernière mise à jour
@@ -204,6 +213,30 @@ error:
   try_again: Veuillez réessayer
 
 #Cart
+region:
+  ca:
+    ab: Alberta
+    bc: Colombie-Britannique
+    mb: Manitoba
+    nb: Nouveau-Brunswick
+    nl: Terre-Neuve-et-Labrador
+    ns: Nouvelle-Écosse
+    nt: Territoires du Nord-Ouest
+    nu: Nunavut
+    on: Ontario
+    pe: Île-du-Prince-Édouard
+    qc: Québec
+    sk: Saskatchewan
+    yt: Yukon
+
+tax:
+  line:
+    gst: TPS
+    pst: TVP
+    qst: TVQ
+    hst: TVH
+    vat: TVA
+
 currency:
   select_label: Choisir une devise
   switched: Devise modifiée. Les prix ont été mis à jour.
@@ -335,6 +368,7 @@ checkout:
   city: Ville
   postal_code: Code postal
   province: Province
+  country: Pays
   payment_note: Mode test uniquement — aucun vrai paiement ne sera effectué.
   confirm_order: Confirmer la commande
   order_summary: Votre commande
@@ -374,8 +408,44 @@ admin:
     settings: Paramètres
     currencies: Devises
     taxes: Taux de taxe
+    regions: Régions
     logs: Journaux
     back_to_store: Retour à la boutique
+  regions:
+    title: Régions
+    breadcrumb: Catalogue / Régions
+    intro: "Régions infranationales (provinces, états…) proposées au paiement. Les marchés courants sont intégrés ; n'ajoutez des lignes ici que pour un pays non couvert, ou pour en personnaliser un. Si vous définissez des régions pour un pays, elles remplacent l'ensemble intégré pour ce pays."
+    create: Ajouter une région
+    country: Pays
+    code: Code
+    name: Nom
+    edit: Modifier
+    save: Enregistrer
+    cancel: Annuler
+    empty: "Aucune personnalisation. Les valeurs intégrées sont utilisées pour tous les marchés."
+    home_effective: "Régions effectives pour le marché d'origine (%country%)"
+    source_override: définies par l'admin
+    source_default: valeurs intégrées
+    home_none: "Aucune région pour ce pays — le paiement affiche un champ libre. Ajoutez des régions ci-dessous pour proposer une liste déroulante."
+    confirm_delete: "Supprimer cette région ? Si c'est la dernière de son pays, ce pays revient aux valeurs intégrées."
+    new_title: Ajouter une région
+    edit_title: "Région %region%"
+    form:
+      country: Code du pays
+      country_help: "Code ISO à deux lettres du pays auquel appartient cette région (US, FR, SA…)."
+      country_invalid: Utilisez un code pays à deux lettres.
+      code: Code de la région
+      code_help: "Code court et stable enregistré sur les commandes (par ex. CA, NY, 34). Jusqu'à 10 caractères."
+      code_invalid: "Lettres, chiffres et traits d'union uniquement, jusqu'à 10 caractères."
+      name: Nom de la région
+      position: Ordre d'affichage
+      position_help: Les plus petits nombres apparaissent en premier dans la liste du paiement.
+      override_notice: "Ajouter une région pour un pays rend votre liste prioritaire pour ce pays — les valeurs intégrées de ce pays ne sont plus utilisées."
+    flash:
+      created: Région ajoutée.
+      updated: Région mise à jour.
+      deleted: Région supprimée.
+      csrf: Échec de la validation du jeton de sécurité.
   taxes:
     title: Taux de taxe
     breadcrumb: Catalogue / Taux de taxe
@@ -517,6 +587,7 @@ admin:
       info_title: Informations sur l'article
       content_title: Contenu de l'article
       pricing_title: Tarification
+      shipping_title: Expédition
       base_price_label: Prix régulier
       promotions_label: Promotions applicables
       promotions_hint: "Maintenez Ctrl / Cmd pour sélectionner plusieurs promotions"
@@ -705,11 +776,13 @@ admin:
       update_status: Mettre à jour le statut
       change_status: Changer le statut de la commande
       status_pending: En attente
+      status_paid: Payée
       status_in_progress: En cours
       status_processing: En traitement
       status_shipped: Expédiée
       status_completed: Terminée
       status_cancelled: Annulée
+      status_abandoned: Abandonnée
       order_id: Référence de commande
       order_summary: Récapitulatif de la commande
       customer_info: Informations sur le client
@@ -796,6 +869,9 @@ admin:
     csrf_error: Erreur de validation du jeton de sécurité.
     general_section: Paramètres généraux
     free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    home_country: Pays d'origine
+    home_country_hint: "Le pays depuis lequel cette boutique opère. Il détermine les taxes, les régions et l'origine d'expédition du marché actif."
+    invalid_country: "Ce code pays n'est pas reconnu ; le pays d'origine n'a pas été modifié."
     chatbot_model_hint: "Modèle utilisé par le chatbot d'assistance : un modèle Ollama (en choisir un non encore téléchargé lance un téléchargement en arrière-plan) ou un modèle Gemini hébergé (utilisé instantanément, sans téléchargement)."
     chatbot_model_pulling: "Téléchargement du modèle démarré en arrière-plan. Il sera prêt une fois le téléchargement terminé."
     chatbot_model_ready: "Téléchargé et prêt."

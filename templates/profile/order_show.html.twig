@@ -475,24 +475,13 @@
                             </span>
                         </div>
                     {% endif %}
-                    {% if order.taxGst and order.taxGst > 0 %}
+                    {% for line in order.taxLines %}
+                        {% set tkey = 'tax.line.' ~ line.code %}{% set tlabel = tkey|trans %}
                         <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_gst'|trans }}</span>
-                            <span>{{ order.taxGst|money_snapshot(order.currency) }}</span>
+                            <span>{{ tlabel == tkey ? line.label : tlabel }}</span>
+                            <span>{{ line.amount|money_snapshot(order.currency) }}</span>
                         </div>
-                    {% endif %}
-                    {% if order.taxPst and order.taxPst > 0 %}
-                        <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_pst'|trans }}</span>
-                            <span>{{ order.taxPst|money_snapshot(order.currency) }}</span>
-                        </div>
-                    {% endif %}
-                    {% if order.taxHst and order.taxHst > 0 %}
-                        <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_hst'|trans }}</span>
-                            <span>{{ order.taxHst|money_snapshot(order.currency) }}</span>
-                        </div>
-                    {% endif %}
+                    {% endfor %}
                     <div class="total-row final">
                         <span>{{ 'profile.order_show.total'|trans }}</span>
                         <span>{{ order.total|money_snapshot(order.currency) }}</span>
