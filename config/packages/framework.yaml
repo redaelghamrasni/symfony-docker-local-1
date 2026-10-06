@@ -3,7 +3,16 @@ framework:
     secret: '%env(APP_SECRET)%'
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        # 'auto' marks the cookie Secure whenever the request is HTTPS. nginx
+        # sets the HTTPS flag from Cloudflare's X-Forwarded-Proto (see
+        # docker/nginx.conf), so this switches itself on once TLS is in front
+        # and stays off for plain-HTTP local development.
+        cookie_secure: auto
+        cookie_httponly: true
+        # Lax keeps the session on normal navigation back from Stripe/PayPal
+        # while blocking it on cross-site POSTs.
+        cookie_samesite: lax
 
     # Internationalization
     default_locale: 'en'

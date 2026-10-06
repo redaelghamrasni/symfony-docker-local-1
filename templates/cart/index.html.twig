@@ -70,7 +70,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="price-column text-end">
-                                    <span class="item-price">{{ item.unitPrice|number_format(2, ',', ' ') }} $</span>
+                                    <span class="item-price">{{ item.unitPrice|money(cart.currency) }}</span>
                                 </td>
                                 <td class="quantity-column text-center">
                                     <form method="post" 
@@ -98,7 +98,7 @@
                                 </td>
                                 <td class="price-column text-end">
                                     <span class="item-price item-subtotal" data-item-id="{{ item.id }}">
-                                        {{ item.subtotal|number_format(2, ',', ' ') }} $
+                                        {{ item.subtotal|money(cart.currency) }}
                                     </span>
                                 </td>
                                 <td class="actions-column text-center">
@@ -120,7 +120,7 @@
                             <td colspan="4" class="text-end">
                                 <div class="grand-total-cell">
                                     <span class="total-label">{{ 'cart.total'|trans }} :</span>
-                                    <span class="total-amount">{{ cart.total|number_format(2, ',', ' ') }} $</span>
+                                    <span class="total-amount">{{ cart.total|money(cart.currency) }}</span>
                                 </div>
                             </td>
                         </tr>

@@ -14,7 +14,8 @@ class CartService
     public function __construct(
         private EntityManagerInterface $em,
         private CartRepository $cartRepository,
-        private RequestStack $requestStack
+        private RequestStack $requestStack,
+        private CurrencyService $currencyService
     ) {}
 
     /**
@@ -34,6 +35,10 @@ class CartService
 
         // Créer un nouveau panier
         $cart = new Cart();
+        // Currency is fixed here, once, and never re-read from the request:
+        // every amount from this point on — display, taxes, payment, order —
+        // refers back to this value.
+        $cart->setCurrency($this->currencyService->default());
         $this->em->persist($cart);
         $this->em->flush();
 
@@ -62,10 +67,64 @@ class CartService
 
         // Nouvel article : créer un CartItem
         $cartItem = new CartItem($article, $quantity);
+        // CartItem snapshots the article's default-currency price; re-price it
+        // in the cart's own currency so an item added while browsing in EUR is
+        // stored in EUR rather than CAD.
+        $cartItem->setUnitPrice(number_format(
+            $this->currencyService->effectivePriceFor($article, $cart->getCurrency()),
+            2,
+            '.',
+            ''
+        ));
         $cart->addItem($cartItem);
 
         $this->em->persist($cartItem);
+        $cart->recalculateTotal();
         $this->em->flush();
+    }
+
+    /**
+     * Moves an existing cart to another currency, re-pricing every line.
+     *
+     * Each item is re-read from its article rather than converted from the
+     * stored unit price: an article with a hand-set price in the new currency
+     * must charge that price, not an arithmetic conversion of the old one.
+     * Converting the stored figure would also compound rounding on every
+     * switch.
+     *
+     * Returns the code actually applied — unknown or disabled codes leave the
+     * cart untouched.
+     */
+    public function switchCurrency(string $code): string
+    {
+        $cart = $this->getCurrentCart();
+        $target = $this->currencyService->normalize($code);
+
+        if ($target === $cart->getCurrency()) {
+            return $target;
+        }
+
+        $cart->setCurrency($target);
+
+        foreach ($cart->getItems() as $item) {
+            $article = $item->getArticle();
+
+            if ($article === null) {
+                continue;
+            }
+
+            $item->setUnitPrice(number_format(
+                $this->currencyService->effectivePriceFor($article, $target),
+                2,
+                '.',
+                ''
+            ));
+        }
+
+        $cart->recalculateTotal();
+        $this->em->flush();
+
+        return $target;
     }
 
     /**

@@ -60,6 +60,13 @@ article_form:
   new_title: Create a new article
   edit_title: Edit article
   price_label: Price
+  weight_label: Weight
+  weight_help: Used to estimate shipping and to declare the parcel at customs. Defaults to 0.5 kg.
+  dimensions_label: Box dimensions
+  dimensions_help: The parcel's length, width and height in cm. Each defaults to 1 cm; set the real size for accurate shipping.
+  length_label: Length
+  width_label: Width
+  height_label: Height
   title_label: Title
   title_placeholder: Enter a catchy title...
   content_label: Content
@@ -180,10 +187,12 @@ common:
   shipping_address: Shipping Address
   billing_address: Billing Address
   status_pending: Pending
+  status_paid: Paid
   status_in_progress: In Progress
   status_shipped: Shipped
   status_completed: Completed
   status_cancelled: Cancelled
+  status_abandoned: Abandoned
   roles: Roles
   joined: Joined
   last_updated: Last Updated
@@ -202,6 +211,34 @@ error:
   try_again: Please try again
 
 #Cart
+region:
+  ca:
+    ab: Alberta
+    bc: British Columbia
+    mb: Manitoba
+    nb: New Brunswick
+    nl: Newfoundland and Labrador
+    ns: Nova Scotia
+    nt: Northwest Territories
+    nu: Nunavut
+    on: Ontario
+    pe: Prince Edward Island
+    qc: Quebec
+    sk: Saskatchewan
+    yt: Yukon
+
+tax:
+  line:
+    gst: GST
+    pst: PST
+    qst: QST
+    hst: HST
+    vat: VAT
+
+currency:
+  select_label: Choose a currency
+  switched: Currency changed. Prices have been updated.
+
 cart:
   item_removed: "Item removed from cart"
   cleared: "Cart cleared"
@@ -328,6 +365,7 @@ checkout:
   city: City
   postal_code: Postal Code
   province: Province
+  country: Country
   payment_note: Test mode only — no real charges will be made.
   confirm_order: Confirm order
   order_summary: Your order
@@ -365,7 +403,169 @@ admin:
     promotions: Promotions
     faq: FAQ
     settings: Settings
+    currencies: Currencies
+    taxes: Tax rates
+    regions: Regions
+    logs: Logs
     back_to_store: Back to Store
+  regions:
+    title: Regions
+    breadcrumb: Catalogue / Regions
+    intro: "Sub-national regions (provinces, states…) offered at checkout. Common markets are built in; add rows here only for a country not covered, or to customise one. If you define any region for a country, it replaces the built-in set for that country."
+    create: Add region
+    country: Country
+    code: Code
+    name: Name
+    edit: Edit
+    save: Save
+    cancel: Cancel
+    empty: "No overrides. Built-in defaults are used for every market."
+    home_effective: "Effective regions for the home market (%country%)"
+    source_override: admin-defined
+    source_default: built-in default
+    home_none: "No regions for this country — checkout shows a free-text region field. Add regions below to offer a dropdown."
+    confirm_delete: "Delete this region? If it is the last one for its country, that country falls back to the built-in defaults."
+    new_title: Add region
+    edit_title: "Region %region%"
+    form:
+      country: Country code
+      country_help: "Two-letter ISO code of the country this region belongs to (US, FR, SA…)."
+      country_invalid: Use a two-letter country code.
+      code: Region code
+      code_help: "Short stable code stored on orders (e.g. CA, NY, 34). Up to 10 characters."
+      code_invalid: "Letters, digits and hyphens only, up to 10 characters."
+      name: Region name
+      position: Display order
+      position_help: Lower numbers appear first in the checkout dropdown.
+      override_notice: "Adding a region for a country makes your list authoritative for it — the built-in defaults for that country are no longer used."
+    flash:
+      created: Region added.
+      updated: Region updated.
+      deleted: Region deleted.
+      csrf: Security token validation failed.
+  taxes:
+    title: Tax rates
+    breadcrumb: Catalogue / Tax rates
+    intro: "Provincial sales-tax rates applied at checkout. Edit a rate here to change what checkout charges — no code deploy needed. Rates are entered as percentages."
+    create: New rate
+    province: Province
+    name: Name
+    combined: Combined
+    edit: Edit
+    save: Save
+    cancel: Cancel
+    confirm_delete: "Delete this province's rate? Orders where it lives will fall back to the default (5% GST). Past orders keep the tax they were charged."
+    hint_snapshot: "Changing a rate only affects new orders. Each past order stored the tax amount it was charged, so history is never rewritten."
+    new_title: New tax rate
+    edit_title: "Tax rate — %province%"
+    form:
+      province: Province code
+      province_help: "Two-letter code (QC, ON, NS). Cannot be changed after creation."
+      province_invalid: Use two to five letters.
+      name: Province name
+      gst: "GST (%)"
+      pst: "PST / QST (%)"
+      hst: "HST (%)"
+      percent_help: "As a percentage, e.g. 5 or 9.975."
+      range: The rate must be between 0 and 100.
+      mutual_exclusive: "A province uses either GST (+ PST/QST) or HST, not both. Leave the ones that don't apply at 0."
+    flash:
+      created: Tax rate created.
+      updated: Tax rate updated.
+      deleted: Tax rate deleted.
+      duplicate: A rate for this province already exists.
+      csrf: Security token validation failed.
+  currencies:
+    title: Currencies
+    breadcrumb: Catalogue / Currencies
+    intro: "Currencies the shop can price and charge in. Prices are authored in the default currency; other currencies use a hand-set price per article where one exists, and the exchange rate below otherwise."
+    create: New currency
+    code: Code
+    name: Name
+    rate: Rate
+    coverage: Article pricing
+    status: Status
+    default: Default
+    enabled: Visible
+    disabled: Hidden
+    base_prices: Prices are authored in this currency
+    priced_count: "%priced% of %total% articles priced by hand"
+    converted_rest: The rest are converted at the rate
+    edit: Edit
+    enable: Show
+    disable: Hide
+    make_default: Make default
+    save: Save
+    cancel: Cancel
+    confirm_default: "Make this the default currency? Article base prices will be interpreted as being in it, which changes every converted price in the catalogue."
+    confirm_delete: "Delete this currency? Hand-set article prices in it are deleted too. Past orders keep their own recorded currency."
+    hint_article_prices: "To set a price by hand for a specific article, open the article in the catalogue and use its Prices section. Anything left blank is converted automatically."
+    new_title: New currency
+    edit_title: "Currency %code%"
+    form:
+      code: ISO code
+      code_help: "Three letters, as used by Stripe and PayPal (CAD, USD, EUR). Cannot be changed later."
+      code_invalid: Use exactly three letters.
+      name: Name
+      symbol: Symbol
+      symbol_position: Symbol position
+      before: "Before the amount ($ 12.00)"
+      after: "After the amount (12,00 €)"
+      exchange_rate: Exchange rate
+      rate_help: "How many units of this currency one unit of the default currency buys. Used only for articles without a hand-set price."
+      rate_help_default: The default currency is the reference point and is always 1.
+      rate_positive: The rate must be greater than zero.
+      enabled: Offer this currency to visitors
+      enabled_help: When unticked, the currency stays configured but does not appear in the storefront selector.
+      enabled_help_default: The default currency is always available and cannot be hidden.
+      position: Display order
+      position_help: Lower numbers appear first in the storefront selector.
+      is_default_notice: This is the default currency. Its rate is fixed at 1 and it cannot be hidden or deleted.
+    flash:
+      created: Currency created.
+      updated: Currency updated.
+      deleted: Currency deleted.
+      enabled: Currency is now visible in the storefront.
+      disabled: Currency is now hidden from the storefront.
+      default_changed: Default currency changed.
+      duplicate: A currency with this code already exists.
+      cannot_delete_default: The default currency cannot be deleted. Make another currency the default first.
+      cannot_disable_default: The default currency cannot be hidden.
+      csrf: Security token validation failed.
+  logs:
+    title: Logs
+    breadcrumb: Maintenance / Logs
+    intro: "Each type of log is written to its own file. Files rotate daily and are kept for 7 days; they live in the running container, so they are lost when it is replaced."
+    empty: "No log files yet. They appear once the application has written its first entries."
+    empty_type: "No %type% entries have been recorded yet."
+    request_id: "Request ID — the same id appears on the web server access line for this request"
+    type:
+      checkout: Checkout
+      payment: Payments
+      shipping: Shipping
+      audit: Audit
+      mail: Email
+      app: Errors
+    description:
+      checkout: "Orders placed and the steps of the purchase funnel."
+      payment: "Stripe and PayPal: payment intents, captures and verification outcomes."
+      shipping: "Shippo rate lookups and shipping method selection."
+      audit: "Back-office actions: who changed what."
+      mail: "Transactional email sent to customers."
+      app: "Technical warnings and errors from the framework and application."
+    file: File
+    size: Size
+    modified: Last modified
+    view: View
+    download: Download
+    level: Level
+    channel: Channel
+    lines: Lines
+    all_levels: All levels
+    all_channels: All channels
+    apply: Apply
+    showing: "showing %count% entries (newest first)"
+    no_entries: No entries match these filters.
   settings:
     title: Settings
     saved: Settings saved successfully.
@@ -375,6 +575,9 @@ admin:
     chatbot_enabled_label: Enable chatbot
     chatbot_enabled_hint: "When off, the chatbot is hidden everywhere and no model can be downloaded — useful on hosts with limited disk space (e.g. an AWS free-tier instance)."
     chatbot_disabled_notice: "Chatbot is disabled: model selection and downloads are blocked."
+    home_country: Home country
+    home_country_hint: "The country this shop operates from. It drives taxes, regions and the shipping origin for the active market."
+    invalid_country: "That is not a recognised country code; the home country was left unchanged."
     chatbot_model_hint: "Model used by the support chatbot: an Ollama model (switching to one not yet downloaded starts a background download) or a hosted Gemini model (used instantly, no download needed)."
     chatbot_model_pulling: "Model download started in the background. It will be ready once the pull completes."
     chatbot_model_ready: "Downloaded and ready."
@@ -411,6 +614,7 @@ admin:
       info_title: Article Information
       content_title: Article Content
       pricing_title: Pricing
+      shipping_title: Shipping
       base_price_label: Regular Price
       promotions_label: Applicable Promotions
       promotions_hint: "Hold Ctrl / Cmd to select multiple promotions"
@@ -424,6 +628,14 @@ admin:
       image_upload_hint: "JPEG, PNG, WebP or GIF · max 4 MB"
       image_delete_label: Delete current image
       image_delete_confirm: The image will be deleted on save
+      prices_title: Prices in other currencies
+      prices_intro: "This article costs %price% in %currency%, the currency prices are authored in. Set a price by hand for any other currency below; leave a field blank to let it be converted automatically at that currency's rate."
+      prices_hint: "Clearing a field removes the hand-set price and returns the article to automatic conversion."
+      prices_save: Save prices
+      prices_saved: Prices updated.
+      prices_csrf: Security token validation failed.
+      price_manual: set by hand
+      price_converted: "converted: %amount% (rate %rate%)"
       gallery_title: Image gallery
       gallery_empty: No images in the gallery
       gallery_upload_label: Add images
@@ -553,6 +765,8 @@ admin:
       no_addresses: No addresses saved.
       add_address: Add new address
   orders:
+    payment_unverified: "Payment unverified"
+    payment_unverified_hint: "The payment behind this order could not be confirmed with the provider. Do not ship it before checking."
     status_updated: "Order status updated."
     status_invalid: "Invalid status."
     tracking_required: "Please enter a tracking number to mark the order as shipped."
@@ -589,11 +803,13 @@ admin:
       update_status: Update Status
       change_status: Change order status
       status_pending: Pending
+      status_paid: Paid
       status_in_progress: In Progress
       status_processing: Processing
       status_shipped: Shipped
       status_completed: Completed
       status_cancelled: Cancelled
+      status_abandoned: Abandoned
       order_id: Order ID
       order_summary: Order Summary
       customer_info: Customer Information

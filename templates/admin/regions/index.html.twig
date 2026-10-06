@@ -1,0 +1,77 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.regions.title'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.regions.title'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.regions.breadcrumb'|trans }}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap;">
+    <p style="margin:0; color:#64748b; font-size:14px; max-width:74ch;">{{ 'admin.regions.intro'|trans }}</p>
+    <a href="{{ path('admin_regions_new') }}" class="btn-action-primary" style="font-size:13px; padding:9px 16px; white-space:nowrap;">
+        <i class="bi bi-plus-lg"></i> {{ 'admin.regions.create'|trans }}
+    </a>
+</div>
+
+{# Effective regions for the home market, so the admin sees what is live #}
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px 18px; margin-bottom:20px;">
+    <p style="margin:0 0 6px; font-size:13px; color:#475569;">
+        <strong>{{ 'admin.regions.home_effective'|trans({'%country%': homeCountry}) }}</strong>
+        <span style="margin-left:6px; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;
+              background:{{ homeIsOverride ? '#dcfce7' : '#dbeafe' }}; color:{{ homeIsOverride ? '#166534' : '#1e40af' }};">
+            {{ (homeIsOverride ? 'admin.regions.source_override' : 'admin.regions.source_default')|trans }}
+        </span>
+    </p>
+    {% if effectiveHome is empty %}
+        <p style="margin:6px 0 0; font-size:12px; color:#8a6100;">
+            <i class="bi bi-info-circle"></i> {{ 'admin.regions.home_none'|trans }}
+        </p>
+    {% else %}
+        <p style="margin:6px 0 0; font-size:12px; color:#64748b;">
+            {% for r in effectiveHome %}{{ r.code }}{% if not loop.last %} · {% endif %}{% endfor %}
+        </p>
+    {% endif %}
+</div>
+
+<div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.regions.country'|trans }}</th>
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.regions.code'|trans }}</th>
+                <th style="padding:12px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:#64748b;">{{ 'admin.regions.name'|trans }}</th>
+                <th style="padding:12px 16px; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for region in overrides %}
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:12px 16px; font-weight:700; color:#0f172a; font-size:13px;">{{ region.country }}</td>
+                <td style="padding:12px 16px; font-family:monospace; font-size:13px; color:#475569;">{{ region.code }}</td>
+                <td style="padding:12px 16px; color:#0f172a; font-size:13px;">{{ region.name }}</td>
+                <td style="padding:12px 16px; text-align:right; white-space:nowrap;">
+                    <a href="{{ path('admin_regions_edit', {id: region.id}) }}" class="btn-action-secondary" style="font-size:12px; padding:5px 12px;">
+                        <i class="bi bi-pencil"></i> {{ 'admin.regions.edit'|trans }}
+                    </a>
+                    <form method="post" action="{{ path('admin_regions_delete', {id: region.id}) }}" style="display:inline;"
+                          onsubmit="return confirm('{{ 'admin.regions.confirm_delete'|trans|e('js') }}');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('region_delete_' ~ region.id) }}">
+                        <button type="submit" class="btn-action-secondary" style="font-size:12px; padding:5px 12px; color:#991b1b;">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4" style="padding:28px; text-align:center; color:#64748b; font-size:14px;">
+                {{ 'admin.regions.empty'|trans }}
+            </td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

@@ -56,6 +56,31 @@ class Article
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private string $price = '0.00';
 
+    // Physical shipping data. Weight (kilograms) feeds the parcel estimate and
+    // the customs declaration; the three box dimensions (centimetres) describe
+    // the parcel in full 3D. All default to a shippable starting value — 0.5 kg
+    // and 1 cm per side — so every article ships without data entry, and an
+    // operator refines them per article.
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 3, options: ['default' => '0.500'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\PositiveOrZero]
+    private string $weight = '0.500';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $length = '1.00';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $width = '1.00';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 2, options: ['default' => '1.00'])]
+    #[Groups(['article:read', 'article:write'])]
+    #[Assert\Positive]
+    private string $height = '1.00';
+
     #[ORM\ManyToOne(inversedBy: 'articles')]
     #[ORM\JoinColumn(nullable: true)]
     private ?Category $category = null;
@@ -74,11 +99,20 @@ class Article
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $images;
 
+    /**
+     * Hand-set prices per currency. The $price field above stays the price in
+     * the shop's default currency; a row here overrides the converted amount
+     * for one other currency. Absence is normal, not an error.
+     */
+    #[ORM\OneToMany(targetEntity: ArticlePrice::class, mappedBy: 'article', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $prices;
+
     public function __construct()
     {
         $this->promotions = new ArrayCollection();
         $this->translations = new ArrayCollection();
         $this->images = new ArrayCollection();
+        $this->prices = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -158,6 +192,58 @@ class Article
         return $this;
     }
 
+    /** Weight in kilograms. */
+    public function getWeight(): string
+    {
+        return $this->weight;
+    }
+
+    public function setWeight(string|float|int $weight): static
+    {
+        $this->weight = (string) $weight;
+
+        return $this;
+    }
+
+    /** Length in centimetres. */
+    public function getLength(): string
+    {
+        return $this->length;
+    }
+
+    public function setLength(string|float|int $length): static
+    {
+        $this->length = (string) $length;
+
+        return $this;
+    }
+
+    /** Width in centimetres. */
+    public function getWidth(): string
+    {
+        return $this->width;
+    }
+
+    public function setWidth(string|float|int $width): static
+    {
+        $this->width = (string) $width;
+
+        return $this;
+    }
+
+    /** Height in centimetres. */
+    public function getHeight(): string
+    {
+        return $this->height;
+    }
+
+    public function setHeight(string|float|int $height): static
+    {
+        $this->height = (string) $height;
+
+        return $this;
+    }
+
     public function getCategory(): ?Category
     {
         return $this->category;
@@ -223,6 +309,52 @@ class Article
             Promotion::TYPE_FIXED_PRICE => $value,
             default                     => $basePrice,
         };
+    }
+
+    /** @return Collection<int, ArticlePrice> */
+    public function getPrices(): Collection
+    {
+        return $this->prices;
+    }
+
+    public function addPrice(ArticlePrice $price): static
+    {
+        if (!$this->prices->contains($price)) {
+            $this->prices->add($price);
+            $price->setArticle($this);
+        }
+
+        return $this;
+    }
+
+    public function removePrice(ArticlePrice $price): static
+    {
+        if ($this->prices->removeElement($price) && $price->getArticle() === $this) {
+            $price->setArticle(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * The hand-set price for a currency, or null when none exists — in which
+     * case the caller converts from the default price.
+     *
+     * Kept on the entity (rather than in a repository) so templates and the
+     * cart can ask an article what it costs without a query per item; the
+     * collection is already loaded alongside the article.
+     */
+    public function getPriceFor(string $currencyCode): ?string
+    {
+        $code = strtoupper($currencyCode);
+
+        foreach ($this->prices as $price) {
+            if ($price->getCurrency()?->getCode() === $code) {
+                return $price->getPrice();
+            }
+        }
+
+        return null;
     }
 
     public function getImageUrl(): ?string

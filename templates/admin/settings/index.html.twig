@@ -23,7 +23,20 @@
 
         <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
             {% for setting in settings %}
-                {% if setting.key != 'chatbot.model' %}
+                {% if setting.key == 'home_country' %}
+                    <div>
+                        <label for="setting_home_country" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 6px;">
+                            {{ 'admin.settings.home_country'|trans }}
+                        </label>
+                        <select form="settings-form" id="setting_home_country" name="settings[home_country]"
+                                style="width: 100%; max-width: 400px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #0f172a; background: #f9fafb;">
+                            {% for code, name in countries %}
+                                <option value="{{ code }}" {% if code == setting.value|default('CA') %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <p style="margin: 4px 0 0; font-size: 0.8rem; color: #64748b;">{{ 'admin.settings.home_country_hint'|trans }}</p>
+                    </div>
+                {% elseif setting.key != 'chatbot.model' %}
                     <div>
                         <label for="setting_{{ setting.key }}" style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 6px;">
                             {{ setting.label }}

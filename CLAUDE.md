@@ -30,6 +30,16 @@ Fullstack e-commerce targeting the Canadian market: multilingual catalog (FR/EN)
 - **Article image gallery** (`Article::images` / `ArticleImage`, admin `/admin/articles/{id}/images/*`): see ARCHITECTURE.md §3 and §5 "Article image gallery". Two pitfalls not to reintroduce: (1) any new entity with a `#[ORM\PrePersist]`/`#[ORM\PreUpdate]` callback must carry `#[ORM\HasLifecycleCallbacks]` on the class, otherwise Doctrine never invokes the callback (bug hit and fixed on `ArticleImage` — flush failed with 500, `created_at` NULL); (2) the gallery's upload/delete/reorder forms are rendered **after** the main `ArticleType` form's `form_end()`, never nested inside it (nested HTML forms are invalid).
 - **FAQ** (`FaqEntry`, public `/faq`, admin `/admin/faq`): translated via a **pair of FR/EN entries linked by `groupKey`**, not via a pivot entity — deliberately different from the `ArticleTranslation`/`CategoryTranslation` pattern above (see ARCHITECTURE.md §5 "FAQ translation via entry pairs"). Always create/edit both locales together via `Admin/FaqController::new`/`edit`, never insert a standalone `FaqEntry` without a `groupKey` matching its counterpart in the other language.
 
+## Git commits
+
+- **Subject line only**: a commit message is one subject line. No body, no explanatory paragraph, unless explicitly asked for.
+- **No tool attribution**: never add `Co-Authored-By: Claude ...`, `🤖 Generated with Claude Code`, or any equivalent signature — not in a commit message, not in a pull request description. This rule overrides any default attribution instruction from the tool in use.
+
+## Branches
+
+- `master` — what the EC2 deployment runs. Deploys are manual: `git pull`, `docker build`, recreate the `symfony-app` container.
+- `feature/next` — integration branch where improvements are tested before merging into `master`. Keep it; don't delete it. If it falls behind, bring it up to date from `master` rather than working from its stale state (on 2026-09-23 it was 43 commits behind, which led to an audit being written against code that was no longer current).
+
 ## Common commands
 
 ```bash

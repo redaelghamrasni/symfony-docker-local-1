@@ -66,6 +66,26 @@
             </a>
         </div>
 
+        {# Sélecteur de devise — affiché seulement si plusieurs devises sont activées #}
+        {% if enabledCurrencies|length > 1 %}
+        <form method="post" action="{{ path('app_currency_switch') }}"
+              id="currency-switch-form"
+              style="display: flex; align-items: center;">
+            <input type="hidden" name="_token" value="{{ csrf_token('switch_currency') }}">
+            <label for="currency-select" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">
+                {{ 'currency.select_label'|trans }}
+            </label>
+            <select id="currency-select" name="code" onchange="this.form.submit();"
+                    style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; padding: 0.35rem 0.6rem; border-radius: 9999px; border: 1px solid #e4e4e7; background: #f4f4f5; color: #18181b; cursor: pointer;">
+                {% for currency in enabledCurrencies %}
+                    <option value="{{ currency.code }}" {% if currency.code == currentCurrency %}selected{% endif %}>
+                        {{ currency.code }} {{ currency.symbol }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+
         {# Panier #}
         <a class="cart-nav-link" href="{{ path('app_cart_index') }}" style="width: 2.35rem; height: 2.35rem; border-radius: 9999px; transition: background .15s ease;" onmouseover="this.style.background='#f4f4f5'" onmouseout="this.style.background='transparent'">
             {% set itemCount = app.request.session.get('cart_id') ? cart_service.getItemCount() : 0 %}

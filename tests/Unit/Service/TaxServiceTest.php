@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Service;
 
+use App\Repository\TaxRateRepository;
 use App\Service\TaxService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -12,7 +13,12 @@ class TaxServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->taxService = new TaxService();
+        // Empty repository → TaxService falls back to its built-in statutory
+        // rates, so this suite tests those defaults independent of the database.
+        $repository = $this->createMock(TaxRateRepository::class);
+        $repository->method('findAllOrdered')->willReturn([]);
+
+        $this->taxService = new TaxService($repository);
     }
 
     #[DataProvider('provinceProvider')]

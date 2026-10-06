@@ -294,8 +294,8 @@
                                         </a>
                                     </td>
                                     <td>{{ item.quantity }}</td>
-                                    <td style="text-align: right;">{{ item.unitPrice|number_format(2, ',', ' ') }} $</td>
-                                    <td style="text-align: right; font-weight: 600;">{{ item.subtotal|number_format(2, ',', ' ') }} $</td>
+                                    <td style="text-align: right;">{{ item.unitPrice|money_snapshot(order.currency) }}</td>
+                                    <td style="text-align: right; font-weight: 600;">{{ item.subtotal|money_snapshot(order.currency) }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -461,41 +461,30 @@
                     <h2 class="section-title">{{ 'profile.order_show.order_summary'|trans }}</h2>
                     <div class="total-row">
                         <span>{{ 'profile.order_show.subtotal'|trans }}</span>
-                        <span>{{ (order.subtotal ?? order.total)|number_format(2, ',', ' ') }} $</span>
+                        <span>{{ (order.subtotal ?? order.total)|money_snapshot(order.currency) }}</span>
                     </div>
                     {% if order.shippingAmount is not null %}
                         <div class="total-row">
                             <span>{{ 'profile.order_show.shipping'|trans }}</span>
                             <span>
                                 {% if order.shippingAmount > 0 %}
-                                    {{ order.shippingAmount|number_format(2, ',', ' ') }} $
+                                    {{ order.shippingAmount|money_snapshot(order.currency) }}
                                 {% else %}
                                     {{ 'profile.order_show.shipping_free'|trans }}
                                 {% endif %}
                             </span>
                         </div>
                     {% endif %}
-                    {% if order.taxGst and order.taxGst > 0 %}
+                    {% for line in order.taxLines %}
+                        {% set tkey = 'tax.line.' ~ line.code %}{% set tlabel = tkey|trans %}
                         <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_gst'|trans }}</span>
-                            <span>{{ order.taxGst|number_format(2, ',', ' ') }} $</span>
+                            <span>{{ tlabel == tkey ? line.label : tlabel }}</span>
+                            <span>{{ line.amount|money_snapshot(order.currency) }}</span>
                         </div>
-                    {% endif %}
-                    {% if order.taxPst and order.taxPst > 0 %}
-                        <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_pst'|trans }}</span>
-                            <span>{{ order.taxPst|number_format(2, ',', ' ') }} $</span>
-                        </div>
-                    {% endif %}
-                    {% if order.taxHst and order.taxHst > 0 %}
-                        <div class="total-row">
-                            <span>{{ 'profile.order_show.tax_hst'|trans }}</span>
-                            <span>{{ order.taxHst|number_format(2, ',', ' ') }} $</span>
-                        </div>
-                    {% endif %}
+                    {% endfor %}
                     <div class="total-row final">
                         <span>{{ 'profile.order_show.total'|trans }}</span>
-                        <span>{{ order.total|number_format(2, ',', ' ') }} $</span>
+                        <span>{{ order.total|money_snapshot(order.currency) }}</span>
                     </div>
                 </div>
 
