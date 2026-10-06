@@ -69,6 +69,19 @@ php bin/phpunit --testsuite Functional
 # provisioning issue (name/port/permissions), not an application regression. The historic
 # JWT_PASSPHRASE bug (see git log 1370284) is fixed, it's no longer the cause.
 
+# Shipping-rate fallback snapshots (ARCHITECTURE.md §5 "Shipping-rate snapshot fallback"):
+# the latest known-good live rates per route/weight band, served at checkout when Shippo
+# returns no live rates. The refresh rates real addresses held in the DB — a seeded baseline
+# (shipping_destination_seed, inserted by migration 20261006130000, editable afterwards) plus
+# real order-history destinations — never hardcoded addresses. Rate-limit aware: one attempt
+# per route per run paced by the admin setting shipping.snapshot.throttle (editable at
+# /admin/settings; --throttle overrides it), empties retried by the schedule (hourly cron),
+# only a 429 retried in-run after --rate-limit-backoff. Runs on server startup (docker/entrypoint.sh,
+# backgrounded) + hourly via cron; also warmed opportunistically on every successful checkout
+# rating. The baseline needs no manual seeding — it ships in the migration.
+php bin/console app:shipping:refresh-snapshots            # rate seed + order history now
+php bin/console app:shipping:refresh-snapshots --dry-run  # rate every destination, store nothing
+
 # Meilisearch reindexing (4 indexes: articles, categories, users, orders — also feeds the
 # back-office search, see "Back-office search" above and ARCHITECTURE.md §5).
 # Must be rerun after any database change: no index is resynced automatically.
