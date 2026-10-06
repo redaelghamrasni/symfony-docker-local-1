@@ -11,14 +11,17 @@ See `ARCHITECTURE.md` for how the system works today and `CLAUDE.md` for convent
 
 Tackle in this order; each item is a step, not a parallel track.
 
-1. **Stripe webhook.** ✅ Code-complete (2026-10-06), Unit suite green, webhook
-   side validated locally with signed payloads; **not yet committed/deployed**.
-   Remaining: commit, run migration on prod, configure the dashboard endpoint +
-   server `STRIPE_WEBHOOK_SECRET`, and one browser test-card pass. Was the
-   highest-value fix: order creation no longer depends on the browser returning
-   to `/checkout/success`, so a payment whose browser never returns no longer
-   leaves a charged customer with **no order**; idempotent so a duplicated event
-   (or webhook + browser return) never creates two orders.
+1. **Stripe webhook.** ✅ Code-complete, committed, and **deployed to EC2
+   (2026-10-06)** with the migration applied. Was the highest-value fix: order
+   creation no longer depends on the browser returning to `/checkout/success`, so
+   a payment whose browser never returns no longer leaves a charged customer with
+   **no order**; idempotent so a duplicated event (or webhook + browser return)
+   never creates two orders. ⚠️ **Currently INERT in prod — to be activated in a
+   real production environment with a real domain.** Stripe needs a valid HTTPS
+   endpoint (domain + CA cert); the EC2 is IP-only (no domain/TLS), so no dashboard
+   endpoint is registered and `STRIPE_WEBHOOK_SECRET` is unset (the route 400s).
+   Not blocking checkout — the browser-return path still creates orders; the
+   webhook is the safety net for the browser-never-returns case.
    Detailed living plan + progress: [`docs/stripe-webhook-plan.md`](docs/stripe-webhook-plan.md).
 2. **CheckoutController end-to-end tests.** The most financially critical flow
    (tax → Stripe/PayPal → shipping → order) is currently untested. Do this

@@ -96,6 +96,28 @@ via a dedicated YAML route (no `#[Route]` attribute), + `access_control`
       400, no processing) + valid-signature processing in
       `tests/Unit/Controller/StripeWebhookControllerTest.php`.
 
+## ⚠️ Production activation requires a real domain + HTTPS (not done)
+
+**Deployed to EC2 2026-10-06, but the webhook is INERT in production.** Stripe
+only delivers webhooks to a publicly reachable endpoint with a **valid, CA-trusted
+TLS certificate** — which in practice means a **domain**. The current EC2 is
+**IP-only (`http://3.96.53.69`, no domain, no TLS)**, so no Stripe dashboard
+endpoint can be registered against it (a bare IP / self-signed cert is rejected).
+`STRIPE_WEBHOOK_SECRET` is therefore unset on the server and `/stripe/webhook`
+returns 400 for everything.
+
+This is **not blocking checkout**: order creation still works via the browser
+return (pre-persist `pending` + `success`-page finalize). The webhook is the
+reliability *safety net* for the browser-never-returns case, and stays off until a
+**real production environment with a domain** exists. To activate then: point a
+domain at the host, terminate TLS (Caddy/Let's Encrypt or nginx+certbot, open 443),
+create the Stripe dashboard endpoint at `https://<domain>/stripe/webhook`
+(events `payment_intent.succeeded` + `payment_intent.payment_failed`), put its
+signing secret in the server `.env` (unquoted), and recreate the container.
+(For an interim no-domain test, `stripe listen --api-key <sk> --forward-to
+http://localhost/stripe/webhook` on the server connects outbound and needs no
+inbound HTTPS.)
+
 ## Progress
 
 All code pieces implemented (2026-10-05) and the Unit suite is green (60 tests).
