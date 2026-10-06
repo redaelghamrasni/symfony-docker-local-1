@@ -10,6 +10,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: '`order`')]
+// A given Stripe PaymentIntent backs at most one order: the DB-level idempotency
+// guard the webhook relies on. MySQL allows multiple NULLs here, so PayPal orders
+// (no PaymentIntent) are unaffected. Created in Version20261005170000.
+#[ORM\UniqueConstraint(name: 'UNIQ_ORDER_STRIPE_PI', columns: ['stripe_payment_intent_id'])]
 #[ORM\HasLifecycleCallbacks]
 class Order
 {

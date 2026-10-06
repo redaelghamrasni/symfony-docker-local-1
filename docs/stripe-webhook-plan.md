@@ -71,24 +71,56 @@ via a dedicated YAML route (no `#[Route]` attribute), + `access_control`
 
 ## Pieces to implement
 
-- [ ] Migration: unique index on `order.stripe_payment_intent_id`
-- [ ] `OrderRepository::findOneByStripePaymentIntentId()`
-- [ ] `update-payment`: upsert a `pending` order + write `order.id` into PI metadata
-- [ ] `OrderFinalizer` service (shared pending → paid transition, idempotent)
-- [ ] Refactor `success` + `paypalCapture` to use `OrderFinalizer`
-- [ ] `StripeWebhookController` + non-localized YAML route + `access_control` rule
-- [ ] Abandoned-`pending` purge command (+ `abandoned` order status)
-- [ ] `.env.dist` placeholder + `services.yaml` wiring of `STRIPE_WEBHOOK_SECRET`
-- [ ] Tests (Unit): idempotency (two calls = one transition, one order), signature
-      rejection (unsigned/bad → 400, no processing)
+- [x] Migration: unique index on `order.stripe_payment_intent_id`
+      (`Version20261005170000`, mirrored by an `#[ORM\UniqueConstraint]` on `Order`).
+- [x] `OrderRepository::findOneByStripePaymentIntentId()` (+ `markPaidIfPending()`,
+      the atomic conditional UPDATE that is the hard idempotency guard, and
+      `findPendingOlderThan()` for the purge).
+- [x] `update-payment`: upsert a `pending` order + write `order.id` into PI metadata
+      (`CheckoutController::upsertPendingOrder`, session key `checkout_order_id`).
+- [x] `OrderFinalizer` service (shared pending → paid transition, idempotent;
+      verification, confirmation email and reindex live here). `PaymentOutcome` is
+      the neutral provider-result value object it consumes.
+- [x] Refactor `success` + `paypalCapture` to use `OrderFinalizer`.
+- [x] `StripeWebhookController` + non-localized YAML route (`stripe_webhook`,
+      `/stripe/webhook`) + `access_control ^/stripe/webhook → PUBLIC_ACCESS`.
+      Handles `payment_intent.succeeded` (finalize) and `payment_intent.payment_failed`
+      (log).
+- [x] Abandoned-`pending` purge command (`app:checkout:purge-pending`, with
+      `--older-than` default 24h, `--delete`, `--dry-run`) + `abandoned` order status
+      (translations, admin filter tabs and badge styles updated; `paid` added too).
+- [x] `.env.dist` placeholder + `.env.test` value + `services.yaml` wiring of
+      `STRIPE_WEBHOOK_SECRET`.
+- [x] Tests (Unit): idempotency (two calls = one transition, one order, one email) in
+      `tests/Unit/Service/OrderFinalizerTest.php`; signature rejection (unsigned/bad →
+      400, no processing) + valid-signature processing in
+      `tests/Unit/Controller/StripeWebhookControllerTest.php`.
 
 ## Progress
 
-Nothing implemented yet — plan fully validated (incl. purge criterion), work to
-**start in a new session**. Order of work: migration + `OrderFinalizer` first (the
-two structural pieces), then webhook, then refactor of `success`/`paypalCapture`,
-then purge, then tests. Resume by reading this file; implement step by step; run
-the Unit suite before committing; commit only on the user's explicit signal.
+All code pieces implemented (2026-10-05) and the Unit suite is green (60 tests).
+Not yet done, and required before this can be considered finished:
+
+- **Run the migration** (`php bin/console doctrine:migrations:migrate`) on each
+  environment — not run here, to avoid mutating the dev DB without a heads-up.
+- **Configure `STRIPE_WEBHOOK_SECRET`** in `.env.local` (dev) and the server `.env`
+  (prod). Until then the endpoint boots fine but rejects every call with 400.
+- **End-to-end local validation (webhook side): DONE 2026-10-06.** Drove the live
+  `/stripe/webhook` with really-signed payloads: pending→paid+verified on a matching
+  succeeded event; idempotent replay (one order, exactly one email confirmed via
+  Mailpit); amount mismatch → paid-but-flagged (`amount_mismatch`); bad signature →
+  400, order untouched. Still worth doing once with a **real test card through the
+  browser** to exercise the other half (update-payment pre-persist + success-page
+  race) before configuring the dashboard endpoint and deploying.
+- **Reindex** after migrating/first runs (`app:meilisearch:reindex`) so the new
+  `paid`/`abandoned` statuses are filterable in the back-office.
+
+Nothing is committed — awaiting the user's explicit signal.
+
+A note on semantics introduced here: the post-payment status is now `paid` (orders
+previously stayed `pending` forever). Admin fulfilment still moves `paid →
+in_progress → shipped → completed` by hand; `abandoned` is set only by the purge
+command.
 
 ## Config needed
 

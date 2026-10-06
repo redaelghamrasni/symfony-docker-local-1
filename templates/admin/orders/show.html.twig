@@ -45,10 +45,12 @@
 
 {% set statusStyles = {
     'pending':     'background:#fef9c3;color:#854d0e;border:1px solid #fde047;',
+    'paid':        'background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;',
     'in_progress': 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;',
     'shipped':     'background:#cffafe;color:#155e75;border:1px solid #67e8f9;',
     'completed':   'background:#dcfce7;color:#166534;border:1px solid #86efac;',
-    'cancelled':   'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;'
+    'cancelled':   'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;',
+    'abandoned':   'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;'
 } %}
 
 {% set shipStatusStyles = {
@@ -488,10 +490,12 @@
                     <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ statusStyles[order.status] ?? '' }}">
                         {{ {
                             'pending': 'admin.orders.show.status_pending'|trans|capitalize,
+                            'paid': 'admin.orders.show.status_paid'|trans|capitalize,
                             'in_progress': 'admin.orders.show.status_in_progress'|trans|capitalize,
                             'shipped': 'admin.orders.show.status_shipped'|trans|capitalize,
                             'completed': 'admin.orders.show.status_completed'|trans|capitalize,
-                            'cancelled': 'admin.orders.show.status_cancelled'|trans|capitalize
+                            'cancelled': 'admin.orders.show.status_cancelled'|trans|capitalize,
+                            'abandoned': 'admin.orders.show.status_abandoned'|trans|capitalize
                         }[order.status]|default(order.status|capitalize) }}
                     </span>
                 </div>

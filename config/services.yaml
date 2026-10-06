@@ -127,3 +127,11 @@ services:
     App\Market\RegionProvider\DefaultRegionProvider:
         arguments:
             $dataFile: '%kernel.project_dir%/config/market/regions.php'
+
+    # Stripe webhook signing secret (whsec_…). Never committed: placeholder in
+    # .env.dist, the `stripe listen` secret in .env.local for dev, the dashboard
+    # endpoint's secret in the server .env. An unset/empty value simply makes
+    # every signature verification fail (400) rather than breaking boot.
+    App\Controller\StripeWebhookController:
+        arguments:
+            $webhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'

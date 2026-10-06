@@ -189,10 +189,12 @@ common:
   shipping_address: Adresse de livraison
   billing_address: Adresse de facturation
   status_pending: En attente
+  status_paid: Payée
   status_in_progress: En cours
   status_shipped: Expédiée
   status_completed: Terminée
   status_cancelled: Annulée
+  status_abandoned: Abandonnée
   roles: Rôles
   joined: Inscrit
   last_updated: Dernière mise à jour
@@ -774,11 +776,13 @@ admin:
       update_status: Mettre à jour le statut
       change_status: Changer le statut de la commande
       status_pending: En attente
+      status_paid: Payée
       status_in_progress: En cours
       status_processing: En traitement
       status_shipped: Expédiée
       status_completed: Terminée
       status_cancelled: Annulée
+      status_abandoned: Abandonnée
       order_id: Référence de commande
       order_summary: Récapitulatif de la commande
       customer_info: Informations sur le client

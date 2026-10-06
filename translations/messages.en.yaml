@@ -187,10 +187,12 @@ common:
   shipping_address: Shipping Address
   billing_address: Billing Address
   status_pending: Pending
+  status_paid: Paid
   status_in_progress: In Progress
   status_shipped: Shipped
   status_completed: Completed
   status_cancelled: Cancelled
+  status_abandoned: Abandoned
   roles: Roles
   joined: Joined
   last_updated: Last Updated
@@ -798,11 +800,13 @@ admin:
       update_status: Update Status
       change_status: Change order status
       status_pending: Pending
+      status_paid: Paid
       status_in_progress: In Progress
       status_processing: Processing
       status_shipped: Shipped
       status_completed: Completed
       status_cancelled: Cancelled
+      status_abandoned: Abandoned
       order_id: Order ID
       order_summary: Order Summary
       customer_info: Customer Information

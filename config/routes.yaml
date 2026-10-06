@@ -17,3 +17,12 @@ controllers:
         _locale: fr|en                  # La locale peut être 'fr' OU 'en' uniquement
     defaults:
         _locale: fr
+
+# Stripe webhook: declared here (not via a #[Route] attribute) so it escapes the
+# /{_locale} prefix above and answers at a bare /stripe/webhook, which is where
+# Stripe posts. Authentication is by signature inside the controller, so the path
+# is PUBLIC_ACCESS in security.yaml. Do not move this under src/Controller scanning.
+stripe_webhook:
+    path: /stripe/webhook
+    controller: App\Controller\StripeWebhookController::handle
+    methods: [POST]

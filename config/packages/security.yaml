@@ -65,6 +65,9 @@ security:
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/user, roles: ROLE_USER }
         - { path: ^/checkout, roles: PUBLIC_ACCESS }
+        # Stripe webhook: authenticated by signature in the controller, not by a
+        # firewall. It carries no session/cookies, so it must be publicly reachable.
+        - { path: ^/stripe/webhook, roles: PUBLIC_ACCESS }
 
 when@test:
     security:
