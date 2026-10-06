@@ -77,7 +77,12 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN mkdir -p /var/www/html/var \
     && chmod +x /entrypoint.sh \
     && chown -R www-data:www-data /var/www/html/var \
-    && mkdir -p /run/nginx
+    && mkdir -p /run/nginx \
+    # su-exec lets the entrypoint run the console commands (cache warmup, migrations,
+    # snapshot refresh) as www-data instead of root. Running them as root would create
+    # root-owned files under var/log and var/cache that php-fpm (www-data) then cannot
+    # write — which made every checkout endpoint that logs 500 in prod. See entrypoint.sh.
+    && apk add --no-cache su-exec
 
 EXPOSE 8080
 
