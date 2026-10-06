@@ -26,3 +26,15 @@ stripe_webhook:
     path: /stripe/webhook
     controller: App\Controller\StripeWebhookController::handle
     methods: [POST]
+
+# Bare root carries no locale, so it matches none of the /{_locale} routes above —
+# which would surface as a 500 while rendering the locale-less error page. Redirect
+# it to the English homepage. Declared here (outside the controllers import) so it
+# is not itself prefixed with /{_locale}. 302 (not permanent) so the target can
+# change (e.g. browser-language detection) without poisoning client caches.
+root_to_locale:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::urlRedirectAction
+    defaults:
+        path: /en/
+        permanent: false
