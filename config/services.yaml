@@ -86,7 +86,6 @@ services:
     App\Service\ShippingService:
         arguments:
             $apiKey: '%env(SHIPPO_API_KEY)%'
-            $environment: '%kernel.environment%'
         public: true
         
     # Rendre le service accessible dans Twig

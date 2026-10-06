@@ -6,6 +6,7 @@ use App\Shipping\Adapter\CarrierAddressAdapter;
 use App\Shipping\Adapter\SenderAddressAdapter;
 use App\Shipping\Customs\CustomsDeclaration;
 use App\Shipping\ShippingAddress;
+use Psr\Log\LoggerInterface;
 
 // shippo/shippo-php uses global classes (no namespace): Shippo, Shippo_Address, Shippo_Parcel, etc.
 
@@ -13,10 +14,9 @@ class ShippingService
 {
     public function __construct(
         string $apiKey,
-        private readonly string $environment,
         private readonly SenderAddressAdapter $sender,
         private readonly CarrierAddressAdapter $carrier,
-        private readonly CurrencyService $currencies,
+        private readonly LoggerInterface $shippingLogger,
     ) {
         \Shippo::setApiKey($apiKey);
     }
@@ -83,11 +83,19 @@ class ShippingService
 
         $shipment = \Shippo_Shipment::create($shipmentPayload);
 
-        if ($shipment['status'] !== 'SUCCESS') {
+        if (($shipment['status'] ?? null) !== 'SUCCESS') {
+            // The shipment itself failed to rate. Shippo says why in its messages;
+            // log them so an empty result is never a mystery.
+            $this->shippingLogger->error('shipping.shipment.not_success', [
+                'provider' => 'shippo',
+                'status'   => $shipment['status'] ?? null,
+                'messages' => $this->extractMessages($shipment),
+            ]);
+
             return [];
         }
 
-        // Normalise les tarifs pour les afficher
+        // Normalise the rates for display.
         $rates = [];
         foreach ($shipment['rates'] as $rate) {
             $rates[] = [
@@ -101,16 +109,40 @@ class ShippingService
             ];
         }
 
-        // Trie par prix croissant
+        // Cheapest first.
         usort($rates, fn($a, $b) => $a['price'] <=> $b['price']);
 
-        // Aucun carrier Shippo n'est configuré pour ce compte (courant hors prod) :
-        // on retombe sur des tarifs simulés pour ne pas bloquer le checkout en dev/test.
-        if (empty($rates) && $this->environment !== 'prod') {
-            return $this->mockRates();
+        // Only the live Shippo rates are ever returned — there is no simulated
+        // fallback. When the list is empty the shipment still succeeded, so the
+        // reason lives in Shippo's own messages (no enabled carrier account for
+        // the route, a carrier key/endpoint mismatch, an unserviceable address…).
+        // Surface it rather than mask it with mock rates.
+        if (empty($rates)) {
+            $this->shippingLogger->warning('shipping.rates.empty', [
+                'provider'    => 'shippo',
+                'destination' => trim(sprintf('%s/%s %s', $to->country, $to->state ?? '', $to->postalCode ?? '')),
+                'messages'    => $this->extractMessages($shipment),
+            ]);
         }
 
         return $rates;
+    }
+
+    /**
+     * Flattens Shippo's shipment-level messages to "[source/code] text" lines —
+     * the explanation for a failed or empty rating.
+     *
+     * @return array<int, string>
+     */
+    private function extractMessages(mixed $shipment): array
+    {
+        $out = [];
+        foreach ($shipment['messages'] ?? [] as $m) {
+            $code = isset($m['code']) && $m['code'] !== '' ? '/' . $m['code'] : '';
+            $out[] = trim(sprintf('[%s%s] %s', $m['source'] ?? '?', $code, $m['text'] ?? ''));
+        }
+
+        return $out;
     }
 
     /**
@@ -148,34 +180,6 @@ class ShippingService
         ]);
 
         return $created['object_id'];
-    }
-
-    private function mockRates(): array
-    {
-        // The simulated prices are shown in the shop's default currency, not a
-        // hardcoded CAD, so a non-Canadian dev shop sees coherent amounts.
-        $currency = $this->currencies->default();
-
-        return [
-            [
-                'object_id'      => 'mock_standard',
-                'carrier'        => 'Standard (simulé)',
-                'service'        => 'Livraison standard',
-                'price'          => '9.99',
-                'currency'       => $currency,
-                'days'           => 5,
-                'duration_terms' => null,
-            ],
-            [
-                'object_id'      => 'mock_express',
-                'carrier'        => 'Express (simulé)',
-                'service'        => 'Livraison express',
-                'price'          => '19.99',
-                'currency'       => $currency,
-                'days'           => 2,
-                'duration_terms' => null,
-            ],
-        ];
     }
 
     /**
