@@ -16,6 +16,7 @@ Tackle in this order; each item is a step, not a parallel track.
    returns leaves a charged customer with **no order**. Add a signed Stripe
    webhook as the reliable source of truth for order creation, idempotent so a
    duplicated event (or webhook + browser return) never creates two orders.
+   Detailed living plan + progress: [`docs/stripe-webhook-plan.md`](docs/stripe-webhook-plan.md).
 2. **CheckoutController end-to-end tests.** The most financially critical flow
    (tax → Stripe/PayPal → shipping → order) is currently untested. Do this
    *after* the webhook, since the webhook changes the order-creation logic.
