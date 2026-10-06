@@ -115,7 +115,8 @@ Not yet done, and required before this can be considered finished:
 - **Reindex** after migrating/first runs (`app:meilisearch:reindex`) so the new
   `paid`/`abandoned` statuses are filterable in the back-office.
 
-Nothing is committed — awaiting the user's explicit signal.
+Committed on `feature/next` as `4cde8c1a1` ("Add Stripe webhook as idempotent
+source of truth for order finalization").
 
 A note on semantics introduced here: the post-payment status is now `paid` (orders
 previously stayed `pending` forever). Admin fulfilment still moves `paid →
