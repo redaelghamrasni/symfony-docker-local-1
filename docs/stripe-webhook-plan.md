@@ -54,7 +54,7 @@ Endpoint: `POST /stripe/webhook`, **outside the `/{_locale}` prefix** — declar
 via a dedicated YAML route (no `#[Route]` attribute), + `access_control`
 `^/stripe/webhook → PUBLIC_ACCESS` (auth is by signature, not firewall).
 
-## Abandoned-`pending` purge (proposed — awaiting final confirmation)
+## Abandoned-`pending` purge (CONFIRMED)
 
 - Console command `app:checkout:purge-pending`, manual + cron-schedulable.
 - **No blind age delete.** For each `pending` older than the threshold, re-query
@@ -62,11 +62,11 @@ via a dedicated YAML route (no `#[Route]` attribute), + `access_control`
   - succeeded/processing/requires_capture → do NOT purge; replay `OrderFinalizer`
     (recovery). The purge doubles as a reconciliation safety net.
   - canceled/requires_payment_method / no PI → treat as abandoned.
-- **Criterion:** `pending` with `updatedAt` older than **24h** (configurable via
-  `--older-than`, default 24h) **and** PaymentIntent not succeeded on Stripe.
-  24h is far beyond any card confirmation window (seconds with PaymentElement),
-  so no legitimate in-progress payment can be caught.
-- **Soft by default:** mark status `abandoned` (new enum value), never DELETE;
+- **Criterion (confirmed):** `pending` with `updatedAt` older than **24h**
+  (configurable via `--older-than`, default 24h) **and** PaymentIntent not
+  succeeded on Stripe. 24h is far beyond any card confirmation window (seconds
+  with PaymentElement), so no legitimate in-progress payment can be caught.
+- **Soft, confirmed:** mark status `abandoned` (new enum value), never DELETE;
   optional `--delete` for a hard purge later.
 
 ## Pieces to implement
@@ -84,9 +84,11 @@ via a dedicated YAML route (no `#[Route]` attribute), + `access_control`
 
 ## Progress
 
-Nothing implemented yet — plan validated, about to start. Order of work:
-migration + `OrderFinalizer` first (the two structural pieces), then webhook,
-then refactor of `success`/`paypalCapture`, then purge, then tests.
+Nothing implemented yet — plan fully validated (incl. purge criterion), work to
+**start in a new session**. Order of work: migration + `OrderFinalizer` first (the
+two structural pieces), then webhook, then refactor of `success`/`paypalCapture`,
+then purge, then tests. Resume by reading this file; implement step by step; run
+the Unit suite before committing; commit only on the user's explicit signal.
 
 ## Config needed
 
