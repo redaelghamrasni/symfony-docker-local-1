@@ -79,6 +79,9 @@ php bin/phpunit --testsuite Functional
 # only a 429 retried in-run after --rate-limit-backoff. Runs on server startup (docker/entrypoint.sh,
 # backgrounded) + hourly via cron; also warmed opportunistically on every successful checkout
 # rating. The baseline needs no manual seeding — it ships in the migration.
+# ⚠️ Any bin/console run that writes logs MUST run as www-data (entrypoint uses su-exec; cron uses
+# `docker exec -u www-data`). As root it creates root-owned var/log files php-fpm can't write →
+# checkout endpoints 500 (hit in prod 2026-10-06).
 php bin/console app:shipping:refresh-snapshots            # rate seed + order history now
 php bin/console app:shipping:refresh-snapshots --dry-run  # rate every destination, store nothing
 
