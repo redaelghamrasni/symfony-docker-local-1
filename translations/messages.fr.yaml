@@ -869,6 +869,7 @@ admin:
     csrf_error: Erreur de validation du jeton de sécurité.
     general_section: Paramètres généraux
     free_threshold_hint: "Laissez vide pour désactiver la livraison gratuite automatique."
+    snapshot_throttle_hint: "Secondes d'attente entre les appels au transporteur lors du rafraîchissement des tarifs de secours, pour rester sous la limite de l'API du transporteur. Valeurs décimales acceptées (ex. 0,5) ; 0 désactive la temporisation."
     home_country: Pays d'origine
     home_country_hint: "Le pays depuis lequel cette boutique opère. Il détermine les taxes, les régions et l'origine d'expédition du marché actif."
     invalid_country: "Ce code pays n'est pas reconnu ; le pays d'origine n'a pas été modifié."

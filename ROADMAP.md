@@ -29,20 +29,31 @@ Tackle in this order; each item is a step, not a parallel track.
 4. **Redis cache invalidation.** The `articles`/`categories` tags are set but
    never invalidated, so the public catalog can stay stale up to 1h. Invalidate
    in the admin create/edit/delete controllers for articles and categories.
-5. **Shipping-rate snapshot fallback.** Replaces the simulated mock fallback that
-   was removed on 2026-10-06 (`ShippingService::getRates` is now external-only and
-   logs `shipping.rates.empty` with Shippo's messages when it returns nothing).
-   Build a mechanism that **downloads the most recent real rates and stores them**,
-   so that *when Shippo returns empty rates* the checkout falls back to the latest
-   known-good rates instead of none. Requirements captured from the request:
-   - Refresh **daily** (scheduled) **and on server startup**.
-   - On a refresh, if Shippo returns empty, **retry until it returns a full set**,
-     then store that snapshot (don't overwrite a good snapshot with an empty one).
-   - Persist the snapshot (table or cache) keyed by route/parcel profile; serve it
-     as the fallback only when the live call yields nothing.
-   - This is the shipping instance of the deferred "every heavy service needs a
-     degraded mode" principle below — a real-data degraded mode, not mock prices.
-   Do **after** priorities 1–4.
+5. **Shipping-rate snapshot fallback.** ✅ Code-complete (2026-10-06), Unit suite
+   green, container + entity mapping validated; **not yet committed/deployed**.
+   green, container + entity mapping validated; **not yet committed/deployed**.
+   Remaining: commit, run migrations `20261006120000` + `20261006130000` +
+   `20261006140000` on each environment (they create the snapshot table, seed the
+   baseline destinations, and seed the editable `shipping.snapshot.throttle`
+   setting), add the hourly cron entry, and one live refresh run
+   (`app:shipping:refresh-snapshots`, also fires backgrounded on container
+   startup) once `SHIPPO_API_KEY` is set.
+   Replaced the simulated mock fallback removed on 2026-10-06: `ShippingService`
+   now splits into `rateLive()` (Shippo only) and `getRates()` (live → fallback);
+   when live returns nothing it serves the latest known-good real rates for the
+   route/weight band (`ShippingRateSnapshot`, keyed by `country|region|band` via
+   `ShippingRouteKey`). Snapshots hold real rates only — **no hardcoded addresses
+   in app config**: the refresh rates real addresses held in the DB — a seeded,
+   editable baseline (`shipping_destination_seed`, so the fallback works day one)
+   plus the distinct destinations from order history (retry-on-empty, never
+   overwrites a good snapshot with an empty one) — and opportunistic capture on
+   each successful checkout rating keeps real routes warm between refreshes.
+   Rate-limit aware: one attempt per route per run paced by the admin-tunable
+   `shipping.snapshot.throttle` setting (`--throttle` overrides), empties retried
+   by the schedule (not an in-run loop), only a 429 retried in-run after
+   `--rate-limit-backoff`. Refreshed on server startup (`docker/entrypoint.sh`,
+   backgrounded) and hourly via cron. Full details: ARCHITECTURE.md §5
+   "Shipping-rate snapshot fallback".
 
 ---
 

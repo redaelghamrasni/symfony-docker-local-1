@@ -72,6 +72,53 @@ class OrderRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Distinct real shipping destinations drawn from order history, newest first,
+     * one representative serviceable address per (country, region). This is what
+     * the snapshot refresh re-rates alongside the seeded baseline: real places the
+     * shop has actually shipped to, so no destination list is ever hardcoded. Only
+     * orders with a usable address (country + city + postal code) placed on/after
+     * $since are considered. Shape matches ShippingDestinationSeedRepository so the
+     * two sources merge cleanly (orders carry no phone, hence null).
+     *
+     * @return list<array{country: string, region: ?string, city: string, postalCode: string, phone: ?string}>
+     */
+    public function findDistinctShippingDestinations(\DateTimeImmutable $since): array
+    {
+        $rows = $this->createQueryBuilder('o')
+            ->select('o.shippingCountry AS country', 'o.shippingProvince AS province', 'o.shippingCity AS city', 'o.shippingPostalCode AS postalCode')
+            ->andWhere('o.createdAt >= :since')
+            ->setParameter('since', $since)
+            ->andWhere('o.shippingCity IS NOT NULL AND o.shippingCity != :empty')
+            ->andWhere('o.shippingPostalCode IS NOT NULL AND o.shippingPostalCode != :empty')
+            ->setParameter('empty', '')
+            ->orderBy('o.createdAt', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        // Keep the most recent address per (country, province); DISTINCT in SQL
+        // would keep every differing postal code, but one representative address
+        // per region is all a fallback snapshot needs.
+        $byRegion = [];
+        foreach ($rows as $row) {
+            $country = strtoupper((string) $row['country']);
+            $region  = $row['province'] !== null && trim((string) $row['province']) !== '' ? strtoupper(trim((string) $row['province'])) : null;
+            $dedupe  = $country . '|' . ($region ?? '*');
+
+            if (!isset($byRegion[$dedupe])) {
+                $byRegion[$dedupe] = [
+                    'country'    => $country,
+                    'region'     => $region,
+                    'city'       => (string) $row['city'],
+                    'postalCode' => (string) $row['postalCode'],
+                    'phone'      => null,
+                ];
+            }
+        }
+
+        return array_values($byRegion);
+    }
+
     public function findLastByUser(User $user): ?Order
     {
         return $this->createQueryBuilder('o')

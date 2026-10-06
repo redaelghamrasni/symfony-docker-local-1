@@ -572,6 +572,7 @@ admin:
     csrf_error: Security token validation failed.
     general_section: General Settings
     free_threshold_hint: "Leave empty to disable automatic free shipping."
+    snapshot_throttle_hint: "Seconds to wait between carrier calls when refreshing the shipping-rate fallback, to stay under the carrier's API rate limit. Fractional values accepted (e.g. 0.5); 0 disables pacing."
     home_country: Home country
     home_country_hint: "The country this shop operates from. It drives taxes, regions and the shipping origin for the active market."
     invalid_country: "That is not a recognised country code; the home country was left unchanged."

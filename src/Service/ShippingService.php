@@ -6,6 +6,7 @@ use App\Shipping\Adapter\CarrierAddressAdapter;
 use App\Shipping\Adapter\SenderAddressAdapter;
 use App\Shipping\Customs\CustomsDeclaration;
 use App\Shipping\ShippingAddress;
+use App\Shipping\Snapshot\ShippingRateSnapshotStore;
 use Psr\Log\LoggerInterface;
 
 // shippo/shippo-php uses global classes (no namespace): Shippo, Shippo_Address, Shippo_Parcel, etc.
@@ -17,12 +18,94 @@ class ShippingService
         private readonly SenderAddressAdapter $sender,
         private readonly CarrierAddressAdapter $carrier,
         private readonly LoggerInterface $shippingLogger,
+        private readonly ShippingRateSnapshotStore $snapshots,
     ) {
         \Shippo::setApiKey($apiKey);
     }
 
     /**
-     * Returns the available shipping rates for a destination.
+     * Returns the available shipping rates for a destination, with a degraded
+     * mode: when the live carrier returns nothing, the latest known-good snapshot
+     * for the same route/weight band is served instead of an empty list (see
+     * ARCHITECTURE.md §5 "Shipping-rate snapshot fallback"). Snapshot rates are
+     * flagged `from_snapshot => true` and carry `captured_at` so the caller (and
+     * the customer) can tell they are a fallback.
+     */
+    public function getRates(array $toAddress, array $parcel, ?CustomsDeclaration $customs = null): array
+    {
+        $country = strtoupper(trim((string) ($toAddress['country'] ?? ''))) ?: $this->sender->address()->country;
+        $region  = $toAddress['state'] ?? null;
+        $weight  = (float) ($parcel['weight'] ?? 1);
+
+        // The degraded mode covers both ways live rating can fail the customer:
+        // the carrier returns no rates, or the call itself errors (Shippo down,
+        // timeout, auth). Either way we try the snapshot before giving up.
+        $liveError = null;
+        try {
+            $rates = $this->rateLive($toAddress, $parcel, $customs);
+            if ($rates !== []) {
+                // Opportunistic capture: a successful live rating for a real
+                // customer address *is* the known-good snapshot for this route and
+                // band. Storing it here means the fallback is warmed from real
+                // traffic, with no probe list and no invented addresses. Never let
+                // a capture failure (e.g. DB hiccup) break the customer's rating.
+                try {
+                    $this->snapshots->remember($country, $region, $weight, $rates);
+                } catch (\Throwable $e) {
+                    $this->shippingLogger->error('shipping.snapshot.capture_failed', [
+                        'provider' => 'shippo',
+                        'error'    => $e->getMessage(),
+                    ]);
+                }
+
+                return $rates;
+            }
+        } catch (\Throwable $e) {
+            $liveError = $e;
+        }
+
+        // Fall back to the most recent real rates captured for this route and
+        // weight band (rateLive already logged the empty case).
+        $snapshot = $this->snapshots->recall($country, $region, $weight);
+        if ($snapshot === null) {
+            // Nothing to serve. When live actually errored, re-throw so the caller
+            // reports a real failure (the checkout turns this into a 502) rather
+            // than masking an outage as "no options". An empty-but-successful live
+            // result with no snapshot is simply no rates.
+            if ($liveError !== null) {
+                throw $liveError;
+            }
+
+            $this->shippingLogger->warning('shipping.rates.no_snapshot', [
+                'provider'    => 'shippo',
+                'destination' => trim(sprintf('%s/%s', $country, $region ?? '')),
+                'weight'      => $weight,
+            ]);
+
+            return [];
+        }
+
+        $capturedAt = $snapshot->getCapturedAt()?->format(\DateTimeInterface::ATOM);
+        $this->shippingLogger->warning('shipping.rates.snapshot_fallback', [
+            'provider'    => 'shippo',
+            'route_key'   => $snapshot->getRouteKey(),
+            'captured_at' => $capturedAt,
+            'rate_count'  => count($snapshot->getRates()),
+            'reason'      => $liveError !== null ? 'live_error' : 'live_empty',
+            'live_error'  => $liveError?->getMessage(),
+        ]);
+
+        return array_map(
+            static fn (array $rate): array => $rate + ['from_snapshot' => true, 'captured_at' => $capturedAt],
+            $snapshot->getRates(),
+        );
+    }
+
+    /**
+     * Rates a destination against the live carrier (Shippo) only — no fallback.
+     * Returns an empty array when the carrier has no rates for the route; the
+     * reason is logged. Used directly by the snapshot refresh command, which must
+     * see the real live result to retry on empty and never store a fallback.
      *
      * The origin comes from the market (SenderAddressAdapter → home country +
      * admin settings), not a constant; both addresses pass through the neutral
@@ -30,7 +113,7 @@ class ShippingService
      * adapter, not this flow. When the parcel crosses a border, Shippo's intl
      * rating requires a phone on both ends, enforced here before the API call.
      */
-    public function getRates(array $toAddress, array $parcel, ?CustomsDeclaration $customs = null): array
+    public function rateLive(array $toAddress, array $parcel, ?CustomsDeclaration $customs = null): array
     {
         $from = $this->sender->address();
         $to   = new ShippingAddress(
