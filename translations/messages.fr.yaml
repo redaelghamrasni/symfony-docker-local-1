@@ -411,6 +411,7 @@ admin:
     taxes: Taux de taxe
     regions: Régions
     logs: Journaux
+    store: Boutique
     back_to_store: Retour à la boutique
   quotes:
     status_draft: Brouillon

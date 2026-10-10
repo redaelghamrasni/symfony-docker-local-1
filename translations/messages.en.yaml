@@ -408,6 +408,7 @@ admin:
     taxes: Tax rates
     regions: Regions
     logs: Logs
+    store: Store
     back_to_store: Back to Store
   quotes:
     status_draft: Draft

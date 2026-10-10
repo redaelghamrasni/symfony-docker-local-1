@@ -83,11 +83,6 @@
                         <i class="bi bi-journal-text"></i>
                         {{ 'admin.nav.logs'|trans }}
                     </a>
-                    <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;">
-                    <a href="{{ path('app_article_list') }}" class="admin-nav-item">
-                        <i class="bi bi-arrow-left"></i>
-                        {{ 'admin.nav.back_to_store'|trans }}
-                    </a>
                 </div>
             </nav>
 
@@ -96,26 +91,34 @@
                 {# Header #}
                 <div class="admin-header">
                     <h1 class="admin-title">{% block page_title %}Admin{% endblock %}</h1>
-                    <!--
-                    <div class="admin-user-menu">
-                        {% if app.user %}
-                            <span>{{ app.user.getFirstName() }} {{ app.user.getLastName() }}</span>
-                            <a href="{{ path('app_profile_index') }}">
-                                <i class="bi bi-person"></i>
-                                Profile
+                    {% if app.user %}
+                    <div class="user-dropdown" id="adminUserDropdown">
+                        <button class="user-dropdown-trigger" onclick="toggleAdminUserDropdown(event)">
+                            <span style="display: flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 9999px; background: #0f172a; color: #fff; font-size: 0.7rem; font-weight: 700; flex-shrink: 0;">
+                                {{ app.user.getFirstName()|default(app.user.username)|slice(0, 1)|upper }}
+                            </span>
+                            {{ 'nav.welcome'|trans({'%name%': app.user.getFirstName()|default(app.user.username)}) }}
+                            <i class="bi bi-chevron-down" style="font-size: 0.65rem;"></i>
+                        </button>
+                        <div class="user-dropdown-menu" id="adminUserDropdownMenu">
+                            <div class="user-dropdown-header">
+                                <div class="user-dropdown-name">{{ app.user.getFirstName() }} {{ app.user.getLastName() }}</div>
+                                <div class="user-dropdown-email">{{ app.user.email }}</div>
+                            </div>
+                            <a href="{{ path('admin_users_show', {id: app.user.id}) }}">
+                                <i class="bi bi-person"></i> {{ 'profile.index.title'|trans }}
                             </a>
-                            <a href="{{ path('app_auth_logout') }}" style="border-color: #fecaca; color: #dc2626;">
-                                <i class="bi bi-box-arrow-right"></i>
-                                Logout
+                            <hr class="user-dropdown-divider">
+                            <a href="{{ path('app_article_list') }}">
+                                <i class="bi bi-shop"></i> {{ 'admin.nav.store'|trans }}
                             </a>
-                        {% else %}
-                            <a href="{{ path('app_auth_login') }}" style="border-color: #3b82f6; color: #3b82f6;">
-                                <i class="bi bi-box-arrow-in-right"></i>
-                                Login
+                            <hr class="user-dropdown-divider">
+                            <a href="{{ path('app_auth_logout') }}" class="user-dropdown-logout">
+                                <i class="bi bi-box-arrow-right"></i> {{ 'profile.logout'|trans }}
                             </a>
-                        {% endif %}
+                        </div>
                     </div>
-                    -->
+                    {% endif %}
                 </div>
 
                 {# Flash Messages #}
@@ -210,6 +213,17 @@
             }
         });
     })();
+
+    // Admin user dropdown (mirrors the storefront user menu).
+    function toggleAdminUserDropdown(e) {
+        e.stopPropagation();
+        var menu = document.getElementById('adminUserDropdownMenu');
+        if (menu) menu.classList.toggle('open');
+    }
+    document.addEventListener('click', function () {
+        var menu = document.getElementById('adminUserDropdownMenu');
+        if (menu) menu.classList.remove('open');
+    });
     </script>
     </body>
 </html>
