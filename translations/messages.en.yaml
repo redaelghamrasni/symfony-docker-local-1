@@ -400,6 +400,7 @@ admin:
     users: Users
     orders: Orders
     quotes: Quotes
+    reports: Reports
     categories: Categories
     promotions: Promotions
     faq: FAQ
@@ -466,6 +467,12 @@ admin:
       reference: Reference
       payment_none: No payment linked yet.
       back: Back to Quotes
+  reports:
+    index:
+      title: Reports
+      breadcrumb: Reports
+      empty_title: No reports yet
+      empty_body: This section will host marketing and sales reports (conversion funnel, abandoned carts, seller analytics). Coming in a later iteration.
   regions:
     title: Regions
     breadcrumb: Catalogue / Regions

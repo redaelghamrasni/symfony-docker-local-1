@@ -403,6 +403,7 @@ admin:
     users: Utilisateurs
     orders: Commandes
     quotes: Devis
+    reports: Rapports
     categories: Catégories
     promotions: Promotions
     faq: FAQ
@@ -469,6 +470,12 @@ admin:
       reference: Référence
       payment_none: Aucun paiement lié pour l''instant.
       back: Retour aux devis
+  reports:
+    index:
+      title: Rapports
+      breadcrumb: Rapports
+      empty_title: Aucun rapport pour le moment
+      empty_body: Cette section accueillera les rapports marketing et de ventes (tunnel de conversion, paniers abandonnés, analytique vendeur). À venir dans une prochaine itération.
   regions:
     title: Régions
     breadcrumb: Catalogue / Régions

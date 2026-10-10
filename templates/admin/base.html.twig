@@ -51,6 +51,10 @@
                         <i class="bi bi-receipt-cutoff"></i>
                         {{ 'admin.nav.quotes'|trans }}
                     </a>
+                    <a href="{{ path('admin_reports_index') }}" class="admin-nav-item {% if 'admin_reports_' in app.request.attributes.get('_route') %}active{% endif %}">
+                        <i class="bi bi-bar-chart"></i>
+                        {{ 'admin.nav.reports'|trans }}
+                    </a>
                     <a href="{{ path('admin_categories_index') }}" class="admin-nav-item {% if 'admin_categories_' in app.request.attributes.get('_route') %}active{% endif %}">
                         <i class="bi bi-tags"></i>
                         {{ 'admin.nav.categories'|trans }}

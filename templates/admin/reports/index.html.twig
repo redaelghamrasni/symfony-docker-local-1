@@ -1,0 +1,16 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.reports.index.title'|trans }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.reports.index.title'|trans }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">{{ 'admin.reports.index.breadcrumb'|trans }}</p>
+{% endblock %}
+
+{% block content %}
+<div style="background: white; padding: 60px 40px; text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <i class="bi bi-bar-chart" style="font-size: 48px; color: #cbd5e1; display: block; margin-bottom: 16px;"></i>
+    <h3 style="margin: 0 0 8px 0; color: #334155;">{{ 'admin.reports.index.empty_title'|trans }}</h3>
+    <p style="margin: 0; color: #94a3b8; max-width: 480px; margin-left: auto; margin-right: auto;">{{ 'admin.reports.index.empty_body'|trans }}</p>
+</div>
+{% endblock %}
