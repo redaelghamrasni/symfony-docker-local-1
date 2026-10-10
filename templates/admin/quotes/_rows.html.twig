@@ -1,0 +1,48 @@
+{% set quoteStatusLabels = {
+    'draft':     'admin.quotes.status_draft'|trans,
+    'ready':     'admin.quotes.status_ready'|trans,
+    'converted': 'admin.quotes.status_converted'|trans,
+    'abandoned': 'admin.quotes.status_abandoned'|trans
+} %}
+{% set quoteStatusStyles = {
+    'draft':     'background:#f1f5f9;color:#475569;',
+    'ready':     'background:#dbeafe;color:#1e40af;',
+    'converted': 'background:#dcfce7;color:#166534;',
+    'abandoned': 'background:#fee2e2;color:#991b1b;'
+} %}
+{% for quote in quotes %}
+<tr style="border-bottom: 1px solid #e2e8f0;">
+    <td style="padding: 14px 16px; color: #64748b; font-size: 13px; font-weight: 600;">#{{ quote.id }}</td>
+    <td style="padding: 14px 16px; color: #0f172a; font-weight: 500;">
+        {{ quote.customerFirstName ?: '—' }} {{ quote.customerLastName }}
+        {% if quote.user is null %}
+            <span style="margin-left:6px; font-size:11px; color:#94a3b8;">{{ 'admin.quotes.guest'|trans }}</span>
+        {% endif %}
+    </td>
+    <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ quote.customerEmail ?: '—' }}</td>
+    <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">{{ quote.items|length }}</td>
+    <td style="padding: 14px 16px; text-align: right; font-weight: 600; color: #0f172a;">
+        {% if quote.total is not null %}{{ quote.total|money_snapshot(quote.currency) }}{% else %}—{% endif %}
+    </td>
+    <td style="padding: 14px 16px; text-align: center;">
+        <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ quoteStatusStyles[quote.status] ?? '' }}">
+            {{ quoteStatusLabels[quote.status] ?? quote.status|capitalize }}
+        </span>
+        {% if quote.status == 'converted' and quote.convertedOrderId %}
+            <a href="{{ path('admin_orders_show', {id: quote.convertedOrderId}) }}"
+               title="{{ 'admin.quotes.view_order'|trans }}"
+               style="display:inline-block; margin-top:4px; font-size:11px; color:#166534; text-decoration:none;">
+                <i class="bi bi-arrow-right-circle"></i> {{ 'admin.quotes.order_hash'|trans }}{{ quote.convertedOrderId }}
+            </a>
+        {% endif %}
+    </td>
+    <td style="padding: 14px 16px; color: #64748b; font-size: 13px;">
+        {{ quote.createdAt|date('Y-m-d H:i') }}
+    </td>
+    <td style="padding: 14px 16px; text-align: right;">
+        <a href="{{ path('admin_quotes_show', {id: quote.id}) }}" class="btn-action-secondary" style="font-size: 12px; padding: 5px 12px;">
+            <i class="bi bi-eye"></i> {{ 'admin.quotes.view'|trans }}
+        </a>
+    </td>
+</tr>
+{% endfor %}

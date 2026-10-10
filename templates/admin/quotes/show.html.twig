@@ -1,0 +1,225 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ 'admin.quotes.show.page_title'|trans({'%id%': quote.id}) }} - Admin{% endblock %}
+{% block page_title %}{{ 'admin.quotes.show.page_title'|trans({'%id%': quote.id}) }}{% endblock %}
+
+{% block breadcrumb %}
+<p style="margin: -8px 0 20px 0; font-size: 12px; color: #8a9ab5;">
+    <a href="{{ path('admin_quotes_index') }}" style="color: #8a9ab5; text-decoration: none;">{{ 'admin.quotes.index.breadcrumb'|trans }}</a>
+    &nbsp;/&nbsp;#{{ quote.id }}
+</p>
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .q-layout        { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+    .q-customer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .q-table-wrap    { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 1100px) { .q-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 700px)  { .q-customer-grid { grid-template-columns: 1fr; } }
+</style>
+
+{% set quoteStatusStyles = {
+    'draft':     'background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;',
+    'ready':     'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;',
+    'converted': 'background:#dcfce7;color:#166534;border:1px solid #86efac;',
+    'abandoned': 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;'
+} %}
+{% set quoteStatusLabels = {
+    'draft':     'admin.quotes.status_draft'|trans,
+    'ready':     'admin.quotes.status_ready'|trans,
+    'converted': 'admin.quotes.status_converted'|trans,
+    'abandoned': 'admin.quotes.status_abandoned'|trans
+} %}
+
+<div class="q-layout">
+
+    {# Left column #}
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 28px;">
+
+            {# Customer & addresses #}
+            <h2 style="margin: 0 0 20px 0; font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">{{ 'admin.quotes.show.customer_info'|trans }}</h2>
+            <div class="q-customer-grid" style="margin-bottom: 28px;">
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.customer_label'|trans }}</p>
+                    <p style="margin: 0; color: #0f172a; font-weight: 500;">{{ quote.customerFirstName ?: '—' }} {{ quote.customerLastName }}</p>
+                    {% if quote.customerEmail %}<p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">{{ quote.customerEmail }}</p>{% endif %}
+                    {% if quote.customerPhone %}<p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">{{ quote.customerPhone }}</p>{% endif %}
+                    {% if quote.user %}
+                        <a href="{{ path('admin_users_show', {id: quote.user.id}) }}" style="font-size: 12px; color: #64748b; text-decoration: none; display: inline-block; margin-top: 6px;">
+                            <i class="bi bi-person"></i> {{ 'admin.quotes.show.view_account'|trans }}
+                        </a>
+                    {% else %}
+                        <p style="margin: 6px 0 0 0; font-size: 12px; color: #94a3b8;">{{ 'admin.quotes.show.guest_quote'|trans }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.shipping_address'|trans }}</p>
+                    <p style="margin: 0; color: #0f172a; font-size: 14px; line-height: 1.6;">
+                        {% if quote.shippingStreet %}
+                            {{ quote.shippingStreet }}<br>
+                            {{ quote.shippingCity }}{% if quote.shippingProvince %}, {{ quote.shippingProvince }}{% endif %}<br>
+                            {{ quote.shippingPostalCode }}{% if quote.shippingCountry %} · {{ quote.shippingCountry }}{% endif %}
+                        {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.billing_address'|trans }}</p>
+                    <p style="margin: 0; color: #0f172a; font-size: 14px; line-height: 1.6;">
+                        {% if quote.billingStreet %}
+                            {{ quote.billingStreet }}<br>
+                            {{ quote.billingCity }}{% if quote.billingProvince %}, {{ quote.billingProvince }}{% endif %}<br>
+                            {{ quote.billingPostalCode }}
+                        {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {# Shipping method snapshot #}
+            {% if quote.shippingMethodName or quote.shippingMethodCarrier %}
+            <h2 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">{{ 'admin.quotes.show.shipping_method_title'|trans }}</h2>
+            <p style="margin: 0 0 24px 0; font-size: 14px; color: #0f172a;">
+                <i class="bi bi-box-seam" style="color:#64748b;"></i>
+                {% if quote.shippingMethodCarrier and quote.shippingMethodName %}{{ quote.shippingMethodCarrier }} — {{ quote.shippingMethodName }}{% else %}{{ quote.shippingMethodName ?? quote.shippingMethodCarrier }}{% endif %}
+                {% if quote.shippingAmount is not null %}
+                    &nbsp;·&nbsp;{% if quote.shippingAmount > 0 %}{{ quote.shippingAmount|money_snapshot(quote.currency) }}{% else %}<span style="color:#16a34a;">{{ 'admin.quotes.show.shipping_free'|trans }}</span>{% endif %}
+                {% endif %}
+            </p>
+            {% endif %}
+
+            {# Items #}
+            <h2 style="margin: 0 0 20px 0; font-size: 15px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                {{ 'admin.quotes.show.items_title'|trans }} <span style="font-weight: 400; color: #64748b;">({{ quote.items|length }})</span>
+            </h2>
+            <div class="q-table-wrap">
+            <table style="width: 100%; border-collapse: collapse; min-width: 400px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <th style="padding: 8px 0; text-align: left; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.article'|trans }}</th>
+                        <th style="padding: 8px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.quantity'|trans }}</th>
+                        <th style="padding: 8px 0; text-align: right; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.unit_price'|trans }}</th>
+                        <th style="padding: 8px 0; text-align: right; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">{{ 'admin.quotes.show.subtotal'|trans }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in quote.items %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #0f172a; font-weight: 500;">
+                            {% if item.article %}
+                                <a href="{{ path('admin_articles_show', {id: item.article.id}) }}?referer={{ app.request.requestUri|url_encode }}" style="color: #3b82f6; text-decoration: none; font-weight: 600;">{{ item.article.title }}</a>
+                            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                        </td>
+                        <td style="padding: 12px 12px; text-align: center; color: #64748b;">{{ item.quantity }}</td>
+                        <td style="padding: 12px 0; text-align: right; color: #64748b; white-space: nowrap;">{{ item.unitPrice|money_snapshot(quote.currency) }}</td>
+                        <td style="padding: 12px 0; text-align: right; font-weight: 600; color: #0f172a; white-space: nowrap;">{{ item.subtotal|money_snapshot(quote.currency) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" style="padding: 10px 0; text-align: right; color: #64748b;">{{ 'admin.quotes.show.subtotal'|trans }}</td>
+                        <td style="padding: 10px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ (quote.subtotal ?? quote.total)|money_snapshot(quote.currency) }}</td>
+                    </tr>
+                    {% if quote.shippingAmount is not null %}
+                    <tr>
+                        <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ 'admin.quotes.show.shipping'|trans }}</td>
+                        <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{% if quote.shippingAmount > 0 %}{{ quote.shippingAmount|money_snapshot(quote.currency) }}{% else %}{{ 'admin.quotes.show.shipping_free'|trans }}{% endif %}</td>
+                    </tr>
+                    {% endif %}
+                    {% for line in quote.taxLines %}
+                    {% set tkey = 'tax.line.' ~ line.code %}{% set tlabel = tkey|trans %}
+                    <tr>
+                        <td colspan="3" style="padding: 6px 0; text-align: right; color: #64748b;">{{ tlabel == tkey ? line.label : tlabel }}{% if line.rate %} ({{ (line.rate * 100)|number_format(3) }}%){% endif %}</td>
+                        <td style="padding: 6px 0; text-align: right; color: #0f172a; white-space: nowrap;">{{ line.amount|money_snapshot(quote.currency) }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <td colspan="3" style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; border-top: 2px solid #0f172a;">{{ 'common.total'|trans }}</td>
+                        <td style="padding: 16px 0 0 0; text-align: right; font-weight: 700; color: #0f172a; font-size: 18px; border-top: 2px solid #0f172a; white-space: nowrap;">{{ (quote.total ?? '0')|money_snapshot(quote.currency) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    {# Right column — lifecycle + payment linkage #}
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <div style="background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0f172a;">{{ 'admin.quotes.show.lifecycle'|trans }}</h2>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.quote_id'|trans }}</span>
+                    <span style="font-weight: 600; color: #0f172a;">#{{ quote.id }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.status'|trans }}</span>
+                    <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; {{ quoteStatusStyles[quote.status] ?? '' }}">{{ quoteStatusLabels[quote.status] ?? quote.status|capitalize }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.created'|trans }}</span>
+                    <span style="font-size: 13px; color: #0f172a;">{{ quote.createdAt|date('Y-m-d H:i') }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.updated'|trans }}</span>
+                    <span style="font-size: 13px; color: #0f172a;">{{ quote.updatedAt|date('Y-m-d H:i') }}</span>
+                </div>
+                {% if quote.readyAt %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.ready_at'|trans }}</span>
+                    <span style="font-size: 13px; color: #0f172a;">{{ quote.readyAt|date('Y-m-d H:i') }}</span>
+                </div>
+                {% endif %}
+                {% if quote.convertedAt %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.converted_at'|trans }}</span>
+                    <span style="font-size: 13px; color: #166534;">{{ quote.convertedAt|date('Y-m-d H:i') }}</span>
+                </div>
+                {% endif %}
+                {% if quote.abandonedAt %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.abandoned_at'|trans }}</span>
+                    <span style="font-size: 13px; color: #991b1b;">{{ quote.abandonedAt|date('Y-m-d H:i') }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if convertedOrder %}
+            <a href="{{ path('admin_orders_show', {id: convertedOrder.id}) }}"
+               style="display:flex; justify-content:center; align-items:center; gap:6px; margin-top:16px; padding:10px; border-radius:6px; background:#dcfce7; color:#166534; font-size:13px; font-weight:600; text-decoration:none;">
+                <i class="bi bi-arrow-right-circle"></i> {{ 'admin.quotes.show.view_converted_order'|trans({'%id%': convertedOrder.id}) }}
+            </a>
+            {% endif %}
+        </div>
+
+        {# Payment linkage — provider-neutral (no Stripe-specific framing) #}
+        <div style="background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0f172a;">{{ 'admin.quotes.show.payment_linkage'|trans }}</h2>
+            {% if quote.paymentProvider %}
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: #64748b;">{{ 'admin.quotes.show.provider'|trans }}</span>
+                    <span style="font-weight: 600; color: #0f172a;">{{ quote.paymentProvider|capitalize }}</span>
+                </div>
+                <div>
+                    <p style="margin:0 0 4px; font-size:12px; color:#64748b;">{{ 'admin.quotes.show.reference'|trans }}</p>
+                    <code style="font-family: monospace; font-size: 12px; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; color: #374155; word-break: break-all; display:block;">{{ quote.paymentReference }}</code>
+                </div>
+            </div>
+            {% else %}
+            <p style="margin: 0; font-size: 13px; color: #94a3b8;">{{ 'admin.quotes.show.payment_none'|trans }}</p>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+            <a href="{{ path('admin_quotes_index') }}" class="btn-action-secondary">
+                <i class="bi bi-arrow-left"></i> {{ 'admin.quotes.show.back'|trans }}
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

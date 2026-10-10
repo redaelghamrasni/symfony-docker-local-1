@@ -399,6 +399,7 @@ admin:
     articles: Articles
     users: Users
     orders: Orders
+    quotes: Quotes
     categories: Categories
     promotions: Promotions
     faq: FAQ
@@ -408,6 +409,62 @@ admin:
     regions: Regions
     logs: Logs
     back_to_store: Back to Store
+  quotes:
+    status_draft: Draft
+    status_ready: Ready
+    status_converted: Converted
+    status_abandoned: Abandoned
+    guest: Guest
+    view: View
+    view_order: View the converted order
+    order_hash: 'Order #'
+    index:
+      title: Quotes
+      breadcrumb: Quotes (carts)
+      status_all: All
+      stat_total: Total quotes
+      stat_in_progress: In progress
+      stat_conversion: Conversion rate
+      col_customer: Customer
+      col_email: Email
+      col_items: Items
+      col_total: Total
+      col_status: Status
+      col_date: Created
+      col_actions: Actions
+      no_quotes_found: No quotes found
+      no_quotes_yet: No quotes yet.
+      no_quotes_with_status: 'No quotes with status "%status%".'
+    show:
+      page_title: 'Quote #%id%'
+      customer_info: Customer information
+      customer_label: Customer
+      shipping_address: Shipping address
+      billing_address: Billing address
+      view_account: View customer profile
+      guest_quote: Guest quote
+      shipping_method_title: Shipping method
+      shipping_free: Free
+      items_title: Items
+      article: Article
+      quantity: Quantity
+      unit_price: Unit price
+      subtotal: Subtotal
+      shipping: Shipping
+      lifecycle: Lifecycle
+      quote_id: Quote ID
+      status: Status
+      created: Created on
+      updated: Updated on
+      ready_at: Ready on
+      converted_at: Converted on
+      abandoned_at: Abandoned on
+      view_converted_order: 'View order #%id%'
+      payment_linkage: Payment linkage
+      provider: Provider
+      reference: Reference
+      payment_none: No payment linked yet.
+      back: Back to Quotes
   regions:
     title: Regions
     breadcrumb: Catalogue / Regions

@@ -402,6 +402,7 @@ admin:
     articles: Articles
     users: Utilisateurs
     orders: Commandes
+    quotes: Devis
     categories: Catégories
     promotions: Promotions
     faq: FAQ
@@ -411,6 +412,62 @@ admin:
     regions: Régions
     logs: Journaux
     back_to_store: Retour à la boutique
+  quotes:
+    status_draft: Brouillon
+    status_ready: Prêt
+    status_converted: Converti
+    status_abandoned: Abandonné
+    guest: Invité
+    view: Voir
+    view_order: Voir la commande convertie
+    order_hash: 'Commande #'
+    index:
+      title: Devis
+      breadcrumb: Devis (paniers)
+      status_all: Tous
+      stat_total: Total devis
+      stat_in_progress: En cours
+      stat_conversion: Taux de conversion
+      col_customer: Client
+      col_email: E-mail
+      col_items: Articles
+      col_total: Total
+      col_status: Statut
+      col_date: Créé
+      col_actions: Actions
+      no_quotes_found: Aucun devis trouvé
+      no_quotes_yet: Aucun devis pour le moment.
+      no_quotes_with_status: 'Aucun devis avec le statut « %status% ».'
+    show:
+      page_title: 'Devis #%id%'
+      customer_info: Informations client
+      customer_label: Client
+      shipping_address: Adresse de livraison
+      billing_address: Adresse de facturation
+      view_account: Voir le profil client
+      guest_quote: Devis invité
+      shipping_method_title: Méthode de livraison
+      shipping_free: Gratuite
+      items_title: Articles
+      article: Article
+      quantity: Quantité
+      unit_price: Prix unitaire
+      subtotal: Sous-total
+      shipping: Livraison
+      lifecycle: Cycle de vie
+      quote_id: ID du devis
+      status: Statut
+      created: Créé le
+      updated: Mis à jour le
+      ready_at: Prêt le
+      converted_at: Converti le
+      abandoned_at: Abandonné le
+      view_converted_order: 'Voir la commande #%id%'
+      payment_linkage: Lien de paiement
+      provider: Fournisseur
+      reference: Référence
+      payment_none: Aucun paiement lié pour l''instant.
+      back: Retour aux devis
   regions:
     title: Régions
     breadcrumb: Catalogue / Régions
