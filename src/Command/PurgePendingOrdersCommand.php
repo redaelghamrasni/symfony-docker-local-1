@@ -3,10 +3,13 @@
 namespace App\Command;
 
 use App\Entity\Order;
+use App\Entity\Quote;
 use App\Message\ReindexEntityMessage;
 use App\Repository\OrderRepository;
+use App\Repository\QuoteRepository;
 use App\Service\OrderFinalizer;
 use App\Service\PaymentOutcome;
+use App\Service\QuoteConverter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Stripe\StripeClient;
@@ -19,8 +22,16 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
- * Cleans up orders left `pending` because their payment was never completed —
+ * Cleans up stale checkout state left behind by payments that never completed —
  * and doubles as a reconciliation safety net for the Stripe webhook.
+ *
+ * Two passes, both age-gated by --older-than and both reconciled against Stripe
+ * before anything is abandoned:
+ *   1. legacy/leftover orders still `pending` (an order is now created only at
+ *      conversion, but a conversion that never finalized can leave one);
+ *   2. the quotes themselves — the mutable pre-payment object that always exists
+ *      before a payment is attempted, so this is the primary place a
+ *      charged-but-abandoned checkout is recovered (converted → paid) or retired.
  *
  * It never deletes blindly on age. For each pending order past the threshold it
  * re-queries Stripe for the PaymentIntent first:
@@ -45,9 +56,11 @@ class PurgePendingOrdersCommand extends Command
 {
     public function __construct(
         private readonly OrderRepository $orders,
+        private readonly QuoteRepository $quotes,
         private readonly EntityManagerInterface $em,
         private readonly StripeClient $stripeClient,
         private readonly OrderFinalizer $orderFinalizer,
+        private readonly QuoteConverter $quoteConverter,
         private readonly MessageBusInterface $messageBus,
         private readonly LoggerInterface $paymentLogger,
     ) {
@@ -199,7 +212,7 @@ class PurgePendingOrdersCommand extends Command
 
         $io->newLine();
         $io->success(sprintf(
-            'Recovered: %d · In flight (kept): %d · Abandoned%s: %d · Stripe unreachable: %d',
+            'Orders — Recovered: %d · In flight (kept): %d · Abandoned%s: %d · Stripe unreachable: %d',
             $recovered,
             $inFlight,
             $hardDelete ? ' (deleted)' : '',
@@ -207,7 +220,159 @@ class PurgePendingOrdersCommand extends Command
             $unreachable,
         ));
 
+        // Second pass: the quotes themselves. A quote always exists before a
+        // payment is attempted (unlike the old pending order), so this is the
+        // primary place a charged-but-abandoned checkout is recovered.
+        $this->reconcileQuotes($io, $cutoff, $olderThan, $hardDelete, $dryRun);
+
         return Command::SUCCESS;
+    }
+
+    /**
+     * Reconciles stale unconverted quotes against the provider, mirroring the
+     * order pass: a Stripe quote whose PaymentIntent actually succeeded is
+     * recovered (converted → paid), one that is still in flight is kept, and a
+     * genuinely dead one is abandoned (soft by default, hard-deleted with
+     * --delete). A quote is never abandoned on uncertainty (Stripe unreachable).
+     */
+    private function reconcileQuotes(
+        SymfonyStyle $io,
+        \DateTimeImmutable $cutoff,
+        string $olderThan,
+        bool $hardDelete,
+        bool $dryRun,
+    ): void {
+        $candidates = $this->quotes->findStaleUnconvertedOlderThan($cutoff);
+
+        $io->section('Quotes');
+        $io->writeln(sprintf(
+            'Cutoff: unconverted and untouched since before <info>%s</info> (older than %s)%s',
+            $cutoff->format('Y-m-d H:i T'),
+            $olderThan,
+            $dryRun ? ' — <comment>dry run</comment>' : '',
+        ));
+        $io->writeln(sprintf('Candidates: <info>%d</info>', count($candidates)));
+
+        $recovered = $inFlight = $abandoned = $unreachable = 0;
+
+        foreach ($candidates as $quote) {
+            // It may have been converted between the query and now.
+            if ($quote->isConverted()) {
+                continue;
+            }
+
+            $provider  = $quote->getPaymentProvider();
+            $reference = $quote->getPaymentReference();
+
+            // Only a Stripe quote carrying a PaymentIntent can be reconciled
+            // against Stripe. Anything else (a draft that never reached payment,
+            // or a PayPal quote that never captured) is treated as abandoned.
+            if ($provider !== 'stripe' || !$reference) {
+                $this->abandonQuote($quote, $io, $hardDelete, $dryRun, $provider === null ? 'no_payment' : 'unreconcilable_' . $provider);
+                $abandoned++;
+                continue;
+            }
+
+            try {
+                $intent = $this->stripeClient->paymentIntents->retrieve($reference);
+            } catch (\Throwable $e) {
+                $unreachable++;
+                $this->paymentLogger->warning('checkout.purge.quote.stripe_unreachable', [
+                    'quote_id'       => $quote->getId(),
+                    'payment_intent' => $reference,
+                    'error'          => $e->getMessage(),
+                ]);
+                $io->writeln(sprintf('  quote #%d — Stripe unreachable, left open', $quote->getId()));
+                continue;
+            }
+
+            $status = $intent->status ?? null;
+
+            if ($status === 'succeeded') {
+                $io->writeln(sprintf('  quote #%d — PaymentIntent succeeded, recovering → order', $quote->getId()));
+                $this->paymentLogger->warning('checkout.purge.quote.recovered', [
+                    'quote_id'       => $quote->getId(),
+                    'payment_intent' => $reference,
+                    'note'           => 'succeeded payment had no converted order; webhook likely missed',
+                ]);
+
+                if (!$dryRun) {
+                    $order   = $this->quoteConverter->convert($quote);
+                    $outcome = new PaymentOutcome(
+                        provider: 'stripe',
+                        providerConfirmed: true,
+                        paidCurrency: $intent->currency !== null ? strtolower((string) $intent->currency) : null,
+                        paidMinor: isset($intent->amount_received) ? (int) $intent->amount_received : null,
+                        reference: $reference,
+                        paymentMethod: ($intent->payment_method_types[0] ?? null) ?: 'card',
+                    );
+                    $this->orderFinalizer->finalizePaid($order, $outcome);
+                }
+                $recovered++;
+                continue;
+            }
+
+            if (in_array($status, ['processing', 'requires_capture'], true)) {
+                $inFlight++;
+                $io->writeln(sprintf('  quote #%d — PaymentIntent %s, left open', $quote->getId(), $status));
+                continue;
+            }
+
+            if (in_array($status, ['canceled', 'requires_payment_method'], true)) {
+                $this->abandonQuote($quote, $io, $hardDelete, $dryRun, 'stripe_' . $status);
+                $abandoned++;
+                continue;
+            }
+
+            // requires_action / requires_confirmation and the like: the customer
+            // may still complete it. Leave open.
+            $inFlight++;
+            $io->writeln(sprintf('  quote #%d — PaymentIntent %s, left open', $quote->getId(), $status ?? 'unknown'));
+        }
+
+        if (!$dryRun) {
+            $this->em->flush();
+        }
+
+        $io->success(sprintf(
+            'Quotes — Recovered: %d · In flight (kept): %d · Abandoned%s: %d · Stripe unreachable: %d',
+            $recovered,
+            $inFlight,
+            $hardDelete ? ' (deleted)' : '',
+            $abandoned,
+            $unreachable,
+        ));
+    }
+
+    private function abandonQuote(
+        Quote $quote,
+        SymfonyStyle $io,
+        bool $hardDelete,
+        bool $dryRun,
+        string $reason,
+    ): void {
+        $id = $quote->getId();
+
+        if ($hardDelete) {
+            $io->writeln(sprintf('  quote #%d — abandoned (%s), deleting', $id, $reason));
+            if (!$dryRun) {
+                // Quotes are not search-indexed, so there is nothing to reindex.
+                $this->em->remove($quote);
+            }
+        } else {
+            $io->writeln(sprintf('  quote #%d — marking abandoned (%s)', $id, $reason));
+            if (!$dryRun) {
+                $quote->markAbandoned();
+                $quote->setUpdatedAt(new \DateTimeImmutable('now', new \DateTimeZone('America/Toronto')));
+            }
+        }
+
+        $this->paymentLogger->info('checkout.purge.quote.abandoned', [
+            'quote_id' => $id,
+            'reason'   => $reason,
+            'mode'     => $hardDelete ? 'deleted' : 'marked_abandoned',
+            'dry_run'  => $dryRun,
+        ]);
     }
 
     /**

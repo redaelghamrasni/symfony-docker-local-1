@@ -2,9 +2,10 @@
 
 namespace App\Controller;
 
-use App\Repository\OrderRepository;
+use App\Repository\QuoteRepository;
 use App\Service\OrderFinalizer;
 use App\Service\PaymentOutcome;
+use App\Service\QuoteConverter;
 use Psr\Log\LoggerInterface;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
@@ -22,14 +23,23 @@ use Symfony\Component\HttpFoundation\Response;
  * bare POST /stripe/webhook (where Stripe sends). Authentication is by signature,
  * not by firewall, so the path is PUBLIC_ACCESS in security.yaml.
  *
- * Idempotency lives in OrderFinalizer (one pending → paid transition per order),
- * so a duplicated event, or this webhook racing the browser return, never
- * produces a second order or a second confirmation email.
+ * On a succeeded payment it finds the quote the payment settles — a quote always
+ * exists before payment (pre-created in checkout) — and converts it into an
+ * Order via QuoteConverter, then finalizes it via OrderFinalizer. Idempotency is
+ * twofold: QuoteConverter yields exactly one order per quote, and OrderFinalizer
+ * performs exactly one pending → paid transition per order, so a duplicated
+ * event, or this webhook racing the browser return, never produces a second
+ * order or a second confirmation email.
+ *
+ * The quote is looked up provider-neutrally, by `(provider='stripe', reference=PI
+ * id)`; the Stripe-specific PI-metadata fallback (quote id) is the only
+ * Stripe-aware bit, and it belongs on this Stripe adapter.
  */
 final class StripeWebhookController extends AbstractController
 {
     public function __construct(
-        private readonly OrderRepository $orders,
+        private readonly QuoteRepository $quotes,
+        private readonly QuoteConverter $quoteConverter,
         private readonly OrderFinalizer $orderFinalizer,
         private readonly LoggerInterface $paymentLogger,
         private readonly string $webhookSecret,
@@ -96,29 +106,32 @@ final class StripeWebhookController extends AbstractController
      */
     private function onPaymentIntentSucceeded($pi): void
     {
-        $order = $this->orders->findOneByStripePaymentIntentId($pi->id);
+        $quote = $this->quotes->findOneByPaymentReference('stripe', (string) $pi->id);
 
-        // Fallback to the order id we wrote into the PaymentIntent metadata at
-        // update-payment, in case the id column was not set for some reason.
-        if (!$order) {
-            $metaOrderId = $pi->metadata->order_id ?? null;
-            if ($metaOrderId) {
-                $order = $this->orders->find((int) $metaOrderId);
+        // Fallback to the quote id we wrote into the PaymentIntent metadata when
+        // the quote was linked, in case the reference was not set for some reason.
+        if (!$quote) {
+            $metaQuoteId = $pi->metadata->quote_id ?? null;
+            if ($metaQuoteId) {
+                $quote = $this->quotes->find((int) $metaQuoteId);
             }
         }
 
-        if (!$order) {
-            // A succeeded payment we cannot tie to an order: the customer has been
+        if (!$quote) {
+            // A succeeded payment we cannot tie to a quote: the customer has been
             // charged with nothing to show for it on our side. Loud, and left for
-            // the purge/reconciliation command to recover if an order appears.
-            $this->paymentLogger->error('payment.webhook.order_not_found', [
+            // the purge/reconciliation command to recover if a quote appears.
+            $this->paymentLogger->error('payment.webhook.quote_not_found', [
                 'provider'       => 'stripe',
                 'payment_intent' => $pi->id ?? null,
-                'action'         => 'charged customer has no matching order; investigate',
+                'action'         => 'charged customer has no matching quote; investigate',
             ]);
 
             return;
         }
+
+        // Quote → Order (idempotent: one order per quote, duplicate event = no-op).
+        $order = $this->quoteConverter->convert($quote);
 
         $outcome = new PaymentOutcome(
             provider: 'stripe',

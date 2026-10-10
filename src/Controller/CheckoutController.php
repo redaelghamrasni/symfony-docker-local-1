@@ -6,22 +6,23 @@ use App\Entity\Address;
 use App\Market\MarketContext;
 use App\Market\MarketProfile;
 use App\Market\Tax\TaxEngineRegistry;
-use App\Market\Tax\TaxQuote;
 use App\Service\CartService;
 use App\Service\CurrencyService;
 use App\Service\OrderFinalizer;
 use App\Service\PaymentOutcome;
 use App\Service\PayPalService;
+use App\Service\QuoteConverter;
+use App\Service\QuoteService;
 use App\Service\SettingService;
 use App\Service\TaxService;
 use App\Service\StripeCustomerService;
 use App\Entity\Cart;
 use App\Entity\Order;
-use App\Entity\OrderItem;
-use App\Entity\OrderTaxLine;
+use App\Entity\Quote;
 use App\Entity\User;
 use App\Repository\AddressRepository;
 use App\Repository\OrderRepository;
+use App\Repository\QuoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Stripe\StripeClient;
@@ -48,6 +49,9 @@ class CheckoutController extends AbstractController
         private StripeCustomerService $stripeCustomerService,
         private AddressRepository $addressRepository,
         private OrderRepository $orderRepository,
+        private QuoteRepository $quoteRepository,
+        private QuoteService $quoteService,
+        private QuoteConverter $quoteConverter,
         private OrderFinalizer $orderFinalizer,
         private CurrencyService $currencyService,
         private TaxService $taxService,
@@ -203,6 +207,11 @@ class CheckoutController extends AbstractController
             }
         }
 
+        // Capture the customer + address onto the quote now that the session holds
+        // them. This is typically the last checkout step before payment confirm,
+        // so it is what ensures the quote carries a deliverable address.
+        $this->syncStripeQuote($session, $this->cartService->getCurrentCart());
+
         return $this->json(['ok' => true]);
     }
 
@@ -303,7 +312,14 @@ class CheckoutController extends AbstractController
         }
 
         // Store PI ID so we can update the amount later
-        $request->getSession()->set('checkout_pi_id', $paymentIntent->id);
+        $session = $request->getSession();
+        $session->set('checkout_pi_id', $paymentIntent->id);
+
+        // Pre-create the quote and link this PaymentIntent now, so a quote the
+        // webhook can convert exists from the very first payment step — even if
+        // the browser never returns. This replaces the old pending-Order
+        // pre-persist; the quote is the mutable pre-payment object.
+        $this->syncStripeQuote($session, $cart);
 
         $this->paymentLogger->info('payment.intent.created', [
             'provider'       => 'stripe',
@@ -339,8 +355,8 @@ class CheckoutController extends AbstractController
         $country  = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
 
         // Tax comes from the active market's engine, not from Canada-specific
-        // code. The order's lines are recomputed from the same engine + inputs
-        // in populateOrderFromSession, so what is charged and what is stored match.
+        // code. The quote's lines are recomputed from the same engine + inputs in
+        // QuoteService::populate, so what is charged and what is stored match.
         $quote      = $this->taxEngineRegistry->active()->quote($subtotal, $country, $province ?: null);
         $taxes      = (float) $quote->total();
         $grandTotal = $subtotal + $taxes + $shipping;
@@ -374,20 +390,12 @@ class CheckoutController extends AbstractController
             }
         }
 
-        // Pre-persist the order as `pending` now that the amount is finalized and
-        // the session holds everything. This is what makes the webhook (and the
-        // browser return) able to finalize an order without the session — see
-        // docs/stripe-webhook-plan.md. Never lets a storage hiccup break the
-        // checkout UI: the totals are still returned.
-        try {
-            $this->upsertPendingOrder($session, $cart);
-        } catch (\Throwable $e) {
-            $this->paymentLogger->error('checkout.pending_order_upsert_failed', [
-                'cart_id' => $cart->getId(),
-                'error'   => $e->getMessage(),
-                'action'  => 'order not pre-persisted; webhook will rely on browser return',
-            ]);
-        }
+        // Keep the quote in sync now that the amount, shipping and tax are
+        // finalized, and (re)link the PaymentIntent. This is what lets the webhook
+        // and the browser return convert an order without the session — see
+        // docs/quote-lifecycle-plan.md. A storage hiccup never breaks the checkout
+        // UI: the totals are still returned (syncStripeQuote swallows + logs).
+        $this->syncStripeQuote($session, $cart);
 
         return $this->json([
             'ok'          => true,
@@ -407,16 +415,17 @@ class CheckoutController extends AbstractController
             $cart            = $this->cartService->getCurrentCart();
             $claimedIntentId = $request->query->get('payment_intent');
 
-            $order = $this->findFinalizableOrder($session, $claimedIntentId);
-
-            // Fallback: the order was not pre-persisted (update-payment never ran,
-            // or its upsert failed). Build it from the session now so a paid
-            // customer still gets an order, exactly as before the webhook work.
-            if (!$order) {
-                $order = $this->upsertPendingOrder($session, $cart);
+            // Last-resort: if no quote was created during checkout (update-payment
+            // never ran, or syncing failed), build one from the session now so a
+            // paid customer still gets an order.
+            $quote = $this->findCheckoutQuote($session, 'stripe', $claimedIntentId);
+            if (!$quote) {
+                $quote = $this->syncStripeQuote($session, $cart);
             }
 
-            if ($order) {
+            if ($quote) {
+                // Quote → Order (idempotent; the webhook may already have done it).
+                $order     = $this->quoteConverter->convert($quote);
                 $outcome   = $this->buildStripeOutcome($order, $claimedIntentId);
                 $performed = $this->orderFinalizer->finalizePaid($order, $outcome);
 
@@ -426,6 +435,12 @@ class CheckoutController extends AbstractController
                     $this->saveAddressFromOrder($order);
                     $this->entityManager->flush();
                 }
+            } else {
+                $this->paymentLogger->error('checkout.success.quote_not_found', [
+                    'provider'       => 'stripe',
+                    'payment_intent' => $claimedIntentId,
+                    'action'         => 'succeeded browser return with no quote to convert; investigate',
+                ]);
             }
 
             // Session/cart clearing is browser-side by nature and must not break
@@ -520,18 +535,23 @@ class CheckoutController extends AbstractController
         $session = $request->getSession();
         $cart    = $this->cartService->getCurrentCart();
 
-        $order = $this->findFinalizableOrder($session, null);
-        if (!$order) {
-            $order = $this->upsertPendingOrder($session, $cart);
+        // Find the quote this PayPal order settles; create one from the session if
+        // none exists yet (a PayPal-only checkout where no Stripe step ever ran).
+        $quote = $this->findCheckoutQuote($session, 'paypal', $paypalOrderId);
+        if (!$quote) {
+            $quote = $this->quoteService->upsert($session, $cart, $this->getUser());
         }
 
-        if ($order) {
-            // This order is being paid through PayPal, not the Stripe
-            // PaymentIntent pre-persisted at update-payment: drop the PI link so
-            // no stray Stripe webhook could ever finalize it, and flush before
-            // the finalizer's refresh so the change survives.
-            $order->setStripePaymentIntentId(null);
+        if ($quote) {
+            // This quote is settled by PayPal, not by any Stripe PaymentIntent it
+            // may have carried: set its provider reference to PayPal. The converter
+            // then stamps no Stripe id on the order, so no stray Stripe webhook can
+            // ever convert/finalize it.
+            $quote->setPayment('paypal', $paypalOrderId);
             $this->entityManager->flush();
+
+            // Quote → Order (idempotent).
+            $order = $this->quoteConverter->convert($quote);
 
             $cap              = $capture['purchase_units'][0]['payments']['captures'][0]['amount'] ?? null;
             $capturedAmount   = $cap['value'] ?? null;
@@ -660,84 +680,81 @@ class CheckoutController extends AbstractController
     // ── Shared helpers ────────────────────────────────────────────────────
 
     /**
-     * Creates or updates the session's `pending` order from the current session
-     * and cart, links the Stripe PaymentIntent both ways, and remembers the
-     * order id in the session. Returns null (creating nothing) while the session
-     * does not yet hold the fields the order's non-nullable columns require.
+     * Keeps the session's quote in sync with the session + cart and (re)links the
+     * current Stripe PaymentIntent to it, writing the quote id into the PI
+     * metadata as the webhook's fallback lookup. Never throws into the checkout
+     * flow: a storage/Stripe hiccup is logged, and the quote (or null) is returned
+     * so the caller can carry on. This is the Stripe-side entry point; the quote
+     * itself stays provider-neutral (QuoteService never sets payment linkage).
      */
-    private function upsertPendingOrder(SessionInterface $session, Cart $cart): ?Order
+    private function syncStripeQuote(SessionInterface $session, Cart $cart): ?Quote
     {
-        $email  = $session->get('checkout_email');
-        $street = $session->get('checkout_shipping_address');
-        $city   = $session->get('checkout_shipping_city');
-        $postal = $session->get('checkout_shipping_postal');
+        try {
+            $quote = $this->quoteService->upsert($session, $cart, $this->getUser());
+        } catch (\Throwable $e) {
+            $this->paymentLogger->error('checkout.quote.upsert_failed', [
+                'cart_id' => $cart->getId(),
+                'error'   => $e->getMessage(),
+                'action'  => 'quote not synced; webhook/browser-return may fail to convert',
+            ]);
 
-        if ($cart->isEmpty() || !$email || !$street || !$city || !$postal) {
             return null;
         }
 
-        $order = null;
-        $existingId = $session->get('checkout_order_id');
-        if ($existingId) {
-            $candidate = $this->orderRepository->find($existingId);
-            // Only reuse a still-pending row: once paid, the order is immutable.
-            if ($candidate && $candidate->getStatus() === 'pending') {
-                $order = $candidate;
-            }
-        }
-        if (!$order) {
-            $order = new Order();
+        if (!$quote) {
+            return null;
         }
 
-        $this->populateOrderFromSession($order, $session, $cart);
-
-        // The PaymentIntent id on the order is the DB-level idempotency guard
-        // (unique index); the order id in the PI metadata is the webhook's
-        // fallback lookup. Set both.
+        // Link the PaymentIntent to the quote when it is not already (or when the
+        // PI changed). (provider, reference) is the webhook's primary lookup; the
+        // quote id in the PI metadata is its fallback.
         $piId = $session->get('checkout_pi_id');
-        if ($piId) {
-            $order->setStripePaymentIntentId($piId);
+        if ($piId && $quote->getPaymentReference() !== $piId) {
+            $quote->setPayment('stripe', $piId);
+            $this->entityManager->flush();
+            $this->linkQuoteToStripeMetadata($piId, (int) $quote->getId());
         }
 
-        $this->entityManager->persist($order);
-        $this->entityManager->flush();
-
-        $session->set('checkout_order_id', $order->getId());
-
-        if ($piId) {
-            try {
-                $this->stripeClient->paymentIntents->update($piId, [
-                    'metadata' => ['order_id' => (string) $order->getId()],
-                ]);
-            } catch (\Throwable $e) {
-                $this->paymentLogger->warning('payment.intent.metadata_update_failed', [
-                    'provider'       => 'stripe',
-                    'payment_intent' => $piId,
-                    'order_id'       => $order->getId(),
-                    'error'          => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return $order;
+        return $quote;
     }
 
     /**
-     * Finds the order a payment should finalize: the one pre-persisted for this
-     * session, or — failing that — the one carrying the claimed PaymentIntent id.
+     * Writes the quote id into the PaymentIntent metadata — the webhook's fallback
+     * lookup when the (provider, reference) pair cannot be matched. Stripe-specific
+     * by nature, so it lives here on the Stripe path and never fails the flow.
      */
-    private function findFinalizableOrder(SessionInterface $session, ?string $claimedIntentId): ?Order
+    private function linkQuoteToStripeMetadata(string $piId, int $quoteId): void
     {
-        $id = $session->get('checkout_order_id');
+        try {
+            $this->stripeClient->paymentIntents->update($piId, [
+                'metadata' => ['quote_id' => (string) $quoteId],
+            ]);
+        } catch (\Throwable $e) {
+            $this->paymentLogger->warning('payment.intent.metadata_update_failed', [
+                'provider'       => 'stripe',
+                'payment_intent' => $piId,
+                'quote_id'       => $quoteId,
+                'error'          => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Finds the quote a payment should convert: the one remembered in the session,
+     * or — failing that — the one carrying the claimed provider reference.
+     */
+    private function findCheckoutQuote(SessionInterface $session, string $provider, ?string $reference): ?Quote
+    {
+        $id = $session->get('checkout_quote_id');
         if ($id) {
-            $order = $this->orderRepository->find($id);
-            if ($order) {
-                return $order;
+            $quote = $this->quoteRepository->find($id);
+            if ($quote) {
+                return $quote;
             }
         }
 
-        if ($claimedIntentId) {
-            return $this->orderRepository->findOneByStripePaymentIntentId($claimedIntentId);
+        if ($reference) {
+            return $this->quoteRepository->findOneByPaymentReference($provider, $reference);
         }
 
         return null;
@@ -797,97 +814,6 @@ class CheckoutController extends AbstractController
         );
     }
 
-    /**
-     * Fills an order (new or still-pending) from the session and cart. Items and
-     * tax lines are rebuilt from scratch each call so a second update-payment
-     * (province or shipping change) does not duplicate them on the same order.
-     */
-    private function populateOrderFromSession(Order $order, SessionInterface $session, Cart $cart): void
-    {
-        $name             = $session->get('checkout_name', 'Client');
-        $email            = $session->get('checkout_email');
-        $phone            = $session->get('checkout_phone');
-        $shippingStreet   = $session->get('checkout_shipping_address');
-        $shippingCity     = $session->get('checkout_shipping_city');
-        $shippingPostal   = $session->get('checkout_shipping_postal');
-        $shippingProvince = $session->get('checkout_shipping_province');
-        $billingSame      = $session->get('checkout_billing_same', true);
-        $billingStreet    = $session->get('checkout_billing_address');
-        $billingCity      = $session->get('checkout_billing_city');
-        $billingPostal    = $session->get('checkout_billing_postal');
-        $billingProvince  = $session->get('checkout_billing_province');
-
-        // Use grand total if available (includes taxes + shipping), else fall back to cart subtotal
-        $grandTotal = $session->get('checkout_grand_total');
-        $total      = $grandTotal !== null ? (string) round((float) $grandTotal, 2) : $cart->getTotal();
-
-        $subtotal          = $session->get('checkout_subtotal');
-        $shippingAmount    = $session->get('checkout_shipping_amount');
-        $shippingCarrier   = $session->get('checkout_shipping_carrier');
-        $shippingMethod    = $session->get('checkout_shipping_method');
-        $shippingReference = $session->get('checkout_shipping_reference');
-
-        $order->setUser($this->getUser());
-        // Snapshot the cart's currency, like the prices and addresses below:
-        // changing the shop's currencies later must not reinterpret this order.
-        $order->setCurrency($cart->getCurrency());
-        $order->setStatus('pending');
-        $order->setTotal($total);
-        $order->setSubtotal($subtotal !== null ? (string) round((float) $subtotal, 2) : $cart->getTotal());
-        $order->setShippingAmount($shippingAmount !== null ? (string) round((float) $shippingAmount, 2) : null);
-        $order->setShippingMethodCarrier($shippingCarrier ?: null);
-        $order->setShippingMethodName($shippingMethod ?: null);
-        $order->setShippingMethodReference($shippingReference ?: null);
-
-        // Rebuild the tax breakdown from the active market's engine, with the
-        // same inputs updatePayment used, and snapshot the lines onto the order.
-        foreach ($order->getTaxLines()->toArray() as $existingLine) {
-            $order->removeTaxLine($existingLine);
-        }
-        $taxCountry = $session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry();
-        $quote = $this->taxEngineRegistry->active()->quote(
-            (float) ($subtotal ?? $cart->getTotal()),
-            $taxCountry,
-            $shippingProvince ?: null,
-        );
-        $this->applyTaxQuote($order, $quote);
-
-        $nameParts = explode(' ', trim($name), 2);
-        $order->setCustomerFirstName($nameParts[0] ?? 'Client');
-        $order->setCustomerLastName($nameParts[1] ?? '');
-        $order->setCustomerEmail($email);
-        $order->setCustomerPhone($phone);
-        $order->setShippingStreet($shippingStreet);
-        $order->setShippingCity($shippingCity);
-        $order->setShippingPostalCode($shippingPostal);
-        $order->setShippingProvince($shippingProvince ?: null);
-        $order->setShippingCountry($session->get('checkout_shipping_country') ?: $this->marketContext->homeCountry());
-
-        if ($billingSame || !$billingStreet) {
-            $order->setBillingStreet($shippingStreet);
-            $order->setBillingCity($shippingCity);
-            $order->setBillingPostalCode($shippingPostal);
-            $order->setBillingProvince($shippingProvince ?: null);
-        } else {
-            $order->setBillingStreet($billingStreet ?? $shippingStreet);
-            $order->setBillingCity($billingCity ?? $shippingCity);
-            $order->setBillingPostalCode($billingPostal ?? $shippingPostal);
-            $order->setBillingProvince($billingProvince ?: $shippingProvince ?: null);
-        }
-
-        foreach ($order->getItems()->toArray() as $existingItem) {
-            $order->removeItem($existingItem);
-        }
-        foreach ($cart->getItems() as $cartItem) {
-            $orderItem = new OrderItem();
-            $orderItem->setArticle($cartItem->getArticle());
-            $orderItem->setQuantity($cartItem->getQuantity());
-            $orderItem->setUnitPrice($cartItem->getUnitPrice());
-            $orderItem->setSubtotal(number_format($cartItem->getSubtotal(), 2, '.', ''));
-            $order->addItem($orderItem);
-        }
-    }
-
     private function saveAddressFromOrder(Order $order): void
     {
         $user = $order->getUser();
@@ -923,26 +849,6 @@ class CheckoutController extends AbstractController
         $this->entityManager->persist($addr);
     }
 
-    /**
-     * Snapshots a tax engine's quote onto the order as OrderTaxLine rows.
-     * The engine produced the neutral TaxLineData; this maps them to the
-     * persisted entity and sets the total.
-     */
-    private function applyTaxQuote(Order $order, TaxQuote $quote): void
-    {
-        foreach ($quote->lines as $line) {
-            $order->addTaxLine(new OrderTaxLine(
-                code: $line->code,
-                label: $line->label,
-                rate: $line->rate,
-                amount: $line->amount,
-                jurisdiction: $line->jurisdiction,
-            ));
-        }
-
-        $order->setTaxTotal($quote->total());
-    }
-
     private function clearCheckoutSession(SessionInterface $session): void
     {
         foreach ([
@@ -952,7 +858,7 @@ class CheckoutController extends AbstractController
             'checkout_shipping_country',
             'checkout_billing_same', 'checkout_billing_address',
             'checkout_billing_city', 'checkout_billing_postal', 'checkout_billing_province',
-            'checkout_pi_id', 'checkout_order_id', 'checkout_subtotal', 'checkout_shipping_amount',
+            'checkout_pi_id', 'checkout_quote_id', 'checkout_subtotal', 'checkout_shipping_amount',
             'checkout_shipping_carrier', 'checkout_shipping_method', 'checkout_shipping_reference',
             'checkout_grand_total',
         ] as $key) {

@@ -11,36 +11,61 @@ See `ARCHITECTURE.md` for how the system works today and `CLAUDE.md` for convent
 
 Tackle in this order; each item is a step, not a parallel track.
 
-1. **Stripe webhook.** ✅ Code-complete, committed, and **deployed to EC2
-   (2026-10-06)** with the migration applied. Was the highest-value fix: order
-   creation no longer depends on the browser returning to `/checkout/success`, so
-   a payment whose browser never returns no longer leaves a charged customer with
-   **no order**; idempotent so a duplicated event (or webhook + browser return)
-   never creates two orders. ⚠️ **Currently INERT in prod — to be activated in a
-   real production environment with a real domain.** Stripe needs a valid HTTPS
-   endpoint (domain + CA cert); the EC2 is IP-only (no domain/TLS), so no dashboard
-   endpoint is registered and `STRIPE_WEBHOOK_SECRET` is unset (the route 400s).
-   Not blocking checkout — the browser-return path still creates orders; the
-   webhook is the safety net for the browser-never-returns case.
-   Detailed living plan + progress: [`docs/stripe-webhook-plan.md`](docs/stripe-webhook-plan.md).
-2. **CheckoutController end-to-end tests.** The most financially critical flow
-   (tax → Stripe/PayPal → shipping → order) is currently untested. Do this
-   *after* the webhook, since the webhook changes the order-creation logic.
-3. **Route a real business message on RabbitMQ.** Messenger/worker infra is
+1. **Stripe webhook.** ✅ Deployed to EC2 (2026-10-06) and **activated 2026-10-09**
+   (valid Let's Encrypt cert via Caddy+sslip.io → `https://3-96-53-69.sslip.io`,
+   dashboard endpoint created, `STRIPE_WEBHOOK_SECRET` set, test-mode). ⚠️ **A real
+   bug was found 2026-10-09:** the pre-payment `pending` order is never actually
+   created before payment (the frontend saves the address only at payment submit,
+   after `update-payment`'s pre-persist runs), so on a true **browser abandonment**
+   the webhook finds no order to finalize → charged customer, no order. The webhook
+   had only been validated with synthetic signed payloads + the browser-return path.
+   **This bug is folded into priority #2 (Quote lifecycle)** rather than band-aided.
+   Living plan: [`docs/stripe-webhook-plan.md`](docs/stripe-webhook-plan.md).
+2. **Quote → Order lifecycle (IN PROGRESS — current focus, started 2026-10-09).** A
+   Magento-style mutable `Quote` created when shipping is confirmed serviceable,
+   converted to an immutable `Order` on payment (webhook/success/PayPal converge on
+   one idempotent converter). Fixes the #1 webhook bug (a pre-payment record always
+   exists) **and** lays the base for the business goals the user wants: abandoned-cart
+   marketing (reminders, promo codes via the existing `Promotion` entity),
+   conversion-rate tracking, seller reports. Decision: **A2** (go straight to the
+   Quote model, no interim fix). Kickoff decisions resolved: lines stored as a
+   **snapshot** (`QuoteItem`/`QuoteTaxLine`, mirroring `Order`); rollout is
+   **incremental**. Full design + phased checklist:
+   [`docs/quote-lifecycle-plan.md`](docs/quote-lifecycle-plan.md).
+   - ✅ **Data model done (2026-10-09):** `Quote` + `QuoteItem` + `QuoteTaxLine`
+     entities, repositories, migration `Version20261010014034` (applied locally,
+     schema in sync), lifecycle state machine + unit tests (`tests/Unit/Entity/QuoteTest.php`).
+     **Provider/engine-independent by design:** neutral tax lines (snapshot of
+     `TaxEngineInterface` output), opaque shipping snapshot, and a provider-neutral
+     payment linkage `(paymentProvider, paymentReference)` + `UNIQ_QUOTE_PAYMENT` —
+     **no Stripe-specific column**; the Stripe/PayPal specifics stay in adapters.
+   - ✅ **Checkout migration done (2026-10-09):** `QuoteService` creates/updates the
+     quote before payment (PI linked up front at `createPaymentIntent`, quote id in PI
+     metadata); idempotent `QuoteConverter` (one order per quote, claimed via
+     `markConvertedIfNot`); webhook + `success` + PayPal capture all convert through it
+     then finalize via `OrderFinalizer`; `app:checkout:purge-pending` generalized with a
+     second quote-reconciliation pass. Old `upsertPendingOrder`/`findFinalizableOrder`/
+     `populateOrderFromSession` removed — the webhook bug is fixed (a quote always exists
+     before payment). Unit suite 95/95 + a real DB conversion round-trip verified.
+   - 🔜 **Remaining before this is "done":** exercise the live browser flow end-to-end
+     (Stripe test-mode checkout, true browser abandonment → webhook converts; PayPal
+     capture; purge recovery), then land the whole thing as a **single commit** (per the
+     user — no step-by-step commits for this feature). Phases 2–3 (analytics, marketing)
+     are separate follow-ups.
+3. **CheckoutController end-to-end tests.** The most financially critical flow
+   (tax → Stripe/PayPal → shipping → order) is currently untested. Do this *after*
+   the Quote lifecycle (#2), since it reshapes order creation — test the new
+   quote-backed flow, not the old one.
+4. **Route a real business message on RabbitMQ.** Messenger/worker infra is
    wired but no business message flows through it. Target: stock management /
    concurrency control.
-4. **Redis cache invalidation.** The `articles`/`categories` tags are set but
+5. **Redis cache invalidation.** The `articles`/`categories` tags are set but
    never invalidated, so the public catalog can stay stale up to 1h. Invalidate
    in the admin create/edit/delete controllers for articles and categories.
-5. **Shipping-rate snapshot fallback.** ✅ Code-complete (2026-10-06), Unit suite
-   green, container + entity mapping validated; **not yet committed/deployed**.
-   green, container + entity mapping validated; **not yet committed/deployed**.
-   Remaining: commit, run migrations `20261006120000` + `20261006130000` +
-   `20261006140000` on each environment (they create the snapshot table, seed the
-   baseline destinations, and seed the editable `shipping.snapshot.throttle`
-   setting), add the hourly cron entry, and one live refresh run
-   (`app:shipping:refresh-snapshots`, also fires backgrounded on container
-   startup) once `SHIPPO_API_KEY` is set.
+6. **Shipping-rate snapshot fallback.** ✅ **Done & deployed to EC2 (2026-10-06)** —
+   migrations applied, baseline seeded, hourly cron live (runs as `www-data`), 27+
+   real snapshots captured. Serves known-good real rates at checkout when Shippo
+   returns none. Details: ARCHITECTURE.md §5 "Shipping-rate snapshot fallback".
    Replaced the simulated mock fallback removed on 2026-10-06: `ShippingService`
    now splits into `rateLive()` (Shippo only) and `getRates()` (live → fallback);
    when live returns nothing it serves the latest known-good real rates for the
