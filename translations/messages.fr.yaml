@@ -474,8 +474,52 @@ admin:
     index:
       title: Rapports
       breadcrumb: Rapports
-      empty_title: Aucun rapport pour le moment
-      empty_body: Cette section accueillera les rapports marketing et de ventes (tunnel de conversion, paniers abandonnés, analytique vendeur). À venir dans une prochaine itération.
+      period_7: 7 jours
+      period_30: 30 jours
+      period_90: 90 jours
+      period_365: 1 an
+    funnel:
+      title: Tunnel de conversion
+      created: Créés
+      reached_ready: Arrivés à « prêt »
+      converted: Convertis
+      abandoned: Abandonnés
+      open: En cours
+      conversion_rate: Taux de conversion
+      abandoned_value: Valeur abandonnée
+      trend: Tendance quotidienne (créés vs convertis)
+    abandoned:
+      title: Paniers abandonnés
+      carts: Paniers récupérables
+      value: Valeur dans les paniers
+      customer: Client
+      email: E-mail
+      items: Articles
+      total: Total
+      status: Statut
+      created: Créé
+      empty: Aucun panier récupérable sur cette période.
+    sales:
+      title: Ventes & revenus
+      revenue: Revenu
+      orders: commandes
+      aov: Panier moyen
+      trend: Revenu quotidien
+      by_province: Revenu par province
+      by_method: Revenu par moyen de paiement
+      province: Province
+      method: Moyen
+      empty: Aucune vente sur cette période.
+    products:
+      title: Performance produits
+      top_sold: Top produits (unités vendues)
+      top_abandoned: Produits les plus abandonnés
+      product: Produit
+      units: Unités
+      revenue: Revenu
+      carts: Paniers
+      empty: Aucune vente sur cette période.
+      empty_abandoned: Aucun produit abandonné sur cette période.
   regions:
     title: Régions
     breadcrumb: Catalogue / Régions
@@ -644,6 +688,17 @@ admin:
     no_articles: Aucun article pour le moment
     no_users: Aucun utilisateur pour le moment
     create_article: Créer un article
+    synthesis: 'Synthèse — 30 derniers jours'
+    view_reports: Voir les rapports complets
+    revenue_30d: Revenu (30j)
+    orders: commandes
+    aov: Panier moyen
+    conversion_30d: Taux de conversion (30j)
+    quotes_created: devis créés
+    abandoned_value: Valeur des paniers abandonnés (30j)
+    abandoned_carts: paniers récupérables
+    flagged_orders: Commandes à vérifier
+    flagged_hint: Paiement non vérifié — à contrôler avant expédition
   articles:
     created: Article créé avec succès
     updated: Article mis à jour avec succès

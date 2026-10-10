@@ -8,9 +8,217 @@
 {% endblock %}
 
 {% block content %}
-<div style="background: white; padding: 60px 40px; text-align: center; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <i class="bi bi-bar-chart" style="font-size: 48px; color: #cbd5e1; display: block; margin-bottom: 16px;"></i>
-    <h3 style="margin: 0 0 8px 0; color: #334155;">{{ 'admin.reports.index.empty_title'|trans }}</h3>
-    <p style="margin: 0; color: #94a3b8; max-width: 480px; margin-left: auto; margin-right: auto;">{{ 'admin.reports.index.empty_body'|trans }}</p>
+
+{% set card = 'background:white;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);' %}
+{% set kpiLabel = 'margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;' %}
+{% set h2 = 'margin:0 0 16px;font-size:16px;font-weight:700;color:#0f172a;' %}
+{% set th = 'padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e2e8f0;' %}
+{% set td = 'padding:10px 12px;font-size:13px;color:#0f172a;border-bottom:1px solid #f1f5f9;' %}
+
+{# ── Period selector ─────────────────────────────────────────────────────── #}
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% for p in periods %}
+            <a href="{{ path('admin_reports_index', {period: p}) }}"
+               style="padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;border:1px solid {{ period == p ? '#0f172a' : '#e2e8f0' }};background:{{ period == p ? '#0f172a' : '#fff' }};color:{{ period == p ? '#fff' : '#64748b' }};">
+                {{ ('admin.reports.index.period_' ~ p)|trans }}
+            </a>
+        {% endfor %}
+    </div>
+    <span style="font-size:12px;color:#94a3b8;">{{ from|date('Y-m-d') }} → {{ to|date('Y-m-d') }}</span>
 </div>
+
+{# ══ 1. Conversion funnel ════════════════════════════════════════════════ #}
+<h2 style="{{ h2 }}"><i class="bi bi-funnel" style="color:#1a56db;"></i> {{ 'admin.reports.funnel.title'|trans }}</h2>
+<div style="{{ card }}padding:24px;margin-bottom:28px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+        {% set kpis = [
+            {l: 'admin.reports.funnel.created',       v: funnel.created,       c: '#0f172a'},
+            {l: 'admin.reports.funnel.reached_ready', v: funnel.reached_ready, c: '#1e40af'},
+            {l: 'admin.reports.funnel.converted',     v: funnel.converted,     c: '#166534'},
+            {l: 'admin.reports.funnel.abandoned',     v: funnel.abandoned,     c: '#991b1b'},
+            {l: 'admin.reports.funnel.open',          v: funnel.open,          c: '#64748b'}
+        ] %}
+        {% for k in kpis %}
+        <div style="border:1px solid #f1f5f9;border-radius:8px;padding:14px;">
+            <p style="{{ kpiLabel }}">{{ k.l|trans }}</p>
+            <p style="margin:0;font-size:22px;font-weight:700;color:{{ k.c }};">{{ k.v }}</p>
+        </div>
+        {% endfor %}
+        <div style="border:1px solid #dcfce7;border-radius:8px;padding:14px;background:#f0fdf4;">
+            <p style="{{ kpiLabel }}">{{ 'admin.reports.funnel.conversion_rate'|trans }}</p>
+            <p style="margin:0;font-size:22px;font-weight:700;color:#166534;">{{ funnel.conversion_rate is not null ? (funnel.conversion_rate|number_format(1) ~ '%') : '—' }}</p>
+        </div>
+        <div style="border:1px solid #fee2e2;border-radius:8px;padding:14px;background:#fef2f2;">
+            <p style="{{ kpiLabel }}">{{ 'admin.reports.funnel.abandoned_value'|trans }}</p>
+            <p style="margin:0;font-size:20px;font-weight:700;color:#991b1b;">{{ funnel.abandoned_value|money_snapshot(abandonedSummary.currency) }}</p>
+        </div>
+    </div>
+
+    {# Funnel bars (relative to created) #}
+    {% set base = funnel.created > 0 ? funnel.created : 1 %}
+    {% for stage in [
+        {l:'admin.reports.funnel.created', v: funnel.created, c:'#0f172a'},
+        {l:'admin.reports.funnel.reached_ready', v: funnel.reached_ready, c:'#1e40af'},
+        {l:'admin.reports.funnel.converted', v: funnel.converted, c:'#16a34a'}
+    ] %}
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="width:130px;font-size:12px;color:#64748b;flex-shrink:0;">{{ stage.l|trans }}</span>
+        <div style="flex:1;background:#f1f5f9;border-radius:4px;height:22px;overflow:hidden;">
+            <div style="height:100%;width:{{ (stage.v / base * 100)|round }}%;background:{{ stage.c }};"></div>
+        </div>
+        <span style="width:46px;text-align:right;font-size:13px;font-weight:600;color:#0f172a;">{{ stage.v }}</span>
+    </div>
+    {% endfor %}
+
+    {# Per-day trend (created vs converted) #}
+    {% if funnelTrend %}
+    {% set maxCreated = max(funnelTrend|map(d => d.created)) ?: 1 %}
+    <p style="margin:20px 0 8px;font-size:12px;font-weight:600;color:#64748b;">{{ 'admin.reports.funnel.trend'|trans }}</p>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:80px;overflow-x:auto;padding-bottom:4px;">
+        {% for d in funnelTrend %}
+        <div title="{{ d.date }} · {{ 'admin.reports.funnel.created'|trans }}: {{ d.created }} · {{ 'admin.reports.funnel.converted'|trans }}: {{ d.converted }}"
+             style="position:relative;width:8px;flex-shrink:0;height:{{ (d.created / maxCreated * 72)|round + 2 }}px;background:#cbd5e1;border-radius:2px 2px 0 0;">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:{{ d.created > 0 ? (d.converted / d.created * 100)|round : 0 }}%;background:#16a34a;border-radius:0 0 2px 2px;"></div>
+        </div>
+        {% endfor %}
+    </div>
+    <p style="margin:6px 0 0;font-size:11px;color:#94a3b8;"><span style="display:inline-block;width:9px;height:9px;background:#cbd5e1;border-radius:2px;"></span> {{ 'admin.reports.funnel.created'|trans }} &nbsp; <span style="display:inline-block;width:9px;height:9px;background:#16a34a;border-radius:2px;"></span> {{ 'admin.reports.funnel.converted'|trans }}</p>
+    {% endif %}
+</div>
+
+{# ══ 2. Abandoned carts ══════════════════════════════════════════════════ #}
+<h2 style="{{ h2 }}"><i class="bi bi-cart-x" style="color:#b91c1c;"></i> {{ 'admin.reports.abandoned.title'|trans }}</h2>
+<div style="{{ card }}padding:24px;margin-bottom:28px;">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:20px;">
+        <div><p style="{{ kpiLabel }}">{{ 'admin.reports.abandoned.carts'|trans }}</p><p style="margin:0;font-size:22px;font-weight:700;color:#991b1b;">{{ abandonedSummary.carts }}</p></div>
+        <div><p style="{{ kpiLabel }}">{{ 'admin.reports.abandoned.value'|trans }}</p><p style="margin:0;font-size:22px;font-weight:700;color:#991b1b;">{{ abandonedSummary.value|money_snapshot(abandonedSummary.currency) }}</p></div>
+    </div>
+    {% if abandonedCarts %}
+    <div class="admin-table-wrap">
+    <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+            <th style="{{ th }}">#</th>
+            <th style="{{ th }}">{{ 'admin.reports.abandoned.customer'|trans }}</th>
+            <th style="{{ th }}">{{ 'admin.reports.abandoned.email'|trans }}</th>
+            <th style="{{ th }}text-align:center;">{{ 'admin.reports.abandoned.items'|trans }}</th>
+            <th style="{{ th }}text-align:right;">{{ 'admin.reports.abandoned.total'|trans }}</th>
+            <th style="{{ th }}text-align:center;">{{ 'admin.reports.abandoned.status'|trans }}</th>
+            <th style="{{ th }}">{{ 'admin.reports.abandoned.created'|trans }}</th>
+            <th style="{{ th }}"></th>
+        </tr></thead>
+        <tbody>
+        {% for c in abandonedCarts %}
+            <tr>
+                <td style="{{ td }}">#{{ c.id }}</td>
+                <td style="{{ td }}">{{ c.customer_first_name }} {{ c.customer_last_name }}</td>
+                <td style="{{ td }}color:#64748b;">{{ c.customer_email }}</td>
+                <td style="{{ td }}text-align:center;">{{ c.item_count }}</td>
+                <td style="{{ td }}text-align:right;font-weight:600;">{{ c.total|money_snapshot(c.currency) }}</td>
+                <td style="{{ td }}text-align:center;"><span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;{{ c.status == 'abandoned' ? 'background:#fee2e2;color:#991b1b;' : 'background:#dbeafe;color:#1e40af;' }}">{{ ('admin.quotes.status_' ~ c.status)|trans }}</span></td>
+                <td style="{{ td }}color:#64748b;">{{ c.created_at|date('Y-m-d H:i') }}</td>
+                <td style="{{ td }}text-align:right;"><a href="{{ path('admin_quotes_show', {id: c.id}) }}" style="color:#3b82f6;text-decoration:none;font-size:12px;"><i class="bi bi-eye"></i> {{ 'admin.quotes.view'|trans }}</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">{{ 'admin.reports.abandoned.empty'|trans }}</p>
+    {% endif %}
+</div>
+
+{# ══ 3. Sales & revenue ══════════════════════════════════════════════════ #}
+<h2 style="{{ h2 }}"><i class="bi bi-cash-coin" style="color:#166534;"></i> {{ 'admin.reports.sales.title'|trans }}</h2>
+<div style="{{ card }}padding:24px;margin-bottom:28px;">
+    {% if sales.by_currency %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px;">
+        {% for r in sales.by_currency %}
+        <div style="border:1px solid #f1f5f9;border-radius:8px;padding:14px;">
+            <p style="{{ kpiLabel }}">{{ 'admin.reports.sales.revenue'|trans }} ({{ r.currency }})</p>
+            <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#166534;">{{ r.revenue|money_snapshot(r.currency) }}</p>
+            <p style="margin:0;font-size:12px;color:#64748b;">{{ r.orders }} {{ 'admin.reports.sales.orders'|trans }} · {{ 'admin.reports.sales.aov'|trans }} {{ r.aov|money_snapshot(r.currency) }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if sales.trend %}
+    {% set maxRev = max(sales.trend|map(d => d.revenue)) ?: 0.01 %}
+    <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#64748b;">{{ 'admin.reports.sales.trend'|trans }} ({{ sales.dominant_currency }})</p>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:80px;overflow-x:auto;padding-bottom:4px;">
+        {% for d in sales.trend %}
+        <div title="{{ d.date }} · {{ d.revenue|money_snapshot(sales.dominant_currency) }} · {{ d.orders }} {{ 'admin.reports.sales.orders'|trans }}"
+             style="width:8px;flex-shrink:0;height:{{ (d.revenue / maxRev * 72)|round + 2 }}px;background:#16a34a;border-radius:2px 2px 0 0;"></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="admin-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;">
+        <div>
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#334155;">{{ 'admin.reports.sales.by_province'|trans }}</p>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr><th style="{{ th }}">{{ 'admin.reports.sales.province'|trans }}</th><th style="{{ th }}text-align:center;">{{ 'admin.reports.sales.orders'|trans }}</th><th style="{{ th }}text-align:right;">{{ 'admin.reports.sales.revenue'|trans }}</th></tr></thead>
+                <tbody>
+                {% for r in sales.by_province %}
+                    <tr><td style="{{ td }}">{{ r.province }}{% if r.country and r.country != 'CA' %} <span style="color:#94a3b8;font-size:11px;">{{ r.country }}</span>{% endif %}</td><td style="{{ td }}text-align:center;">{{ r.orders }}</td><td style="{{ td }}text-align:right;font-weight:600;">{{ r.revenue|money_snapshot(r.currency) }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#334155;">{{ 'admin.reports.sales.by_method'|trans }}</p>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr><th style="{{ th }}">{{ 'admin.reports.sales.method'|trans }}</th><th style="{{ th }}text-align:center;">{{ 'admin.reports.sales.orders'|trans }}</th><th style="{{ th }}text-align:right;">{{ 'admin.reports.sales.revenue'|trans }}</th></tr></thead>
+                <tbody>
+                {% for r in sales.by_method %}
+                    <tr><td style="{{ td }}">{{ r.method|capitalize }}</td><td style="{{ td }}text-align:center;">{{ r.orders }}</td><td style="{{ td }}text-align:right;font-weight:600;">{{ r.revenue|money_snapshot(r.currency) }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">{{ 'admin.reports.sales.empty'|trans }}</p>
+    {% endif %}
+</div>
+
+{# ══ 4. Product performance ══════════════════════════════════════════════ #}
+<h2 style="{{ h2 }}"><i class="bi bi-box-seam" style="color:#7c3aed;"></i> {{ 'admin.reports.products.title'|trans }}</h2>
+<div class="admin-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
+    <div style="{{ card }}padding:24px;">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#334155;">{{ 'admin.reports.products.top_sold'|trans }}</p>
+        {% if topProducts %}
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr><th style="{{ th }}">{{ 'admin.reports.products.product'|trans }}</th><th style="{{ th }}text-align:center;">{{ 'admin.reports.products.units'|trans }}</th><th style="{{ th }}text-align:right;">{{ 'admin.reports.products.revenue'|trans }}</th></tr></thead>
+            <tbody>
+            {% for p in topProducts %}
+                <tr>
+                    <td style="{{ td }}"><a href="{{ path('admin_articles_show', {id: p.id}) }}" style="color:#3b82f6;text-decoration:none;">{{ p.title }}</a></td>
+                    <td style="{{ td }}text-align:center;font-weight:600;">{{ p.units }}</td>
+                    <td style="{{ td }}text-align:right;">{{ p.revenue|money_snapshot(p.currency) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p style="margin:0;color:#94a3b8;font-size:13px;">{{ 'admin.reports.products.empty'|trans }}</p>{% endif %}
+    </div>
+    <div style="{{ card }}padding:24px;">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#334155;">{{ 'admin.reports.products.top_abandoned'|trans }}</p>
+        {% if topAbandonedProducts %}
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr><th style="{{ th }}">{{ 'admin.reports.products.product'|trans }}</th><th style="{{ th }}text-align:center;">{{ 'admin.reports.products.units'|trans }}</th><th style="{{ th }}text-align:center;">{{ 'admin.reports.products.carts'|trans }}</th></tr></thead>
+            <tbody>
+            {% for p in topAbandonedProducts %}
+                <tr>
+                    <td style="{{ td }}"><a href="{{ path('admin_articles_show', {id: p.id}) }}" style="color:#3b82f6;text-decoration:none;">{{ p.title }}</a></td>
+                    <td style="{{ td }}text-align:center;font-weight:600;">{{ p.units }}</td>
+                    <td style="{{ td }}text-align:center;color:#64748b;">{{ p.carts }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p style="margin:0;color:#94a3b8;font-size:13px;">{{ 'admin.reports.products.empty_abandoned'|trans }}</p>{% endif %}
+    </div>
+</div>
+
 {% endblock %}

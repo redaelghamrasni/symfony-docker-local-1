@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Repository\ArticleRepository;
 use App\Repository\UserRepository;
 use App\Repository\OrderRepository;
+use App\Service\ReportService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,7 +16,8 @@ class DashboardController extends AbstractController
     public function __construct(
         private ArticleRepository $articleRepository,
         private UserRepository $userRepository,
-        private OrderRepository $orderRepository
+        private OrderRepository $orderRepository,
+        private ReportService $reports,
     ) {}
 
     #[Route('/', name: 'dashboard')]
@@ -33,6 +35,8 @@ class DashboardController extends AbstractController
             'totalOrders' => $totalOrders,
             'recentArticles' => $recentArticles,
             'recentUsers' => $recentUsers,
+            // Last-30-days synthesis, including the marketing KPIs.
+            'summary' => $this->reports->dashboardSummary(),
         ]);
     }
 }

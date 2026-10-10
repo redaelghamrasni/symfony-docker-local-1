@@ -471,8 +471,52 @@ admin:
     index:
       title: Reports
       breadcrumb: Reports
-      empty_title: No reports yet
-      empty_body: This section will host marketing and sales reports (conversion funnel, abandoned carts, seller analytics). Coming in a later iteration.
+      period_7: 7 days
+      period_30: 30 days
+      period_90: 90 days
+      period_365: 1 year
+    funnel:
+      title: Conversion funnel
+      created: Created
+      reached_ready: Reached ready
+      converted: Converted
+      abandoned: Abandoned
+      open: In progress
+      conversion_rate: Conversion rate
+      abandoned_value: Abandoned value
+      trend: Daily trend (created vs converted)
+    abandoned:
+      title: Abandoned carts
+      carts: Recoverable carts
+      value: Value left in carts
+      customer: Customer
+      email: Email
+      items: Items
+      total: Total
+      status: Status
+      created: Created
+      empty: No recoverable carts in this period.
+    sales:
+      title: Sales & revenue
+      revenue: Revenue
+      orders: orders
+      aov: AOV
+      trend: Daily revenue
+      by_province: Revenue by province
+      by_method: Revenue by payment method
+      province: Province
+      method: Method
+      empty: No sales in this period.
+    products:
+      title: Product performance
+      top_sold: Top products (units sold)
+      top_abandoned: Most abandoned products
+      product: Product
+      units: Units
+      revenue: Revenue
+      carts: Carts
+      empty: No sales in this period.
+      empty_abandoned: No abandoned products in this period.
   regions:
     title: Regions
     breadcrumb: Catalogue / Regions
@@ -669,6 +713,17 @@ admin:
     no_articles: No articles yet
     no_users: No users yet
     create_article: Create Article
+    synthesis: 'Synthesis — last 30 days'
+    view_reports: View full reports
+    revenue_30d: Revenue (30d)
+    orders: orders
+    aov: AOV
+    conversion_30d: Conversion rate (30d)
+    quotes_created: quotes created
+    abandoned_value: Abandoned cart value (30d)
+    abandoned_carts: recoverable carts
+    flagged_orders: Orders to review
+    flagged_hint: Payment unverified — check before shipping
   articles:
     created: Article created successfully
     updated: Article updated successfully
